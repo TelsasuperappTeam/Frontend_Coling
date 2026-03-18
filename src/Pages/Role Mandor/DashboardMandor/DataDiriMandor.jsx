@@ -45,7 +45,7 @@ function ClickToSetMarker({ setPos, disabled }) {
   return null;
 }
 
-export default function DataDiriPetani({
+export default function DataDiriMandor({
   onClose,
   onSave,
   initialData,

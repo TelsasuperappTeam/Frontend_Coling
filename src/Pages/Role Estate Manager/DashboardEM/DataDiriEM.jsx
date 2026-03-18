@@ -45,7 +45,7 @@ function ClickToSetMarker({ setPos, disabled }) {
   return null;
 }
 
-export default function DataDiriKebun({
+export default function DataDiriEM({
   onClose,
   onSave,
   initialData,

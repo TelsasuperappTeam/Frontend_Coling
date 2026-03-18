@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_ENDPOINTS, ROLES, getFileUrl } from "../../../config/constants.js";
-import DataDiriEM from "./DataDiriEM.jsx";
+import DataDiriEM from "./DataDiriEM";
 import {
   Loader2,
   Check,
@@ -843,7 +843,7 @@ export default function DashboardEM() {
       {showPopupDataDiri && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-all duration-300">
           <div className="w-full max-w-3xl h-[85vh] rounded-2xl animate-fade-in-up flex relative shadow-2xl">
-            <DataDiriKebun
+            <DataDiriEM
               onClose={() => setShowPopupDataDiri(false)}
               onSave={handleProfileSaved}
               initialData={profile}

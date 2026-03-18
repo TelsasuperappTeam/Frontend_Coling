@@ -9,11 +9,11 @@ export const menuConfig = {
     { label: "Data Stakeholder", path: "/admin/datastakeholder" },
     { label: "Validasi Kebun", path: "/admin/validasikebun" },
   ],
-  [ROLES.PETANI]: [
-    { label: "Dashboard", path: "/petani/dashboard" },
-    { label: "Manajemen Kebun", path: "/petani/manajemenkebun" },
-    { label: "Riwayat Penjualan", path: "/petani/riwayatpenjualan" },
-    { label: "Pantau ISPO", path: "/petani/pantauISPO" },
+  [ROLES.MANDOR]: [
+    { label: "Dashboard", path: "/mandor/dashboard" },
+    { label: "Manajemen Kebun", path: "/mandor/manajemenkebun" },
+    { label: "Riwayat Penjualan", path: "/mandor/riwayatpenjualan" },
+    { label: "Pantau ISPO", path: "/mandor/pantauISPO" },
   ],
   [ROLES.KEBUN]: [
     { label: "Dashboard", path: "/kebun/dashboard" },
@@ -21,13 +21,29 @@ export const menuConfig = {
     { label: "Distribusi&Logistik", path: "/kebun/distribusi&logistik" },
     { label: "Operasional", path: "/kebun/manajemenoperasional" },
     { label: "Kemitraan Petani", path: "/kebun/kemitraanpetani" },
-    { label: "Inventrais", path: "/kebun/inventaris" },
+    { label: "Inventaris", path: "/kebun/inventaris" },
   ],
-  [ROLES.LOGISTIK]: [
-    { label: "Dashboard", path: "/logistik/dashboard" },
-    { label: "Manajemen Pesanan", path: "/logistik/manajemenpesanan" },
-    { label: "Pengiriman", path: "/logistik/pengiriman" },
-    { label: "Armada", path: "/logistik/armada" },
+    [ROLES.ESTATE_MANAGER]: [
+    { label: "Dashboard", path: "/estate-manager/dashboard" },
+    { label: "Penjualan", path: "/estate-manager/penjualan" },
+    { label: "Distribusi&Logistik", path: "/estate-manager/distribusi&logistik" },
+    { label: "Operasional", path: "/estate-manager/manajemenoperasional" },
+    { label: "Kemitraan Petani", path: "/estate-manager/kemitraanpetani" },
+    { label: "Inventaris", path: "/estate-manager/inventaris" },
+  ],
+    [ROLES.GENERAL_MANAGER_DISTRIK]: [
+    { label: "Dashboard", path: "/general-manager-distrik/dashboard" },
+    { label: "Penjualan", path: "/general-manager-distrik/penjualan" },
+    { label: "Distribusi&Logistik", path: "/general-manager-distrik/distribusi&logistik" },
+    { label: "Operasional", path: "/general-manager-distrik/manajemenoperasional" },
+    { label: "Kemitraan Petani", path: "/general-manager-distrik/kemitraanpetani" },
+    { label: "Inventaris", path: "/general-manager-distrik/inventaris" },
+  ],
+  [ROLES.TRANSPORT]: [
+    { label: "Dashboard", path: "/transport/dashboard" },
+    { label: "Manajemen Pesanan", path: "/transport/manajemenpesanan" },
+    { label: "Pengiriman", path: "/transport/pengiriman" },
+    { label: "Armada", path: "/transport/armada" },
   ],
   [ROLES.PABRIK]: [
     { label: "Dashboard", path: "/pabrik/dashboard" },

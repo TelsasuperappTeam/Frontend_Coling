@@ -1,9 +1,11 @@
-// src/layouts/LogistikLayout.jsx
+// src/layouts/TransportLayout.jsx
 import React from "react";
 import RoleLayout from "./RoleLayout";
+import { ROLES } from "../config/constants"; // Import konstantanya
 
 const TransportLayout = () => {
-  return <RoleLayout role="transport" />;
+  // Gunakan ROLES.TRANSPORT agar jika nilainya berubah di constants, layout otomatis ikut
+  return <RoleLayout role={ROLES.TRANSPORT} />;
 };
 
 export default TransportLayout;

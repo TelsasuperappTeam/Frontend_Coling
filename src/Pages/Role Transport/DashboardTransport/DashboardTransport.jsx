@@ -415,7 +415,7 @@ export default function DashboardLogistik() {
       {showPopupDataDiri && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-opacity duration-300">
           <div className="w-full max-w-2xl h-auto max-h-[90vh] rounded-3xl animate-fade-in-up flex relative shadow-2xl">
-            <DataDiriLogistik
+            <DataDiriTransport
               onClose={() => setShowPopupDataDiri(false)}
               onSave={handleProfileSaved}
               initialData={{

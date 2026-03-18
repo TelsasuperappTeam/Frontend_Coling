@@ -8,7 +8,7 @@
 
 import { Routes, Route } from "react-router-dom";
 import PrivateRoute from "../components/PrivateRoute";
-import GMDistrikLayout from "../layouts/GMDistrikLayout";
+import GMDistrikLayout from "../layouts/GMDistrikLayout"; // Layout khusus untuk role Kebun
 import { ROLES } from "../config/constants";
 
 import DashboardGMDistrik from "../Pages/Role GM Distrik/DashboardGMDistrik/DashboardGMDistrik";
@@ -21,7 +21,7 @@ import Operasional from "../Pages/Role GM Distrik/Operasional";
 const GMDistrikRoutes = () => {
   return (
     <Routes>
-      <Route element={<KebunLayout />}>
+      <Route element={<GMDistrikLayout />}>
         <Route
           index
           element={

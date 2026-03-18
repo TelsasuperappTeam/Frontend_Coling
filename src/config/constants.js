@@ -10,8 +10,8 @@ export const ROLES = {
   ADMIN: "admin",
   MANDOR: "petani", // ubah "mandor" menjadi "petani" jika BE tetap menamakan role ini untuk petani
   KEBUN: "kebun",
-  ESTATE_MANAGER: "estate manager",
-  GENERAL_MANAGER_DISTRIK: "general manager distrik",
+  ESTATE_MANAGER: "estate-manager",
+  GENERAL_MANAGER_DISTRIK: "general-manager-distrik",
   TRANSPORT: "transport",
   PABRIK: "pabrik",
 };

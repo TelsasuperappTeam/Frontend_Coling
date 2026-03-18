@@ -45,7 +45,7 @@ function ClickToSetMarker({ setPos, disabled }) {
   return null;
 }
 
-export default function DataDiriLogistik({
+export default function DataDiriTransport({
   onClose,
   onSave,
   initialData,

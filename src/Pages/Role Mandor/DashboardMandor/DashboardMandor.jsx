@@ -1054,7 +1054,7 @@ export default function DashboardMandor() {
       {showPopupDataDiri && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-opacity duration-300">
           <div className="w-full max-w-3xl h-[85vh] rounded-3xl animate-fade-in-up flex relative">
-            <DataDiriPetani
+            <DataDiriMandor
               onClose={() => setShowPopupDataDiri(false)}
               onSave={handleProfileSaved}
               initialData={profile}

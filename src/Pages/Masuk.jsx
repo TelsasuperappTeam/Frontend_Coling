@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getRoleRedirectPath } from "../utils/roleRedirect";
-import { API_ENDPOINTS } from "../config/constants";
+import { API_ENDPOINTS, ROLES } from "../config/constants";
 import { jwtDecode } from "jwt-decode";
 
 // ===================== KOMPONEN LOGIN =====================
@@ -227,43 +227,43 @@ export default function Masuk() {
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             <button
-              onClick={() => handleBypass("admin")}
+              onClick={() => handleBypass(ROLES.ADMIN)}
               className="px-2 py-1.5 bg-gray-800 text-white text-[10px] sm:text-xs rounded hover:bg-gray-900 font-medium transition"
             >
               Login Admin
             </button>
             <button
-              onClick={() => handleBypass("petani")}
+              onClick={() => handleBypass(ROLES.MANDOR)}
               className="px-2 py-1.5 bg-green-600 text-white text-[10px] sm:text-xs rounded hover:bg-green-700 font-medium transition"
             >
               Login Mandor
             </button>
             <button
-              onClick={() => handleBypass("kebun")}
+              onClick={() => handleBypass(ROLES.KEBUN)}
               className="px-2 py-1.5 bg-blue-600 text-white text-[10px] sm:text-xs rounded hover:bg-blue-700 font-medium transition"
             >
               Login Kebun
             </button>
             <button
-              onClick={() => handleBypass("estate manager")}
+              onClick={() => handleBypass(ROLES.ESTATE_MANAGER)}
               className="px-2 py-1.5 bg-teal-600 text-white text-[10px] sm:text-xs rounded hover:bg-teal-700 font-medium transition"
             >
               Login Estate Manager
             </button>
             <button
-              onClick={() => handleBypass("general manager distrik")}
+              onClick={() => handleBypass(ROLES.GENERAL_MANAGER_DISTRIK)}
               className="px-2 py-1.5 bg-orange-600 text-white text-[10px] sm:text-xs rounded hover:bg-orange-700 font-medium transition"
             >
               Login GM Distrik
             </button>
             <button
-              onClick={() => handleBypass("transport")}
+              onClick={() => handleBypass(ROLES.TRANSPORT)}
               className="px-2 py-1.5 bg-purple-600 text-white text-[10px] sm:text-xs rounded hover:bg-purple-700 font-medium transition"
             >
               Login Transport
             </button>
             <button
-              onClick={() => handleBypass("pabrik")}
+              onClick={() => handleBypass(ROLES.PABRIK)}
               className="px-2 py-1.5 bg-yellow-600 text-white text-[10px] sm:text-xs rounded hover:bg-yellow-700 font-medium transition"
             >
               Login Pabrik
@@ -274,7 +274,6 @@ export default function Masuk() {
           </p>
         </div>
         {/* [DEV MODE END] ================================================== */}
-      
       </div>
     </div>
   );
