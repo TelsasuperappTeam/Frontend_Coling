@@ -1,0 +1,44 @@
+/* Reset dasar */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Font dan warna */
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: #ffffff;
+  color: #1f2937; /* gray-800 */
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Gambar responsif */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Utility tambahan untuk logo */
+.logo {
+  height: 6rem;
+  width: 6rem;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+/* Tombol bawaan */
+button {
+  font-family: inherit;
+}

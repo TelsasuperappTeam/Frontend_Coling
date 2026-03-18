@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+
+/* == BASE LAYER == */
+@layer base {
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: "Poppins", sans-serif;
+    scroll-padding-top: 80px;
+    scroll-behavior: smooth;
+
+    /* Mencegah halaman overscroll dan horizontal scroll */
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    height: 100%;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none; /* biar elemen tidak bisa terseleksi tanpa sengaja */
+  }
+
+  /* input & textarea bisa diseleksi */
+  input,
+  textarea {
+    user-select: text;
+  }
+
+  /* Gambar responsif */
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Link dasar */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* Tombol dasar */
+  button {
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
+
+  /* Form element */
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  /* List reset */
+  ul,
+  ol {
+    list-style: none;
+  }
+
+  /* Pastikan root mengisi layar penuh */
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .reactEasyCrop_CropArea {
+  outline: none !important;
+}
+
+}
+
+/* === Custom Cropper Style === */
+
+.cropper-container-custom {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cropper-zoom-slider {
+  width: 100%;
+  margin-top: 15px;
+}
+
+.cropper-modal-bg {
+  backdrop-filter: blur(3px);
+}

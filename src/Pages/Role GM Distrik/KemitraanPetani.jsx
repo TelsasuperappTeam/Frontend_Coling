@@ -1,0 +1,842 @@
+import React, { useState, useEffect } from "react";
+import {
+  ShieldCheck,
+  Users,
+  ChevronDown,
+  CheckCircle,
+  XCircle,
+  FileText,
+  AlertTriangle,
+  ExternalLink,
+} from "lucide-react";
+// Pastikan getFileUrl di-export dari constants.js
+import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
+
+/* ===================== MOCK DATA (STATIC) ===================== */
+const MOCK_DOKUMEN_SERTIFIKASI = [
+  {
+    id: 1,
+    nama: "Pak Budi Santoso",
+    jenisDok: "Surat Hak Milik (SHM)",
+    prinsip: "Prinsip 1 (Legalitas)",
+    file: "shm_budi.pdf",
+    catatan: "-",
+    status: "pending",
+  },
+  {
+    id: 2,
+    nama: "Pak Joko Widodo",
+    jenisDok: "Bukti Pembelian Bibit",
+    prinsip: "Prinsip 4 (Good Agriculture)",
+    file: "nota_bibit.pdf",
+    catatan: "Foto kurang jelas",
+    status: "pending",
+  },
+];
+
+const KemitraanPetani = () => {
+  // State manajemen tab
+  const [activeTab, setActiveTab] = useState("validasi");
+
+  // State data dinamis untuk Validasi
+  const [pendingPanen, setPendingPanen] = useState([]);
+  const [pendingTanam, setPendingTanam] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // --- TAMBAHKAN STATE INI ---
+  const [petaniMembers, setPetaniMembers] = useState([]);
+  const [loadingManajemen, setLoadingManajemen] = useState(false);
+
+  // --- STATE MODAL REJECT ---
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [selectedRejectItem, setSelectedRejectItem] = useState({
+    id: null,
+    type: null, // 'panen' atau 'tanam'
+  });
+
+  /**
+   * Mengambil data validasi (Rencana Panen & Rencana Tanam) dari API.
+   * (SESUAI BE MAHAR):
+   * - Endpoint GET Rencana Panen Pending
+   * - Endpoint GET Rencana Tanam (Blok) Pending
+   * Token diambil dari localStorage untuk otentikasi Bearer.
+   */
+  const fetchValidasiData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      // (SESUAI BE MAHAR): FETCH RENCANA PANEN PENDING
+      const resPanen = await fetch(
+        API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING,
+        { headers }
+      );
+      const dataPanen = await resPanen.json();
+
+      // (SESUAI BE MAHAR): FETCH RENCANA TANAM (BLOK) PENDING
+      const resTanam = await fetch(
+        API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK,
+        { headers }
+      );
+      const dataTanam = await resTanam.json();
+
+      if (Array.isArray(dataPanen)) setPendingPanen(dataPanen);
+      if (Array.isArray(dataTanam)) setPendingTanam(dataTanam);
+    } catch (error) {
+      console.error("Gagal mengambil data validasi:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Mengambil data daftar petani yang sudah disetujui
+   */
+  const fetchPetaniMembers = async () => {
+    setLoadingManajemen(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_ENDPOINTS.USER.KEBUN.PETANI_MEMBERS, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data anggota petani");
+      }
+
+      const data = await res.json();
+      setPetaniMembers(data);
+    } catch (error) {
+      console.error("Error fetching petani members:", error);
+    } finally {
+      setLoadingManajemen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "validasi") {
+      fetchValidasiData();
+    } else if (activeTab === "manajemen") {
+      fetchPetaniMembers(); // <-- Panggil di sini
+    }
+  }, [activeTab]);
+
+  // --- MODAL HANDLERS ---
+  const openRejectModal = (id, type) => {
+    setSelectedRejectItem({ id, type });
+    setRejectReason("");
+    setShowRejectModal(true);
+  };
+
+  const closeRejectModal = () => {
+    setShowRejectModal(false);
+    setSelectedRejectItem({ id: null, type: null });
+  };
+
+  /**
+   * Fungsi helper generic untuk mengirim request approval/rejection ke Backend.
+   * (SESUAI BE MAHAR):
+   * - Body request berisi `status_approval` ('disetujui' | 'ditolak').
+   * - Jika ditolak, `catatan_penolakan` wajib dikirim.
+   */
+  const sendApprovalRequest = async (url, isApprove, reason, contextName) => {
+    const payload = {
+      status_approval: isApprove ? "disetujui" : "ditolak",
+    };
+
+    // Hanya kirim catatan jika ditolak & ada isinya
+    if (!isApprove && reason) {
+      payload.catatan_penolakan = reason;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const textResponse = await res.text();
+        let errorMessage = `Gagal memproses ${contextName} (Status: ${res.status})`;
+        try {
+          const jsonResponse = JSON.parse(textResponse);
+          if (jsonResponse.detail) {
+            errorMessage += `: ${JSON.stringify(jsonResponse.detail)}`;
+          } else if (jsonResponse.message) {
+            errorMessage += `: ${jsonResponse.message}`;
+          }
+        } catch {
+          errorMessage += `: ${textResponse.substring(0, 100)}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      alert(`${contextName} berhasil ${isApprove ? "disetujui" : "ditolak"}`);
+      fetchValidasiData(); // Refresh data tabel/grid setelah sukses
+    } catch (error) {
+      console.error(`Error ${contextName}:`, error);
+      alert(error.message);
+    }
+  };
+
+  // (SESUAI BE MAHAR): Handler Approve/Reject Rencana Panen
+  const processActionPanen = async (id, isApprove, reason = null) => {
+    const url = API_ENDPOINTS.FARM.KEBUN.APPROVAL.ACTION_RENCANA_PANEN(id);
+    await sendApprovalRequest(url, isApprove, reason, "Rencana Panen");
+  };
+
+  // (SESUAI BE MAHAR): Handler Approve/Reject Rencana Tanam (Blok)
+  const processActionTanam = async (id, isApprove, reason = null) => {
+    const url = API_ENDPOINTS.FARM.KEBUN.APPROVAL.APPROVE_BLOK(id);
+    await sendApprovalRequest(url, isApprove, reason, "Rencana Tanam");
+  };
+
+  const handleSubmitRejection = async () => {
+    if (!rejectReason.trim()) {
+      alert("Harap isi alasan penolakan.");
+      return;
+    }
+
+    if (selectedRejectItem.type === "panen") {
+      await processActionPanen(selectedRejectItem.id, false, rejectReason);
+    } else if (selectedRejectItem.type === "tanam") {
+      await processActionTanam(selectedRejectItem.id, false, rejectReason);
+    }
+
+    closeRejectModal();
+  };
+
+  return (
+    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
+      {/* --- HEADER --- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-red-50 rounded-2xl">
+            {activeTab === "validasi" ? (
+              <ShieldCheck className="w-8 h-8 text-[#B5302D]" />
+            ) : (
+              <Users className="w-8 h-8 text-[#B5302D]" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
+              Kemitraan Petani
+            </h1>
+            <p className="text-gray-500 text-xs sm:text-sm">
+              {activeTab === "validasi"
+                ? "Validasi rencana kerja dan dokumen sertifikasi petani."
+                : "Kelola data profil dan progres ISPO anggota petani."}
+            </p>
+          </div>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
+          <button
+            onClick={() => setActiveTab("validasi")}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+              activeTab === "validasi"
+                ? "bg-white text-[#B5302D] shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span className="hidden sm:inline">Validasi Pengajuan</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("manajemen")}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+              activeTab === "manajemen"
+                ? "bg-white text-[#B5302D] shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Manajemen Petani</span>
+          </button>
+        </div>
+      </div>
+
+      {/* --- CONTENT AREA --- */}
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+        {activeTab === "validasi" && (
+          <>
+            {/* VALIDASI RENCANA PANEN (SESUAI BE MAHAR: RencanaPanenResponse) */}
+            <SectionCard title="Validasi Rencana Panen">
+              <p className="text-xs text-gray-500 mb-6 -mt-4">
+                Daftar pengajuan rencana panen petani yang harus divalidasi.
+              </p>
+
+              {loading ? (
+                <div className="text-center py-10 text-gray-400 text-xs">
+                  Memuat data...
+                </div>
+              ) : pendingPanen.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-xs">
+                  Tidak ada rencana panen yang harus divalidasi.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  {pendingPanen.map((item) => (
+                    <ValidationCard
+                      key={item.id}
+                      title={item.nama_blok || `Unit ${item.id}`}
+                    >
+                      <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
+                        {/* --- DATA UTAMA: Mapping response BE Rencana Panen --- */}
+                        <DetailRow
+                          label="Nama Petani"
+                          value={item.nama_petani}
+                        />
+
+                        <DetailRow
+                          label="Siklus Panen Ke"
+                          value={item.nomor_siklus || "-"}
+                        />
+
+                        <DetailRow
+                          label="Tanggal Rencana"
+                          value={item.tanggal_rencana_panen}
+                        />
+                        <DetailRow
+                          label="Usia Tanaman"
+                          value={item.usia_tanaman}
+                        />
+                        <DetailRow
+                          label="Luas Panen (Ha)"
+                          value={item.luas_lahan_dipanen}
+                        />
+                        <DetailRow
+                          label="Jenis Sawit"
+                          value={item.jenis_sawit || "-"}
+                        />
+                        <DetailRow
+                          label="Varietas (jika tenera)"
+                          value={item.nama_varietas || "-"}
+                        />
+                        {item.catatan_penolakan && (
+                          <div className="mt-3 pt-2 border-t border-dashed border-gray-200">
+                            <p className="font-bold text-red-500 mb-1">
+                              Catatan Penolakan Sebelumnya:
+                            </p>
+                            <p className="text-gray-600 pl-1 italic">
+                              "{item.catatan_penolakan}"
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Estimasi TBS (Perhitungan BE) */}
+                        <div className="pt-2 mt-2 border-t border-gray-100 flex justify-between font-bold text-[#B5302D]">
+                          <span>Estimasi TBS:</span>
+                          <span>{item.estimasi_total_tbs_kg} Kg</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons: Trigger API Action */}
+                      <div className="absolute bottom-4 right-4 flex gap-2">
+                        <button
+                          onClick={() => openRejectModal(item.id, "panen")}
+                          className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                          title="Tolak"
+                        >
+                          <XCircle className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => processActionPanen(item.id, true)}
+                          className="p-1.5 rounded-lg border border-green-200 text-green-500 hover:bg-green-50 transition-colors"
+                          title="Setujui"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </ValidationCard>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
+            {/* VALIDASI RENCANA TANAM (SESUAI BE MAHAR: BlokResponse) */}
+            <SectionCard title="Validasi Rencana Tanam">
+              <p className="text-xs text-gray-500 mb-6 -mt-4">
+                Daftar pengajuan rencana replanting atau tanam baru (Blok
+                Lahan).
+              </p>
+
+              {loading ? (
+                <div className="text-center py-10 text-gray-400 text-xs">
+                  Memuat data...
+                </div>
+              ) : pendingTanam.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-xs">
+                  Tidak ada rencana tanam pending.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  {pendingTanam.map((item) => (
+                    <ValidationCard
+                      key={item.id}
+                      title={item.nama_unit || `Blok #${item.id}`}
+                    >
+                      <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
+                        {/* --- DATA UMUM --- */}
+                        <DetailRow
+                          label="Tanggal Tanam"
+                          value={item.tanggal_tanam_blok}
+                        />
+                        <DetailRow
+                          label="Luas Unit (Ha)"
+                          value={item.luas_unit}
+                        />
+
+                        {/* Info Bibit */}
+                        <DetailRow
+                          label="Jenis Bibit"
+                          value={item.jenis_bibit}
+                        />
+                        <DetailRow
+                          label="Varietas"
+                          value={item.varietas_bibit_nama || "-"}
+                        />
+
+                        <DetailRow
+                          label="Jml. Bibit Total"
+                          value={item.jumlah_total_tanaman}
+                        />
+                        <DetailRow
+                          label="Tanaman/Ha"
+                          value={item.jumlah_tanaman_per_ha}
+                        />
+
+                        <DetailRow
+                          label="Jarak Tanam"
+                          value={
+                            item.jarak_tanam === "Lainnya"
+                              ? item.jarak_tanam_lainnya
+                              : item.jarak_tanam
+                          }
+                        />
+
+                        {/* --- LOGIKA KONDISI LAHAN --- */}
+                        <div className="pt-2 mt-2 border-t border-gray-100 font-semibold text-gray-900 mb-1">
+                          Kondisi Lahan
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 mb-2">
+                          <DetailRow
+                            label="Jenis Tanah"
+                            value={item.jenis_tanah}
+                          />
+                          <DetailRow
+                            label="Jenis Lahan"
+                            value={item.jenis_lahan}
+                          />
+                        </div>
+
+                        {/* A. LOGIKA MINERAL */}
+                        {item.jenis_tanah === "Mineral" && (
+                          <>
+                            {/* Terasering (Miring/Konservasi) */}
+                            {(item.jenis_lahan === "Miring" ||
+                              item.jenis_lahan === "Konservasi") && (
+                              <div className="bg-yellow-50 p-2 rounded border border-yellow-100 mt-1">
+                                <DetailRow
+                                  label="Terasering"
+                                  // Cek jika nilainya 'Lainnya', ambil dari field _lainnya
+                                  value={
+                                    item.jenis_terasering_mineral === "Lainnya"
+                                      ? item.jenis_terasering_mineral_lainnya
+                                      : item.jenis_terasering_mineral || "-"
+                                  }
+                                />
+                                {item.dok_bukti_terasering_url && (
+                                  <div className="flex justify-between items-center mt-1 pt-1 border-t border-dashed border-gray-300">
+                                    <span className="text-gray-500 font-medium italic text-[10px]">
+                                      Bukti:
+                                    </span>
+                                    {/* (SESUAI BE MAHAR): getFileUrl helper */}
+                                    <a
+                                      href={getFileUrl(
+                                        item.dok_bukti_terasering_url,
+                                        "FARM"
+                                      )}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-blue-600 flex items-center gap-1 hover:underline font-bold text-[10px]"
+                                    >
+                                      Lihat File{" "}
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Drainase (Khusus Konservasi) */}
+                            {item.jenis_lahan === "Konservasi" && (
+                              <div className="bg-blue-50 p-2 rounded border border-blue-100 mt-1">
+                                <DetailRow
+                                  label="Drainase"
+                                  value={
+                                    item.jenis_drainase_mineral === "Lainnya"
+                                      ? item.jenis_drainase_mineral_lainnya
+                                      : item.jenis_drainase_mineral || "-"
+                                  }
+                                />
+                                {item.dok_bukti_drainase_url && (
+                                  <div className="flex justify-between items-center mt-1 pt-1 border-t border-dashed border-gray-300">
+                                    <span className="text-gray-500 font-medium italic text-[10px]">
+                                      Bukti:
+                                    </span>
+                                    <a
+                                      href={getFileUrl(
+                                        item.dok_bukti_drainase_url,
+                                        "FARM"
+                                      )}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-blue-600 flex items-center gap-1 hover:underline font-bold text-[10px]"
+                                    >
+                                      Lihat File{" "}
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {/* LOGIKA GAMBUT */}
+                        {item.jenis_tanah === "Gambut" && (
+                          <div className="bg-emerald-50 p-2 rounded border border-emerald-100 mt-2 space-y-1">
+                            <div className="flex items-center gap-1 text-emerald-800 border-b border-emerald-200 pb-1 mb-1 font-bold">
+                              Detail Gambut
+                            </div>
+
+                            <DetailRow
+                              label="Nama Lahan"
+                              value={item.nama_lahan_gambut || "-"}
+                            />
+                            <DetailRow
+                              label="Lapisan Mineral"
+                              value={
+                                item.gambut_lapisan_mineral?.join(", ") || "-"
+                              }
+                            />
+                            <DetailRow
+                              label="Kematangan"
+                              value={item.gambut_kematangan?.join(", ") || "-"}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="absolute bottom-4 right-4 flex gap-2">
+                        <button
+                          onClick={() => openRejectModal(item.id, "tanam")}
+                          className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                          title="Tolak"
+                        >
+                          <XCircle className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => processActionTanam(item.id, true)}
+                          className="p-1.5 rounded-lg border border-green-200 text-green-500 hover:bg-green-50 transition-colors"
+                          title="Setujui"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </ValidationCard>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
+            {/* 3. VALIDASI DOKUMEN  (Dummy data) */}
+            <SectionCard title="Validasi Dokumen Sertifikasi">
+              <p className="text-xs text-gray-500 mb-6 -mt-4">
+                Tabel pengajuan dokumen sertifikasi oleh petani yang harus dicek
+                kebun.
+              </p>
+
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                      <th className="p-4 font-bold rounded-tl-xl">No</th>
+                      <th className="p-4 font-bold">Nama Petani</th>
+                      <th className="p-4 font-bold">Jenis Dokumen</th>
+                      <th className="p-4 font-bold">Prinsip ISPO</th>
+                      <th className="p-4 font-bold">File Dokumen</th>
+                      <th className="p-4 font-bold">Catatan</th>
+                      <th className="p-4 font-bold text-center rounded-tr-xl">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-xs text-gray-700 bg-white">
+                    {MOCK_DOKUMEN_SERTIFIKASI.map((item, index) => (
+                      <tr
+                        key={item.id}
+                        className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                      >
+                        <td className="p-4 font-bold text-center">
+                          {index + 1}
+                        </td>
+                        <td className="p-4 font-bold">{item.nama}</td>
+                        <td className="p-4 font-medium">{item.jenisDok}</td>
+                        <td className="p-4 text-gray-500">{item.prinsip}</td>
+                        <td className="p-4">
+                          <button className="flex items-center gap-1 text-blue-600 hover:underline">
+                            <FileText className="w-3 h-3" /> Lihat
+                          </button>
+                        </td>
+                        <td className="p-4 italic text-gray-400">
+                          {item.catatan}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                              title="Tolak"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              className="text-green-500 hover:bg-green-50 p-1 rounded transition-colors"
+                              title="Validasi"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </>
+        )}
+
+        {/* TAB MANAJEMEN */}
+        {activeTab === "manajemen" && (
+          <SectionCard title="Manajemen Petani">
+            <p className="text-xs text-gray-500 mb-6 -mt-4">
+              Daftar lokasi kebun yang dimiliki dan profil detail petani mitra.
+            </p>
+
+            {/* --- TAMBAHKAN LOGIKA LOADING & KOSONG --- */}
+            {loadingManajemen ? (
+              <div className="text-center py-10 text-gray-400 text-xs">
+                Memuat data petani...
+              </div>
+            ) : petaniMembers.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-xs">
+                Belum ada petani yang bergabung.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {petaniMembers.map((petani) => (
+                  <PetaniProfileCard key={petani.id} data={petani} />
+                ))}
+              </div>
+            )}
+          </SectionCard>
+        )}
+      </div>
+
+      {/* ================= MODAL POPUP REJECT ================= */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+            {/* Header Modal */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Tolak Pengajuan
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Berikan alasan mengapa pengajuan ini ditolak.
+                </p>
+              </div>
+            </div>
+
+            {/* Input Reason */}
+            <textarea
+              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#B5302D] focus:border-transparent min-h-[100px]"
+              placeholder="Contoh: Dokumen kurang jelas, data tidak sesuai..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              autoFocus
+            />
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closeRejectModal}
+                className="px-4 py-2 text-sm font-bold text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSubmitRejection}
+                className="px-4 py-2 text-sm font-bold text-white bg-[#B5302D] rounded-lg shadow-lg shadow-red-200 hover:bg-[#962523] transition-all"
+              >
+                Kirim Penolakan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ===================== COMPONENT HELPERS ===================== */
+
+const SectionCard = ({ title, children }) => {
+  return (
+    <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+      {/* Decorative Header Line */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
+
+      <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+};
+
+//Komponen ValidationCard (Isi Item Validasi)
+const ValidationCard = ({ title, children }) => {
+  // State untuk dropdown: Default False (Tertutup)
+  // Karena useState ada di sini, setiap card INDEPENDEN.
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div
+      className={`rounded-xl border border-gray-200 overflow-hidden relative shadow-sm hover:shadow-md transition-all bg-gray-50/50 ${
+        isOpen ? "pb-14" : ""
+      }`}
+    >
+      {/* Header Dropdown  */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-[#EF8523] text-white px-4 py-3 flex justify-between items-center cursor-pointer select-none hover:bg-[#d6731b] transition-colors"
+      >
+        <span className="font-bold text-xs sm:text-sm">{title}</span>
+        <ChevronDown
+          className={`w-4 h-4 transition-transform duration-300 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </div>
+
+      {/* Content Body (Only rendered when isOpen) */}
+      {isOpen && (
+        <div className="p-5 bg-white animate-in slide-in-from-top-2">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+//Komponen PetaniProfileCard (Manajemen Petani)
+const PetaniProfileCard = ({ data }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Buat URL Foto Profil. Gunakan UI-Avatars jika foto_profil_url kosong/null
+  const fotoProfilUrl = data.foto_profil_url 
+    ? getFileUrl(data.foto_profil_url, "USER") 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama_lengkap)}&background=random`;
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-[#EF8523] px-6 py-3 flex justify-between items-center text-white cursor-pointer hover:bg-[#d6731b] transition-colors"
+      >
+        <span className="font-bold text-sm">{data.nama_lengkap}</span> {/* Sesuaikan key BE */}
+        <ChevronDown
+          className={`w-5 h-5 transition-transform duration-300 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </div>
+
+      {isOpen && (
+        <div className="p-6 flex flex-col lg:flex-row gap-8 items-center lg:items-start animate-in slide-in-from-top-2">
+          <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start flex-1 w-full">
+            <img
+              src={fotoProfilUrl}
+              alt={data.nama_lengkap}
+              className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 shadow-md"
+            />
+            <div className="space-y-2 text-xs w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <p className="font-bold text-gray-500">Email:</p>
+                  <p className="text-gray-800">{data.email}</p>
+                </div>
+                <div>
+                  <p className="font-bold text-gray-500">No Telepon:</p>
+                  <p className="text-gray-800">{data.no_hp}</p> {/* Sesuaikan key BE */}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-500">Status:</p>
+                  <p className="text-gray-800 font-bold capitalize">{data.status || "Approved"}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="font-bold text-gray-500">Alamat:</p>
+                  <p className="text-gray-800">{data.alamat || "-"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-center lg:items-end gap-4">
+             {/* Dummy Score ISPO karena belum ada data skor dari UserProfilRespon BE */}
+            <div className="flex gap-3 justify-center">
+              {[0, 0, 0, 0, 0].map((score, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-1">
+                  <div className="w-10 h-10 rounded-full bg-gray-300 text-white flex items-center justify-center text-[10px] font-bold shadow-md border-2 border-white">
+                    N/A
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DetailRow = ({ label, value }) => (
+  <div className="flex justify-between border-b border-gray-50 pb-1 last:border-0">
+    <span className="font-medium text-gray-500">{label} :</span>
+    <span className="font-bold text-gray-800 text-right">{value}</span>
+  </div>
+);
+
+export default KemitraanPetani;
