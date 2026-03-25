@@ -44,10 +44,10 @@ const DashboardAdmin = () => {
 
 
       setUserData({
-        nama: profile.nama_lengkap || profile.nama || "-",
-        email: profile.email || "-",
-        role: profile.role || "-",
-        foto: profile.foto_profil || "",
+        nama: profile.nama_lengkap || profile.nama,
+        email: profile.email,
+        role: "Admin",
+        foto: profile.foto_profil,
       });
     } catch (err) {
       console.error("Gagal memuat profil admin:", err);

@@ -1,6 +1,6 @@
-// src/routes/PetaniRoutes.jsx
+// src/routes/MandorRoutes.jsx
 // -------------------------------------------------------------
-// File ini mengatur semua route (halaman) untuk role PETANI.
+// File ini mengatur semua route (halaman) untuk role MANDOR.
 // -------------------------------------------------------------
 
 import { Routes, Route } from "react-router-dom";
@@ -8,7 +8,7 @@ import PrivateRoute from "../components/PrivateRoute";
 import MandorLayout from "../layouts/MandorLayout";
 import { ROLES } from "../config/constants";
 
-// Import halaman khusus role Petani
+// Import halaman khusus role MANDOR
 import DashboardMandor from "../Pages/Role Mandor/DashboardMandor/DashboardMandor";
 import LuasLahan from "../Pages/Role Mandor/DashboardMandor/LuasLahan";
 import PantauISPO from "../Pages/Role Mandor/PantauISPO";

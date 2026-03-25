@@ -82,7 +82,7 @@ export default function Masuk() {
         navigate(targetPath, { replace: true });
       } else {
         console.error(
-          `❌ Role '${normalizedRole}' tidak dikenali di roleRedirect!`,
+          `❌ Role '${normalizedRole}' tidak terdaftar!`,
         );
         alert(`Role '${normalizedRole}' tidak valid silahkan hubungi admin.`);
       }

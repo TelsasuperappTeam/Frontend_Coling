@@ -7,8 +7,8 @@ import { API_ENDPOINTS } from "../config/constants";
 const ROLES = {
   MANDOR: "petani", // BE menerima "petani", tapi di FE dilabeli "Mandor"
   KEBUN: "kebun",
-  ESTATE_MANAGER: "estate manager",
-  GENERAL_MANAGER_DISTRIK: "general manager distrik",
+  ESTATE_MANAGER: "estate_manager",
+  GENERAL_MANAGER_DISTRIK: "general_manager_distrik",
   TRANSPORT: "transport",
   PABRIK: "pabrik",
 };

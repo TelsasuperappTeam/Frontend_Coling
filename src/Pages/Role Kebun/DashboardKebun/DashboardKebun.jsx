@@ -75,7 +75,7 @@ export default function DashboardKebun() {
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
     nama_kebun: "",
-    role: ROLES.KEBUN,
+    role: "Kebun",
     email: "",
     nomor_telepon: "",
     alamat_kebun: "",
@@ -479,7 +479,7 @@ export default function DashboardKebun() {
 
         {/* CARD 2: PERMINTAAN VALIDASI */}
         <Card
-          title="Permintaan Validasi"
+          title="Permintaan Validasi Operasional Perkebunan "
           icon={FileText}
           footer={
             <button

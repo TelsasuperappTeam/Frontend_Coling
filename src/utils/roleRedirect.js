@@ -9,8 +9,8 @@ export const getRoleRedirectPath = (role) => {
     [ROLES.ADMIN]: "/admin/dashboard",
     [ROLES.MANDOR]: "/petani/dashboard",
     [ROLES.KEBUN]: "/kebun/dashboard",
-    [ROLES.ESTATE_MANAGER]: "/estate-manager/dashboard",
-    [ROLES.GENERAL_MANAGER_DISTRIK]: "/general-manager-distrik/dashboard",
+    [ROLES.ESTATE_MANAGER]: "/estate_manager/dashboard",
+    [ROLES.GENERAL_MANAGER_DISTRIK]: "/general_manager_distrik/dashboard",
     [ROLES.TRANSPORT]: "/transport/dashboard",
     [ROLES.PABRIK]: "/pabrik/dashboard",
   };

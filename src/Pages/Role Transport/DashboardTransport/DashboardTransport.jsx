@@ -40,7 +40,7 @@ export default function DashboardLogistik() {
   // --- STATE PROFILE  ---
   const [profile, setProfile] = useState({
     nama_logistik: "",
-    role: ROLES.LOGISTIK,
+    role: ROLES.TRANSPORT,
     email: "",
     nomor_telepon: "",
     alamat_pabrik: "",
@@ -80,7 +80,7 @@ export default function DashboardLogistik() {
         // Mapping Data Backend ke State Frontend
         setProfile({
           nama_logistik: userData.nama_lengkap || "-",
-          role: userData.role || ROLES.LOGISTIK,
+          role: "Transport",
           email: userData.email || "-",
           nomor_telepon: userData.no_hp || "-",
           alamat_pabrik: userData.alamat || "",
@@ -250,7 +250,7 @@ export default function DashboardLogistik() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Dashboard Utama Fitur Logistik
+        Dashboard Utama Fitur Transport
       </h2>
 
       {/* SECTION 2 WIDGETS */}

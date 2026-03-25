@@ -56,7 +56,7 @@ export default function DashboardPabrik() {
   // --- STATE PROFILE  ---
   const [profile, setProfile] = useState({
     nama_pabrik: "",
-    role: ROLES.PABRIK,
+    role: "Pabrik",
     email: "",
     nomor_telepon: "",
     alamat_pabrik: "",

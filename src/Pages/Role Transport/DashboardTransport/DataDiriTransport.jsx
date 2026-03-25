@@ -5,14 +5,11 @@ import {
   X,
   Save,
   Camera,
-  Move,
-  Minus,
   MapPin,
   Loader2,
   Lock,
   Info,
   CheckCircle2,
-  Navigation,
   Map as MapIcon,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../../config/constants";

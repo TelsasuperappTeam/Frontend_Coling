@@ -42,7 +42,7 @@ function AppContent() {
   // Menyesuaikan rolePaths agar Navbar dan Footer tidak muncul di rute-rute ini
   const rolePaths = [
     `/${ROLES.ADMIN}`,
-    `/${ROLES.MANDOR}`,                 // Mengarah ke path "petani"
+    `/${ROLES.MANDOR}`,
     `/${ROLES.KEBUN}`,
     `/${ROLES.ESTATE_MANAGER}`,         // Mengarah ke path "estate manager"
     `/${ROLES.GENERAL_MANAGER_DISTRIK}`, // Mengarah ke path "general manager distrik"

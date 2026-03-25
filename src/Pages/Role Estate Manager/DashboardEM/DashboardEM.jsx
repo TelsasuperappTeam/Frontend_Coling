@@ -75,7 +75,7 @@ export default function DashboardEM() {
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
     nama_kebun: "",
-    role: ROLES.KEBUN,
+    role: "Estate Manager",
     email: "",
     nomor_telepon: "",
     alamat_kebun: "",
@@ -156,7 +156,7 @@ export default function DashboardEM() {
 
         setProfile({
           nama_kebun: userData.nama_lengkap || "-",
-          role: userData.role || ROLES.KEBUN,
+          role: "Estate Manager",
           email: userData.email || "-",
           nomor_telepon: userData.no_hp || "-",
           alamat_kebun: userData.alamat || "",
@@ -408,7 +408,7 @@ export default function DashboardEM() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Dashboard Fitur Utama Kebun
+        Dashboard Fitur Utama Estate Manager
       </h2>
 
       {/* =========================================
@@ -479,7 +479,7 @@ export default function DashboardEM() {
 
         {/* CARD 2: PERMINTAAN VALIDASI */}
         <Card
-          title="Permintaan Validasi"
+          title="Permintaan Validasi Operasional Perkebunan"
           icon={FileText}
           footer={
             <button

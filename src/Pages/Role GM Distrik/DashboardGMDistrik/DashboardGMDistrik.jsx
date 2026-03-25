@@ -75,7 +75,7 @@ export default function DashboardGMDistrik() {
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
     nama_kebun: "",
-    role: ROLES.KEBUN,
+    role: ROLES.GENERAL_MANAGER_DISTRIK,
     email: "",
     nomor_telepon: "",
     alamat_kebun: "",
@@ -99,35 +99,39 @@ export default function DashboardGMDistrik() {
     ],
   });
 
-  // --- MOCK DATA LAINNYA (Tetap sama sesuai request) ---
+  // Data dummy untuk progres penjualan TBS, bisa dihapus jika sudah ada API
   const [progresPenjualan] = useState([
     {
       id: 1,
+      kebun: "Kebun Mahar",
       pabrik: "PT. Agro Lestari Pabrik",
       tanggal: "20 Okt 2023",
       status: "Diterima",
     },
     {
       id: 2,
+      kebun: "Kebun Dhimas",
       pabrik: "PT. Sawit Makmur",
       tanggal: "21 Okt 2023",
       status: "Ditolak",
     },
   ]);
 
+  // Data dummy untuk pengiriman TBS, bisa dihapus jika sudah ada API
   const [pengirimanTBS] = useState([
     {
       id: 1,
+      kebun: "Kebun Mahar",
       pabrik: "PT. Agro Lestari Pabrik",
       steps: ["Proses", "Penjemputan", "Pengiriman"],
     },
     {
       id: 2,
+      kebun: "Kebun Dhimas",
       pabrik: "PT. Sawit Makmur",
       steps: ["Proses", "Penjemputan", "Pengiriman"],
     },
   ]);
-
   // --- HELPER AUTH ---
   const getToken = () =>
     localStorage.getItem("accessToken") || localStorage.getItem("token");
@@ -156,7 +160,7 @@ export default function DashboardGMDistrik() {
 
         setProfile({
           nama_kebun: userData.nama_lengkap || "-",
-          role: userData.role || ROLES.KEBUN,
+          role: "General Manager Distrik",
           email: userData.email || "-",
           nomor_telepon: userData.no_hp || "-",
           alamat_kebun: userData.alamat || "",
@@ -408,7 +412,7 @@ export default function DashboardGMDistrik() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Dashboard Fitur Utama Kebun
+        Dashboard Fitur Utama General Manager Distrik
       </h2>
 
       {/* =========================================
@@ -416,7 +420,7 @@ export default function DashboardGMDistrik() {
          ========================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* CARD 1: PERMINTAAN RELASI (Design: Clean List with Actions) */}
-        <Card title="Permintaan Relasi Petani" icon={User}>
+        <Card title="Permintaan Relasi" icon={User}>
           {isLoadingPending ? (
             <div className="h-full flex items-center justify-center text-gray-400">
               <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
@@ -426,7 +430,9 @@ export default function DashboardGMDistrik() {
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
                 <Check className="w-8 h-8 text-gray-300" />
               </div>
-              <p className="text-sm font-medium">Tidak ada permintaan baru.</p>
+              <p className="text-sm font-medium">
+                Tidak ada data permintaan validasi relasi
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -435,22 +441,35 @@ export default function DashboardGMDistrik() {
                   key={item.id}
                   className="group border border-gray-100 rounded-2xl p-4 relative bg-white hover:bg-orange-50/30 hover:border-orange-200 transition-all duration-300 shadow-sm"
                 >
-                  {/* Indikator Garis Kiri */}
-                  <div className="absolute left-0 top-4 bottom-4 w-1 bg-[#EF8523] rounded-r-full"></div>
+                  <div className="pl-3 pr-20 space-y-1.5 py-1">
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">Nama</span>
+                      <span className="font-bold text-gray-800">
+                        : {item.nama_lengkap}
+                      </span>
+                    </div>
 
-                  <div className="pl-3 pr-16">
-                    <h4 className="font-bold text-gray-800 text-sm mb-1">
-                      {item.nama_lengkap}
-                    </h4>
-                    <div className="text-xs text-gray-500 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Phone size={12} className="text-gray-400" />{" "}
-                        {item.no_hp}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={12} className="text-gray-400" />{" "}
-                        <span className="truncate">{item.email}</span>
-                      </div>
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">
+                        No Telpon
+                      </span>
+                      <span className="text-gray-700 font-medium">
+                        : {item.no_hp}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">Email</span>
+                      <span className="text-gray-700 font-medium truncate">
+                        : {item.email}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">Role</span>
+                      <span className="text-gray-700 font-medium capitalize">
+                        : {item.role}
+                      </span>
                     </div>
                   </div>
 
@@ -478,107 +497,106 @@ export default function DashboardGMDistrik() {
         </Card>
 
         {/* CARD 2: PERMINTAAN VALIDASI */}
-        <Card
-          title="Permintaan Validasi"
-          icon={FileText}
-          footer={
-            <button
-              // TAMBAHKAN ONCLICK DI SINI:
-              onClick={() => navigate("/kebun/kemitraanpetani")}
-              className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
-            >
-              Detail Validasi
-            </button>
-          }
-        >
-          {isValidasiLoading ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Loop Validasi Data (Tanam, Panen, Dokumen) */}
-              {Object.entries({
-                "Rencana Tanam": validasiData.rencanaTanam,
-                "Rencana Panen": validasiData.rencanaPanen,
-                "Dokumen ISPO": validasiData.dokumenISPO, // Static
-              }).map(([title, items], idx) => (
-                <div
-                  key={idx}
-                  className="bg-gray-50/80 rounded-xl p-4 border border-gray-100"
-                >
-                  <h4 className="text-[#B5302D] text-[11px] uppercase font-bold tracking-wider mb-3 border-b border-gray-200 pb-1">
-                    Validasi {title}
-                  </h4>
-                  {items.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">
-                      Tidak ada data pending.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {items.map((item, i) => (
-                        <li
-                          key={item.id || i}
-                          className="flex items-center justify-between text-xs group cursor-pointer"
-                        >
-                          <span className="font-medium text-gray-700 group-hover:text-black transition-colors flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-[#EF8523]"></span>
-                            {/* LOGIC DISPLAY NAMA (Sesuai Data Source) */}
-                            {title === "Dokumen ISPO" ? (
-                              item.nama
-                            ) : (
-                              <span>
-                                {item.nama_petani}
-                                <span className="text-[10px] text-gray-400 ml-1 font-normal">
-                                  -{" "}
-                                  {title === "Rencana Tanam"
-                                    ? item.nama_unit || `Blok #${item.id}`
-                                    : item.nama_blok || `Unit ${item.id}`}
-                                </span>
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded border border-gray-200">
-                            Pending
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+        <Card title="Permintaan Validasi Operasional Perkebunan">
+          {/* Background abu-abu menutupi padding bawaan Card dengan margin negatif */}
+          <div className="-m-4 sm:-m-5 p-4 sm:p-5 h-full flex flex-col">
+            {isValidasiLoading ? (
+              <div className="h-full flex items-center justify-center text-gray-400 flex-grow">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              </div>
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="space-y-4 flex-grow">
+                  {/* Loop Validasi Data (Tanam, Panen, Dokumen) */}
+                  {Object.entries({
+                    "Rencana Tanam": validasiData.rencanaTanam,
+                    "Rencana Panen": validasiData.rencanaPanen,
+                    "Dokumen ISPO": validasiData.dokumenISPO, // Static
+                  }).map(([title, items], idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white rounded-xl p-4 shadow-sm"
+                    >
+                      <h4 className="text-[#B5302D] text-sm sm:text-[15px] font-medium mb-2">
+                        Permintaan Validasi {title} :
+                      </h4>
+                      {items.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic pl-5">
+                          Tidak ada data pending.
+                        </p>
+                      ) : (
+                        <ul className="list-disc pl-6 space-y-1">
+                          {items.map((item, i) => {
+                            // Logic Data Dinamis: Menangkap nama mandor/petani & asal kebun
+                            const namaMandor =
+                              title === "Dokumen ISPO"
+                                ? item.nama
+                                : item.nama_petani;
+                            const namaKebun = item.nama_kebun || "kebun Relasi";
+
+                            return (
+                              <li
+                                key={item.id || i}
+                                className="text-[13px] font-medium text-black"
+                              >
+                                {namaMandor || "Nama Mandor"} ({namaKebun}) :
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Tombol Liat Detail di pojok kanan bawah area abu-abu */}
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={() => navigate("/kebun/kemitraanpetani")}
+                    className="bg-[#B5302D] text-white text-[11px] sm:text-xs px-5 py-2 rounded-lg font-medium hover:bg-red-800 transition-all shadow-sm"
+                  >
+                    Liat Detail
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
 
-        {/* CARD 3: PROGRES PENJUALAN TBS (Design: Timeline Modern) */}
-        <Card title="Progres Penjualan TBS" icon={Calendar}>
+        {/* CARD 3: PROGRES PENJUALAN TBS */}
+        <Card title="Progres Penjualan TBS Relasi" icon={Calendar}>
           <div className="space-y-0">
             {progresPenjualan.map((item, index) => (
               <div key={item.id} className="relative pl-6 py-3 group">
-                {/* Garis Konektor Vertical */}
                 {index !== progresPenjualan.length - 1 && (
                   <div className="absolute left-[9px] top-6 bottom-[-12px] w-0.5 bg-gray-200 group-hover:bg-green-200 transition-colors"></div>
                 )}
-
-                {/* Dot Indikator */}
                 <div
                   className={`absolute left-0 top-4 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 ${
                     item.status === "Diterima" ? "bg-green-500" : "bg-red-500"
                   }`}
                 ></div>
 
-                <div className="flex justify-between items-start bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-800">
-                      {item.pabrik}
-                    </h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
-                      <Calendar size={10} /> {item.tanggal}
+                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h4 className="text-sm font-bold text-gray-800 leading-tight">
+                        {item.pabrik}
+                      </h4>
+
+                      <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
+                        {item.kebun}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                      <Calendar size={10} /> Tanggal Pengajuan: {item.tanggal}
                     </p>
                   </div>
+
+                  {/* BAGIAN KANAN: Status */}
                   <div
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
                       item.status === "Diterima"
                         ? "bg-green-50 border-green-200 text-green-700"
                         : "bg-red-50 border-red-200 text-red-700"
@@ -592,26 +610,30 @@ export default function DashboardGMDistrik() {
           </div>
         </Card>
 
-        {/* CARD 4: PENGIRIMAN TBS (Design: Stepper Modern) */}
-        <Card title="Pengiriman TBS" icon={Truck}>
+        {/* CARD 4: PENGIRIMAN TBS RELASI */}
+        <Card title="Pengiriman TBS Relasi" icon={Truck}>
           <div className="space-y-6">
             {pengirimanTBS.map((item) => (
               <div
                 key={item.id}
                 className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
               >
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  {/* Icon Truck */}
                   <div className="p-1.5 bg-white rounded-lg shadow-sm text-[#EF8523]">
                     <Truck size={16} />
                   </div>
-                  <h4 className="text-sm font-bold text-gray-800">
-                    {item.pabrik}
-                  </h4>
-                </div>
 
-                {/* Visualisasi Steps */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-bold text-gray-800 leading-tight">
+                      {item.pabrik}
+                    </h4>
+                    <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
+                      {item.kebun}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between relative px-2">
-                  {/* Garis Background */}
                   <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 -z-0 rounded-full"></div>
 
                   {item.steps.map((step, idx) => (
@@ -622,7 +644,7 @@ export default function DashboardGMDistrik() {
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm transition-all ${
                           idx === 1
-                            ? "bg-white border-[#EF8523] text-[#EF8523]" // Step Aktif (Contoh)
+                            ? "bg-white border-[#EF8523] text-[#EF8523]"
                             : "bg-white border-gray-300 text-gray-400"
                         }`}
                       >

@@ -33,6 +33,13 @@ const INITIAL_DATA = {
   pestisida: [],
 };
 
+const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+
+const isValidFileType = (file) => {
+  if (!file) return false;
+  return ALLOWED_FILE_TYPES.includes(file.type);
+};
+
 export default function Inventaris() {
   const [popupType, setPopupType] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
@@ -172,11 +179,14 @@ export default function Inventaris() {
           payload.append("nama_varietas", formData.nama_varietas || "");
 
           // Perbaikan bug: state di input namanya jumlah_tersisa, bukan jumlah
-          payload.append("jumlah_tersisa", formData.jumlah_tersisa || 0);
+          payload.append(
+            "jumlah_awal",
+            parseFloat(formData.jumlah_tersisa) || 0,
+          );
 
           // 3. Kirim File Data (Perbaikan nama key agar 100% cocok dengan BE)
-          payload.append("sertifikat_bibit_url", formData.file_sertifikat);
-          payload.append("nota_pembelian_url", formData.file_nota);
+          payload.append("file_sertifikat", formData.file_sertifikat);
+          payload.append("file_nota", formData.file_nota);
           break;
 
         case "pupuk":
@@ -192,7 +202,7 @@ export default function Inventaris() {
           if (formData.jenis_pupuk)
             payload.append("jenis_pupuk", formData.jenis_pupuk);
           payload.append(
-            "jumlah_tersisa_kg",
+            "jumlah_awal_kg",
             parseFloat(formData.jumlah_tersisa_kg) || 0,
           );
 
@@ -213,7 +223,7 @@ export default function Inventaris() {
           if (formData.jenis_pestisida)
             payload.append("jenis_pestisida", formData.jenis_pestisida);
           payload.append(
-            "jumlah_tersisa",
+            "jumlah_awal",
             parseFloat(formData.jumlah_tersisa) || 0,
           );
           if (formData.satuan) payload.append("satuan", formData.satuan);
@@ -276,14 +286,7 @@ export default function Inventaris() {
     peralatan: {
       title: "Daftar Peralatan",
       icon: <Wrench className="w-5 h-5" />,
-      columns: [
-        "Nama Alat",
-        "Jumlah",
-        "Lokasi",
-        "Kepemilikan",
-        "Catatan",
-        "Aksi",
-      ],
+      columns: ["Nama Alat", "Jumlah", "Lokasi", "Kepemilikan", "Catatan"],
       fields: [
         {
           name: "nama_alat",
@@ -359,16 +362,14 @@ export default function Inventaris() {
           name: "jenis_bibit",
           label: "Jenis Bibit",
           type: "select",
-          // PERBAIKAN: Enum disesuaikan dengan BE (Capitalize)
           options: ["Dura", "Tenera", "Pisifera"],
         },
         {
-          // PERBAIKAN: Ubah nama field agar sinkron dengan state formData & BE
           name: "nama_varietas",
           label: "Nama Varietas",
           type: "text",
-          placeholder: "Wajib diisi jika Tenera",
-          note: "Kosongkan jika Dura/Pisifera",
+          placeholder: "Contoh: Yangambi / Avros",
+          showIf: (data) => data.jenis_bibit === "Tenera",
         },
         {
           name: "asal_bibit",
@@ -385,10 +386,16 @@ export default function Inventaris() {
         },
         {
           name: "file_sertifikat",
-          label: "Sertifikat (Opsional)",
+          label: "Sertifikat Bibit",
           type: "file",
+          note: "File: JPG, PNG, PDF (Maks. 2MB)",
         },
-        { name: "file_nota", label: "Nota Pembelian (Opsional)", type: "file" },
+        {
+          name: "file_nota",
+          label: "Nota Pembelian",
+          type: "file",
+          note: "File: JPG, PNG (Maks. 2MB)",
+        },
       ],
       renderRow: (item) => [
         <span className="font-bold text-gray-700">{item.jenis_bibit}</span>,
@@ -444,13 +451,13 @@ export default function Inventaris() {
           name: "file_sertifikat",
           label: "Sertifikat/Kemasan (Wajib)",
           type: "file",
-          note: "*Wajib diisi",
+          note: "File: JPG, PNG, PDF (Maks. 2MB)",
         },
         {
           name: "file_nota",
           label: "Nota Pembelian (Wajib)",
           type: "file",
-          note: "*Wajib diisi",
+          note: "File: JPG, PNG, PDF (Maks. 2MB)",
         },
       ],
       renderRow: (item) => [
@@ -478,9 +485,9 @@ export default function Inventaris() {
       fields: [
         {
           name: "nama_pestisida",
-          label: "Nama Dagang",
+          label: "Nama Dagang/Merek",
           type: "text",
-          placeholder: "Contoh: Roundup",
+          placeholder: "Contoh: CULTAR 250 SC/ENTIBLU 450/100 SC",
         },
         { name: "tanggal_expired", label: "Tanggal Expired", type: "date" },
         {
@@ -512,8 +519,9 @@ export default function Inventaris() {
         },
         {
           name: "file_sertifikat",
-          label: "Sertifikat (Opsional)",
+          label: "Sertifikat",
           type: "file",
+          note: "File: JPG, PNG, PDF (Maks. 2MB)",
         },
       ],
       renderRow: (item) => [
@@ -577,13 +585,57 @@ export default function Inventaris() {
                     <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
                 ) : f.type === "file" ? (
-                  <input
-                    type="file"
-                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-red-100 outline-none"
-                    onChange={(e) =>
-                      setFormData({ ...formData, [f.name]: e.target.files[0] })
-                    }
-                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id={`file-${f.name}`}
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        // MENGGUNAKAN FUNGSI VALIDASI
+                        if (!isValidFileType(file)) {
+                          alert(
+                            "Jenis file tidak didukung. Gunakan PDF atau Foto (JPG/PNG).",
+                          );
+                          e.target.value = ""; // Reset input
+                          return;
+                        }
+
+                        setFormData({
+                          ...formData,
+                          [f.name]: file,
+                        });
+                      }}
+                    />
+                    <label
+                      htmlFor={`file-${f.name}`}
+                      className="flex items-center justify-between w-full border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white cursor-pointer hover:border-gray-400 transition-all"
+                    >
+                      <span className="text-gray-400 truncate pr-4">
+                        {formData[f.name]
+                          ? formData[f.name].name
+                          : `Pilih file ${f.label.toLowerCase()}...`}
+                      </span>
+                      {/* WARNA DIUBAH JADI OREN #EF8523 */}
+                      <span className="text-[#EF8523] font-bold text-xs whitespace-nowrap">
+                        CARI FILE
+                      </span>
+                    </label>
+
+                    {/* TAMBAHAN: Keterangan format agar persis lampiran */}
+                    <div className="flex items-center gap-1.5 mt-1 px-1 text-gray-500">
+                      <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                      <p className="text-[10px] italic">
+                        Format yang didukung:{" "}
+                        <span className="font-semibold uppercase">
+                          JPG, PNG, PDF
+                        </span>
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   <input
                     type={f.type}
@@ -624,7 +676,7 @@ export default function Inventaris() {
   };
 
   return (
-    <div className="p-4 sm:p-10 bg-[#FFFDFB] min-h-screen text-gray-800 font-sans">
+    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
@@ -707,7 +759,7 @@ const Section = ({ config, data, onAdd }) => (
       </div>
       <button
         onClick={onAdd}
-        className="flex items-center gap-1.5 text-[10px] sm:text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-semibold shadow-sm"
+        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
       >
         <Plus className="w-3.5 h-3.5" /> Tambah Stok
       </button>

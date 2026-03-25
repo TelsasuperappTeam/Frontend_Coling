@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Keperluan Deploy"
+git commit -m "Perubahan utama cek di Folder GM Distik"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"
