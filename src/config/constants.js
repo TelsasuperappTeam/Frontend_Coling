@@ -19,7 +19,7 @@ export const ROLES = {
 // ======================= BASE URL =======================
 // Karena backend MAHAR sudah disatukan (merged), gunakan satu alamat pusat.
 // URL Default (Fallback jika .env tidak terbaca)
-const DEFAULT_SERVER_URL = "https://api.telsa.cloud";
+const DEFAULT_SERVER_URL = "https://api.company.telsa.cloud";
 
 export const API_BASE_URLS = {
   // Mengambil dari .env (atau .env.local jika ada).

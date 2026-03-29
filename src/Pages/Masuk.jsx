@@ -12,16 +12,6 @@ export default function Masuk() {
 
   const navigate = useNavigate();
 
-  // ====== START: HAPUS BLOK INI NANTI KALAU BE SUDAH AMAN ======
-  const handleBypass = (roleDev) => {
-    localStorage.setItem("token", "dummy-bypass-token");
-    localStorage.setItem("role", roleDev);
-    localStorage.setItem("userRole", roleDev);
-    const targetPath = getRoleRedirectPath(roleDev);
-    if (targetPath) navigate(targetPath, { replace: true });
-  };
-  // ====== END: HAPUS BLOK INI NANTI KALAU BE SUDAH AMAN ========
-
   // ===================== HANDLE LOGIN =====================
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -218,62 +208,6 @@ export default function Masuk() {
           </Link>
         </p>
 
-        {/* ================================================================= */}
-        {/* [DEV MODE START] - AREA TOMBOL BYPASS (HAPUS BAGIAN INI NANTI) */}
-        {/* ================================================================= */}
-        <div className="mt-8 pt-4 border-t-2 border-dashed border-red-300 bg-red-50 p-3 rounded-lg">
-          <p className="text-center text-[10px] uppercase font-bold text-red-600 mb-2">
-            🛠️ Dev Mode: Bypass Backend Down
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            <button
-              onClick={() => handleBypass(ROLES.ADMIN)}
-              className="px-2 py-1.5 bg-gray-800 text-white text-[10px] sm:text-xs rounded hover:bg-gray-900 font-medium transition"
-            >
-              Login Admin
-            </button>
-            <button
-              onClick={() => handleBypass(ROLES.MANDOR)}
-              className="px-2 py-1.5 bg-green-600 text-white text-[10px] sm:text-xs rounded hover:bg-green-700 font-medium transition"
-            >
-              Login Mandor
-            </button>
-            <button
-              onClick={() => handleBypass(ROLES.KEBUN)}
-              className="px-2 py-1.5 bg-blue-600 text-white text-[10px] sm:text-xs rounded hover:bg-blue-700 font-medium transition"
-            >
-              Login Kebun
-            </button>
-            <button
-              onClick={() => handleBypass(ROLES.ESTATE_MANAGER)}
-              className="px-2 py-1.5 bg-teal-600 text-white text-[10px] sm:text-xs rounded hover:bg-teal-700 font-medium transition"
-            >
-              Login Estate Manager
-            </button>
-            <button
-              onClick={() => handleBypass(ROLES.GENERAL_MANAGER_DISTRIK)}
-              className="px-2 py-1.5 bg-orange-600 text-white text-[10px] sm:text-xs rounded hover:bg-orange-700 font-medium transition"
-            >
-              Login GM Distrik
-            </button>
-            <button
-              onClick={() => handleBypass(ROLES.TRANSPORT)}
-              className="px-2 py-1.5 bg-purple-600 text-white text-[10px] sm:text-xs rounded hover:bg-purple-700 font-medium transition"
-            >
-              Login Transport
-            </button>
-            <button
-              onClick={() => handleBypass(ROLES.PABRIK)}
-              className="px-2 py-1.5 bg-yellow-600 text-white text-[10px] sm:text-xs rounded hover:bg-yellow-700 font-medium transition"
-            >
-              Login Pabrik
-            </button>
-          </div>
-          <p className="text-center text-[9px] text-gray-500 mt-3">
-            Klik salah satu tombol di atas untuk masuk tanpa API.
-          </p>
-        </div>
-        {/* [DEV MODE END] ================================================== */}
       </div>
     </div>
   );
