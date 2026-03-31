@@ -8,9 +8,12 @@ const DashboardAdmin = () => {
     role: "",
   });
 
+  // State disesuaikan dengan role baru
   const [dataJumlah, setDataJumlah] = useState({
     kebun: 0,
-    petani: 0,
+    mandor: 0,
+    estateManager: 0,
+    gmDistrik: 0,
     logistik: 0,
     pabrik: 0,
     validasiKebun: 0,
@@ -21,7 +24,6 @@ const DashboardAdmin = () => {
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
-      // Mengambil Profile & Statistik Validasi
       await Promise.all([fetchAdminProfile(), fetchDashboardStats()]);
       setLoading(false);
     };
@@ -42,12 +44,11 @@ const DashboardAdmin = () => {
 
       const profile = await res.json();
 
-
       setUserData({
         nama: profile.nama_lengkap || profile.nama,
         email: profile.email,
         role: "Admin",
-        foto: profile.foto_profil,
+        foto: profile.foto_profil, // Opsional jika ingin dipakai nanti
       });
     } catch (err) {
       console.error("Gagal memuat profil admin:", err);
@@ -68,25 +69,29 @@ const DashboardAdmin = () => {
 
       const rawData = await res.json();
 
-      // --- PERBAIKAN DISINI ---
-      // Kita pastikan userList SELALU Array, apapun respon backendnya
+      // Memastikan userList SELALU Array
       let userList = [];
       if (Array.isArray(rawData)) {
         userList = rawData;
       } else if (rawData && Array.isArray(rawData.data)) {
         userList = rawData.data;
       }
-      // ------------------------
 
-      // Filter menggunakan userList yang sudah pasti Array
+      // Filter menggunakan role terbaru dari constant
       const jumlahKebun = userList.filter(
         (u) => u.role?.toLowerCase() === ROLES.KEBUN?.toLowerCase(),
       ).length;
-      const jumlahPetani = userList.filter(
-        (u) => u.role?.toLowerCase() === ROLES.PETANI?.toLowerCase(),
+      const jumlahMandor = userList.filter(
+        (u) => u.role?.toLowerCase() === ROLES.MANDOR?.toLowerCase(),
       ).length;
-      const jumlahLogistik = userList.filter(
-        (u) => u.role?.toLowerCase() === ROLES.LOGISTIK?.toLowerCase(),
+      const jumlahEstateManager = userList.filter(
+        (u) => u.role?.toLowerCase() === ROLES.ESTATE_MANAGER?.toLowerCase(),
+      ).length;
+      const jumlahGMDistrik = userList.filter(
+        (u) => u.role?.toLowerCase() === ROLES.GENERAL_MANAGER_DISTRIK?.toLowerCase(),
+      ).length;
+      const jumlahTransport = userList.filter(
+        (u) => u.role?.toLowerCase() === ROLES.TRANSPORT?.toLowerCase(),
       ).length;
       const jumlahPabrik = userList.filter(
         (u) => u.role?.toLowerCase() === ROLES.PABRIK?.toLowerCase(),
@@ -100,14 +105,15 @@ const DashboardAdmin = () => {
 
       setDataJumlah({
         kebun: jumlahKebun,
-        petani: jumlahPetani,
-        logistik: jumlahLogistik,
+        mandor: jumlahMandor,
+        estateManager: jumlahEstateManager,
+        gmDistrik: jumlahGMDistrik,
+        logistik: jumlahTransport,
         pabrik: jumlahPabrik,
         validasiKebun,
       });
     } catch (err) {
       console.error("Gagal memuat data pengguna:", err);
-      // Jangan biarkan error menghentikan render komponen lain
     }
   };
 
@@ -170,10 +176,13 @@ const DashboardAdmin = () => {
           Daftar Jumlah Stakeholder
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 bg-gray-50 p-6 rounded-b-2xl shadow-md border border-gray-300">
+        {/* Ubah grid-cols menjadi lg:grid-cols-3 agar 6 item terlihat rapi */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 bg-gray-50 p-6 rounded-b-2xl shadow-md border border-gray-300">
           <StakeholderCard title="Kebun" jumlah={dataJumlah.kebun} />
-          <StakeholderCard title="Petani" jumlah={dataJumlah.petani} />
-          <StakeholderCard title="Logistik" jumlah={dataJumlah.logistik} />
+          <StakeholderCard title="Mandor" jumlah={dataJumlah.mandor} />
+          <StakeholderCard title="Estate Manager" jumlah={dataJumlah.estateManager} />
+          <StakeholderCard title="GM Distrik" jumlah={dataJumlah.gmDistrik} />
+          <StakeholderCard title="Transport" jumlah={dataJumlah.logistik} />
           <StakeholderCard title="Pabrik" jumlah={dataJumlah.pabrik} />
         </div>
       </div>
@@ -183,11 +192,11 @@ const DashboardAdmin = () => {
 
 // Komponen kartu kecil biar rapi
 const StakeholderCard = ({ title, jumlah }) => (
-  <div className="relative bg-[#EF8523]/7 rounded-xl p-5 text-center border border-gray-200 hover:shadow-lg transition">
+  <div className="relative bg-[#EF8523]/7 rounded-xl p-5 text-center border border-gray-200 hover:shadow-lg transition flex flex-col justify-center items-center">
     <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-10 h-1.5 rounded-full bg-[#EF8523]"></div>
     <p className="font-semibold mb-2 text-black">Jumlah Stakeholder {title}</p>
     <div className="text-3xl font-bold my-2 text-black">{jumlah}</div>
-    <span className="text-sm border border-[#B5302D] px-3 py-1 rounded-lg text-black">
+    <span className="text-sm border border-[#B5302D] px-3 py-1 rounded-lg text-black mt-auto">
       Stakeholder
     </span>
   </div>

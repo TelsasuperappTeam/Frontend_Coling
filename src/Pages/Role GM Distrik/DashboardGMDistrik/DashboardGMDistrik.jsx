@@ -81,7 +81,7 @@ export default function DashboardGMDistrik() {
     alamat_kebun: "",
     foto: "",
     koordinat: "",
-    kebun_id: "",
+    distrik_id: "",
   });
 
   // Data dinamis dari API
@@ -165,7 +165,7 @@ export default function DashboardGMDistrik() {
           nomor_telepon: userData.no_hp || "-",
           alamat_kebun: userData.alamat || "",
           foto: getFileUrl(userData.foto_profil_url) || "",
-          kebun_id: userData.kebun_id || "-",
+          distrik_id: userData.distrik_id || "-",
           koordinat: userData.koordinat
             ? JSON.stringify(userData.koordinat)
             : "",
@@ -389,7 +389,7 @@ export default function DashboardGMDistrik() {
               {/* BAGIAN DATA TEKS (TETAP SAMA) */}
               <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 sm:gap-y-2 w-full">
                 <div className="space-y-1 sm:space-y-2">
-                  <DataRow label="Nama Kebun" value={profile.nama_kebun} />
+                  <DataRow label="Nama Lengkap" value={profile.nama_kebun} />
                   <DataRow label="Role" value={profile.role} />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
@@ -400,7 +400,7 @@ export default function DashboardGMDistrik() {
                   />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
-                  <DataRow label="Kebun Id" value={profile.kebun_id} />
+                  <DataRow label="Distrik Id" value={profile.distrik_id} />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow label="Alamat Kebun" value={profile.alamat_kebun} />
@@ -496,71 +496,78 @@ export default function DashboardGMDistrik() {
           )}
         </Card>
 
-        {/* CARD 2: PERMINTAAN VALIDASI */}
-        <Card title="Permintaan Validasi Operasional Perkebunan">
-          {/* Background abu-abu menutupi padding bawaan Card dengan margin negatif */}
-          <div className="-m-4 sm:-m-5 p-4 sm:p-5 h-full flex flex-col">
-            {isValidasiLoading ? (
-              <div className="h-full flex items-center justify-center text-gray-400 flex-grow">
-                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
-              </div>
-            ) : (
-              <div className="flex flex-col h-full">
-                <div className="space-y-4 flex-grow">
-                  {/* Loop Validasi Data (Tanam, Panen, Dokumen) */}
-                  {Object.entries({
-                    "Rencana Tanam": validasiData.rencanaTanam,
-                    "Rencana Panen": validasiData.rencanaPanen,
-                    "Dokumen ISPO": validasiData.dokumenISPO, // Static
-                  }).map(([title, items], idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white rounded-xl p-4 shadow-sm"
-                    >
-                      <h4 className="text-[#B5302D] text-sm sm:text-[15px] font-medium mb-2">
-                        Permintaan Validasi {title} :
-                      </h4>
-                      {items.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic pl-5">
-                          Tidak ada data pending.
-                        </p>
-                      ) : (
-                        <ul className="list-disc pl-6 space-y-1">
-                          {items.map((item, i) => {
-                            // Logic Data Dinamis: Menangkap nama mandor/petani & asal kebun
-                            const namaMandor =
-                              title === "Dokumen ISPO"
-                                ? item.nama
-                                : item.nama_petani;
-                            const namaKebun = item.nama_kebun || "kebun Relasi";
-
-                            return (
-                              <li
-                                key={item.id || i}
-                                className="text-[13px] font-medium text-black"
-                              >
-                                {namaMandor || "Nama Mandor"} ({namaKebun}) :
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
+{/* CARD 2: PERMINTAAN VALIDASI */}
+        <Card
+          title="Permintaan Validasi Operasional Perkebunan"
+          icon={FileText}
+          footer={
+            <button
+              // TAMBAHKAN ONCLICK DI SINI:
+              onClick={() => navigate("/kebun/kemitraanpetani")}
+              className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
+            >
+              Detail Validasi
+            </button>
+          }
+        >
+          {isValidasiLoading ? (
+            <div className="h-full flex items-center justify-center text-gray-400">
+              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Loop Validasi Data (Tanam, Panen, Dokumen) */}
+              {Object.entries({
+                "Rencana Tanam": validasiData.rencanaTanam,
+                "Rencana Panen": validasiData.rencanaPanen,
+                "Dokumen ISPO": validasiData.dokumenISPO, // Static
+              }).map(([title, items], idx) => (
+                <div
+                  key={idx}
+                  className="bg-gray-50/80 rounded-xl p-4 border border-gray-100"
+                >
+                  <h4 className="text-[#B5302D] text-[11px] uppercase font-bold tracking-wider mb-3 border-b border-gray-200 pb-1">
+                    Validasi {title}
+                  </h4>
+                  {items.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">
+                      Tidak ada data pending.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {items.map((item, i) => (
+                        <li
+                          key={item.id || i}
+                          className="flex items-center justify-between text-xs group cursor-pointer"
+                        >
+                          <span className="font-medium text-gray-700 group-hover:text-black transition-colors flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-[#EF8523]"></span>
+                            {/* LOGIC DISPLAY NAMA (Sesuai Data Source) */}
+                            {title === "Dokumen ISPO" ? (
+                              item.nama
+                            ) : (
+                              <span>
+                                {item.nama_petani}
+                                <span className="text-[10px] text-gray-400 ml-1 font-normal">
+                                  -{" "}
+                                  {title === "Rencana Tanam"
+                                    ? item.nama_unit || `Blok #${item.id}`
+                                    : item.nama_blok || `Unit ${item.id}`}
+                                </span>
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded border border-gray-200">
+                            Pending
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-
-                {/* Tombol Liat Detail di pojok kanan bawah area abu-abu */}
-                <div className="flex justify-end mt-4">
-                  <button
-                    onClick={() => navigate("/kebun/kemitraanpetani")}
-                    className="bg-[#B5302D] text-white text-[11px] sm:text-xs px-5 py-2 rounded-lg font-medium hover:bg-red-800 transition-all shadow-sm"
-                  >
-                    Liat Detail
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* CARD 3: PROGRES PENJUALAN TBS */}

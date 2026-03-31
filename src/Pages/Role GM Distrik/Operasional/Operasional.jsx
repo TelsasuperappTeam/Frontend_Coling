@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Users, Plus, X } from "lucide-react";
+import { ShoppingCart, Users, Plus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 // Sesuaikan import config dengan struktur folder Anda
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../config/constants.js";
-// import { useNavigate } from "react-router-dom"; // UNCOMMENT JIKA MENGGUNAKAN REACT ROUTER
 
 const Operasional = () => {
   const navigate = useNavigate();
+
+  // -- STATE UNTUK GM DISTRIK (BUNGKUSAN KEBUN) --
+  const [daftarKebun, setDaftarKebun] = useState([]);
+  const [expandedKebun, setExpandedKebun] = useState(null);
 
   // -- STATE UNTUK TRANSAKSI (JUAL & PINJAM) --
   const [riwayatJual, setRiwayatJual] = useState([]);
@@ -21,6 +24,8 @@ const Operasional = () => {
     dinamis_item_id: "",
     jumlah: "",
     total_harga: "",
+    // Tambahkan field kebun_id jika API insert membutuhkannya
+    // kebun_id: "" 
   });
 
   const [showModalPinjam, setShowModalPinjam] = useState(false);
@@ -30,12 +35,35 @@ const Operasional = () => {
     dinamis_peralatan_id: "",
     jumlah_dipinjam: "",
     tanggal_peminjaman: "",
+    // Tambahkan field kebun_id jika API insert membutuhkannya
+    // kebun_id: ""
   });
 
   // -- STATE UNTUK OPSI DROPDOWN --
   const [opsiPetani, setOpsiPetani] = useState([]);
   const [opsiPeralatan, setOpsiPeralatan] = useState([]);
   const [opsiBarang, setOpsiBarang] = useState([]);
+
+  // Mock Fetching Daftar Kebun untuk GM Distrik
+  const fetchDaftarKebun = async () => {
+    try {
+      // TODO: Ganti dengan API Endpoint asli untuk get list kebun GM Distrik
+      // const token = localStorage.getItem("token");
+      // const res = await fetch(`${API_BASE_URLS.FARM}/farm/gm/kebun-list`, { ... });
+      
+      // Data Mockup Sementara agar UI berjalan
+      const dummyKebun = [
+        { id: 1, nama_kebun: "Kebun Alpha" },
+        { id: 2, nama_kebun: "Kebun Beta" },
+      ];
+      setDaftarKebun(dummyKebun);
+      
+      // Otomatis buka accordion pertama
+      if (dummyKebun.length > 0) setExpandedKebun(dummyKebun[0].id);
+    } catch (e) {
+      console.error("Gagal fetch kebun", e);
+    }
+  };
 
   const fetchOpsiPetani = async () => {
     try {
@@ -130,6 +158,7 @@ const Operasional = () => {
   };
 
   useEffect(() => {
+    fetchDaftarKebun();
     fetchOpsiPetani();
     fetchOpsiPeralatan();
     fetchRiwayatTransaksi();
@@ -257,6 +286,10 @@ const Operasional = () => {
     }
   };
 
+  const toggleKebun = (id) => {
+    setExpandedKebun(expandedKebun === id ? null : id);
+  };
+
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
       {/* HEADER & TAB SWITCHER */}
@@ -281,7 +314,7 @@ const Operasional = () => {
             <span className="hidden sm:inline">Penjualan/Peminjaman</span>
           </button>
           <button
-            onClick={() => navigate("../organisasi")} // Berpindah ke route organisasi
+            onClick={() => navigate("../manajemenoperasional/organisasi")}
             className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
             <Users className="w-4 h-4" />
@@ -290,164 +323,201 @@ const Operasional = () => {
         </div>
       </div>
 
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-        {/* SECTION 1 PENJUALAN BARANG */}
-        <SectionCard title="Penjualan Barang">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-xs text-gray-500">
-              Tabel riwayat penjualan barang ke petani/anggota.
-            </p>
-            <button
-              onClick={() => setShowModalJual(true)}
-              className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
-            >
-              <Plus className="w-3 h-3" /> Jual Barang
-            </button>
-          </div>
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        {/* LOOPING KEBUN (ROLE GM DISTRIK) */}
+        {daftarKebun.map((kebun) => {
+          // Logika Filter Data Per Kebun:
+          // Jika data dari API sudah mengandung kebun_id, gunakan filter ini:
+          // const filteredJual = riwayatJual.filter(item => item.kebun_id === kebun.id);
+          // const filteredPinjam = riwayatPinjam.filter(item => item.kebun_id === kebun.id);
+          
+          // Fallback sementara (menampilkan semua data jika kebun_id belum ada):
+          const filteredJual = riwayatJual;
+          const filteredPinjam = riwayatPinjam;
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                  <th className="p-4 font-bold rounded-tl-xl">No</th>
-                  <th className="p-4 font-bold">Nama Petani</th>
-                  <th className="p-4 font-bold">Tgl Pembelian</th>
-                  <th className="p-4 font-bold">Jenis</th>
-                  <th className="p-4 font-bold">Nama Barang</th>
-                  <th className="p-4 font-bold">Jumlah</th>
-                  <th className="p-4 font-bold">Total Harga</th>
-                  <th className="p-4 font-bold rounded-tr-xl">ID/Nota</th>
-                </tr>
-              </thead>
-              <tbody className="text-xs text-gray-700 bg-white">
-                {isLoadingTransaksi ? (
-                  <tr>
-                    <td colSpan="8" className="p-4 text-center">
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : riwayatJual.length > 0 ? (
-                  riwayatJual.map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                    >
-                      <td className="p-4 font-bold text-center">{index + 1}</td>
-                      <td className="p-4 font-medium">
-                        {item.nama_petani || "Tidak Diketahui"}
-                      </td>
-                      <td className="p-4 text-gray-500">
-                        {item.tanggal_pembelian}
-                      </td>
-                      <td className="p-4">
-                        <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">
-                          {item.jenis_barang}
-                        </span>
-                      </td>
-                      <td className="p-4 font-bold">
-                        {item.nama_barang_tercatat}
-                      </td>
-                      <td className="p-4">{item.jumlah}</td>
-                      <td className="p-4 font-bold text-[#B5302D]">
-                        {item.total_harga
-                          ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
-                          : "-"}
-                      </td>
-                      <td className="p-4 text-gray-400 italic">#{item.id}</td>
-                    </tr>
-                  ))
+          const isExpanded = expandedKebun === kebun.id;
+
+          return (
+            <div key={kebun.id} className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm">
+              {/* HEADER BUNGKUSAN KEBUN */}
+              <div
+                className="bg-[#B5302D] p-4 flex justify-between items-center cursor-pointer hover:bg-[#9a2825] transition-colors"
+                onClick={() => toggleKebun(kebun.id)}
+              >
+                <h2 className="text-white font-bold text-lg">{kebun.nama_kebun}</h2>
+                {isExpanded ? (
+                  <ChevronUp className="w-5 h-5 text-white" />
                 ) : (
-                  <tr>
-                    <td colSpan="8" className="p-4 text-center">
-                      Belum ada riwayat penjualan.
-                    </td>
-                  </tr>
+                  <ChevronDown className="w-5 h-5 text-white" />
                 )}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
+              </div>
 
-        {/* SECTION 2 PEMINJAMAN */}
-        <SectionCard title="Peminjaman Inventaris">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-xs text-gray-500">
-              Tabel riwayat peminjaman aset kebun.
-            </p>
-            <button
-              onClick={() => setShowModalPinjam(true)}
-              className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
-            >
-              <Plus className="w-3 h-3" /> Peminjaman
-            </button>
-          </div>
+              {/* KONTEN JIKA KEBUN DIBUKA */}
+              {isExpanded && (
+                <div className="p-4 sm:p-8 space-y-8 bg-gray-50">
+                  {/* SECTION 1 PENJUALAN BARANG */}
+                  <SectionCard title="Penjualan Barang">
+                    <div className="flex justify-between items-start mb-4">
+                      <p className="text-xs text-gray-500">
+                        Tabel riwayat penjualan barang ke petani/anggota di {kebun.nama_kebun}.
+                      </p>
+                      <button
+                        onClick={() => setShowModalJual(true)}
+                        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
+                      >
+                        <Plus className="w-3 h-3" /> Jual Barang
+                      </button>
+                    </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                  <th className="p-4 font-bold rounded-tl-xl">No</th>
-                  <th className="p-4 font-bold">Nama Peminjam</th>
-                  <th className="p-4 font-bold">Tgl Pinjam</th>
-                  <th className="p-4 font-bold">Nama Barang</th>
-                  <th className="p-4 font-bold text-center">Jumlah Dipinjam</th>
-                  <th className="p-4 font-bold text-center">Jumlah Kembali</th>
-                  <th className="p-4 font-bold rounded-tr-xl">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-xs text-gray-700 bg-white">
-                {isLoadingTransaksi ? (
-                  <tr>
-                    <td colSpan="6" className="p-4 text-center">
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : riwayatPinjam.length > 0 ? (
-                  riwayatPinjam.map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                    >
-                      <td className="p-4 font-bold text-center">{index + 1}</td>
-                      <td className="p-4 font-medium">
-                        {item.nama_petani || "Tidak Diketahui"}
-                      </td>
-                      <td className="p-4 text-gray-500">
-                        {item.tanggal_peminjaman}
-                      </td>
-                      <td className="p-4 font-bold">
-                        {item.dinamis_peralatan?.nama_alat ||
-                          item.dinamis_peralatan?.nama ||
-                          "Alat"}
-                      </td>
-                      <td className="p-4 text-center font-bold text-orange-600">
-                        {item.jumlah_dipinjam}
-                      </td>
-                      <td className="p-4 text-center font-bold text-green-600">
-                        {item.jumlah_dikembalikan}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold border ${item.status === "DIPINJAMKAN" || item.status === "DIPINJAM" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-green-50 text-green-700 border-green-200"}`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="p-4 text-center">
-                      Belum ada riwayat peminjaman.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                            <th className="p-4 font-bold rounded-tl-xl">No</th>
+                            <th className="p-4 font-bold">Nama Petani</th>
+                            <th className="p-4 font-bold">Tgl Pembelian</th>
+                            <th className="p-4 font-bold">Jenis</th>
+                            <th className="p-4 font-bold">Nama Barang</th>
+                            <th className="p-4 font-bold">Jumlah</th>
+                            <th className="p-4 font-bold">Total Harga</th>
+                            <th className="p-4 font-bold rounded-tr-xl">ID/Nota</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-xs text-gray-700 bg-white">
+                          {isLoadingTransaksi ? (
+                            <tr>
+                              <td colSpan="8" className="p-4 text-center">
+                                Memuat data...
+                              </td>
+                            </tr>
+                          ) : filteredJual.length > 0 ? (
+                            filteredJual.map((item, index) => (
+                              <tr
+                                key={item.id}
+                                className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                              >
+                                <td className="p-4 font-bold text-center">{index + 1}</td>
+                                <td className="p-4 font-medium">
+                                  {item.nama_petani || "Tidak Diketahui"}
+                                </td>
+                                <td className="p-4 text-gray-500">
+                                  {item.tanggal_pembelian}
+                                </td>
+                                <td className="p-4">
+                                  <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">
+                                    {item.jenis_barang}
+                                  </span>
+                                </td>
+                                <td className="p-4 font-bold">
+                                  {item.nama_barang_tercatat}
+                                </td>
+                                <td className="p-4">{item.jumlah}</td>
+                                <td className="p-4 font-bold text-[#B5302D]">
+                                  {item.total_harga
+                                    ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
+                                    : "-"}
+                                </td>
+                                <td className="p-4 text-gray-400 italic">#{item.id}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="8" className="p-4 text-center">
+                                Belum ada riwayat penjualan.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+
+                  {/* SECTION 2 PEMINJAMAN */}
+                  <SectionCard title="Peminjaman Inventaris">
+                    <div className="flex justify-between items-start mb-4">
+                      <p className="text-xs text-gray-500">
+                        Tabel riwayat peminjaman aset kebun.
+                      </p>
+                      <button
+                        onClick={() => setShowModalPinjam(true)}
+                        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
+                      >
+                        <Plus className="w-3 h-3" /> Peminjaman
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                            <th className="p-4 font-bold rounded-tl-xl">No</th>
+                            <th className="p-4 font-bold">Nama Peminjam</th>
+                            <th className="p-4 font-bold">Tgl Pinjam</th>
+                            <th className="p-4 font-bold">Nama Barang</th>
+                            <th className="p-4 font-bold text-center">Jumlah Dipinjam</th>
+                            <th className="p-4 font-bold text-center">Jumlah Kembali</th>
+                            <th className="p-4 font-bold rounded-tr-xl">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-xs text-gray-700 bg-white">
+                          {isLoadingTransaksi ? (
+                            <tr>
+                              <td colSpan="6" className="p-4 text-center">
+                                Memuat data...
+                              </td>
+                            </tr>
+                          ) : filteredPinjam.length > 0 ? (
+                            filteredPinjam.map((item, index) => (
+                              <tr
+                                key={item.id}
+                                className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                              >
+                                <td className="p-4 font-bold text-center">{index + 1}</td>
+                                <td className="p-4 font-medium">
+                                  {item.nama_petani || "Tidak Diketahui"}
+                                </td>
+                                <td className="p-4 text-gray-500">
+                                  {item.tanggal_peminjaman}
+                                </td>
+                                <td className="p-4 font-bold">
+                                  {item.dinamis_peralatan?.nama_alat ||
+                                    item.dinamis_peralatan?.nama ||
+                                    "Alat"}
+                                </td>
+                                <td className="p-4 text-center font-bold text-orange-600">
+                                  {item.jumlah_dipinjam}
+                                </td>
+                                <td className="p-4 text-center font-bold text-green-600">
+                                  {item.jumlah_dikembalikan}
+                                </td>
+                                <td className="p-4">
+                                  <span
+                                    className={`px-3 py-1 rounded-full text-[10px] font-bold border ${item.status === "DIPINJAMKAN" || item.status === "DIPINJAM" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-green-50 text-green-700 border-green-200"}`}
+                                  >
+                                    {item.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="6" className="p-4 text-center">
+                                Belum ada riwayat peminjaman.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
+      {/* SISA KODE MODAL TETAP SAMA SEPERTI AWAL */}
       {/* MODAL JUAL BARANG */}
       {showModalJual && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -764,7 +834,7 @@ const Operasional = () => {
 
 // HELPER COMPONENT (Tetap butuh di sini)
 const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+  <div className="bg-white rounded-[20px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
     <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
       {title}

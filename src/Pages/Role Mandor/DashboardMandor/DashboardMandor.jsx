@@ -90,7 +90,7 @@ export default function DashboardMandor() {
     email: "",
     nomor_hp: "",
     foto: "",
-    relasi_kebun: "-",
+    nama_kebun_naungan: "-",
     alamat_kebun: "",
     koordinat_lahan: null,
   });
@@ -417,12 +417,12 @@ export default function DashboardMandor() {
 
       setProfile({
         nama_lengkap: userData.nama_lengkap || "-",
-        role: userData.role || ROLES.MANDOR,
+        role: "Mandor",
         email: userData.email || "-",
         nomor_hp: userData.no_hp || "-",
         alamat_kebun: userData.alamat || "",
         foto: getFileUrl(userData.foto_profil_url) || "",
-        relasi_kebun: userData.nama_kebun_naungan || "Belum Terhubung",
+        nama_kebun_naungan: userData.nama_kebun_naungan || "Belum Terhubung",
         koordinat_lahan: finalKoordinat,
       });
     } catch (error) {
@@ -554,7 +554,7 @@ export default function DashboardMandor() {
                   <DataRow label="Email" value={profile.email} />
                 </div>
                 <div className="space-y-1">
-                  <DataRow label="Relasi Kebun" value={profile.relasi_kebun} />
+                  <DataRow label="Relasi Kebun" value={profile.nama_kebun_naungan} />
                   <DataRow
                     label="Alamat / Lokasi Kebun"
                     value={profile.alamat_kebun}

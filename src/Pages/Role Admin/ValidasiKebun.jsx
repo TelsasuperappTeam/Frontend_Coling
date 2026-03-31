@@ -172,6 +172,10 @@ export default function ValidasiStakeholderKebun() {
                     {/* --- DATA TAMBAHAN UNTUK MOBILE --- */}
                     <div className="space-y-2 border-t border-gray-50 pt-2">
                       <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <span className="font-bold w-16">Distrik ID</span>
+                        <span>: {row.distrik_id || "N/A"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
                         <Mail size={14} className="text-gray-400" />
                         {row.email}
                       </div>
@@ -224,7 +228,7 @@ export default function ValidasiStakeholderKebun() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <Th>ID Kebun</Th>
+                      <Th>Distrik ID</Th>
                       <Th>Nama Lembaga</Th>
                       <Th>Kontak</Th>
                       <Th icon={<FileText size={14} />}>Dokumen Akta</Th>
@@ -238,8 +242,8 @@ export default function ValidasiStakeholderKebun() {
                         className="hover:bg-orange-50/30 transition-colors"
                       >
                         <td className="px-4 py-4">
-                          <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded font-mono text-xs font-bold border border-gray-200">
-                            {row.kebun_id || "N/A"}
+                          <span className="bg-gray-100 text-[#B5302D] px-2 py-1 rounded font-mono text-xs font-bold border border-gray-200">
+                            {row.distrik_id || "N/A"}
                           </span>
                         </td>
 
@@ -316,10 +320,13 @@ export default function ValidasiStakeholderKebun() {
 }
 
 // Helper Components
-const Th = ({ children, className = "" }) => (
+const Th = ({ children, className = "", icon }) => (
   <th
     className={`px-4 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider ${className}`}
   >
-    {children}
+    <div className="flex items-center gap-1.5">
+      {icon}
+      {children}
+    </div>
   </th>
 );

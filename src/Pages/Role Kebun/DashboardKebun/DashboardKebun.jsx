@@ -194,7 +194,7 @@ export default function DashboardKebun() {
       });
 
       if (!response.ok)
-        throw new Error("Gagal mengambil data permintaan petani");
+        throw new Error("Gagal mengambil data permintaan mandor");
 
       const data = await response.json();
       setPendingPetani(data);
@@ -263,8 +263,8 @@ export default function DashboardKebun() {
     if (isProcessing) return;
     const confirmMsg =
       actionType === "approve"
-        ? "Terima permintaan petani ini?"
-        : "Tolak permintaan petani ini?";
+        ? "Terima permintaan mandor ini?"
+        : "Tolak permintaan mandor ini?";
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -287,7 +287,7 @@ export default function DashboardKebun() {
 
       await fetchPendingPetani();
       alert(
-        `Berhasil ${actionType === "approve" ? "menerima" : "menolak"} petani.`,
+        `Berhasil ${actionType === "approve" ? "menerima" : "menolak"} mandor.`,
       );
     } catch (error) {
       console.error("Error manage petani:", error);
@@ -416,7 +416,7 @@ export default function DashboardKebun() {
          ========================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* CARD 1: PERMINTAAN RELASI (Design: Clean List with Actions) */}
-        <Card title="Permintaan Relasi Petani" icon={User}>
+        <Card title="Permintaan Relasi Mandor" icon={User}>
           {isLoadingPending ? (
             <div className="h-full flex items-center justify-center text-gray-400">
               <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />

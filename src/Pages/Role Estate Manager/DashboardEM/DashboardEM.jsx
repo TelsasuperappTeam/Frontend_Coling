@@ -69,19 +69,18 @@ export default function DashboardEM() {
   const [showPopupDataDiri, setShowPopupDataDiri] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingPending, setIsLoadingPending] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isValidasiLoading, setIsValidasiLoading] = useState(false);
 
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
     nama_kebun: "",
-    role: "Estate Manager",
+    role: ROLES.ESTATE_MANAGER,
     email: "",
     nomor_telepon: "",
     alamat_kebun: "",
     foto: "",
     koordinat: "",
-    kebun_id: "",
+    nama_kebun_naungan: "",
   });
 
   // Data dinamis dari API
@@ -99,35 +98,39 @@ export default function DashboardEM() {
     ],
   });
 
-  // --- MOCK DATA LAINNYA (Tetap sama sesuai request) ---
+  // Data dummy untuk progres penjualan TBS, bisa dihapus jika sudah ada API
   const [progresPenjualan] = useState([
     {
       id: 1,
+      kebun: "Kebun Mahar",
       pabrik: "PT. Agro Lestari Pabrik",
       tanggal: "20 Okt 2023",
       status: "Diterima",
     },
     {
       id: 2,
+      kebun: "Kebun Dhimas",
       pabrik: "PT. Sawit Makmur",
       tanggal: "21 Okt 2023",
       status: "Ditolak",
     },
   ]);
 
+  // Data dummy untuk pengiriman TBS, bisa dihapus jika sudah ada API
   const [pengirimanTBS] = useState([
     {
       id: 1,
+      kebun: "Kebun Mahar",
       pabrik: "PT. Agro Lestari Pabrik",
       steps: ["Proses", "Penjemputan", "Pengiriman"],
     },
     {
       id: 2,
+      kebun: "Kebun Dhimas",
       pabrik: "PT. Sawit Makmur",
       steps: ["Proses", "Penjemputan", "Pengiriman"],
     },
   ]);
-
   // --- HELPER AUTH ---
   const getToken = () =>
     localStorage.getItem("accessToken") || localStorage.getItem("token");
@@ -161,7 +164,7 @@ export default function DashboardEM() {
           nomor_telepon: userData.no_hp || "-",
           alamat_kebun: userData.alamat || "",
           foto: getFileUrl(userData.foto_profil_url) || "",
-          kebun_id: userData.kebun_id || "-",
+          nama_kebun_naungan: userData.nama_kebun_naungan || "-",
           koordinat: userData.koordinat
             ? JSON.stringify(userData.koordinat)
             : "",
@@ -179,27 +182,47 @@ export default function DashboardEM() {
   /**
    * --- FETCH PENDING PETANI ---
    */
+  /**
+   * --- FETCH PENDING PETANI ---
+   */
   const fetchPendingPetani = useCallback(async () => {
     setIsLoadingPending(true);
     try {
       const token = getToken();
-      if (!token) return;
+      if (!token) {
+        console.warn("Token tidak ditemukan, silakan login kembali.");
+        return;
+      }
 
       const response = await fetch(API_ENDPOINTS.USER.KEBUN.PENDING_PETANI, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, // <-- Di sinilah Backend membaca role Anda
           "Content-Type": "application/json",
         },
       });
 
-      if (!response.ok)
+      // Penanganan khusus untuk Dependency Role dari Backend
+      if (response.status === 403) {
+        throw new Error(
+          "Akses Ditolak: Anda tidak memiliki akses sebagai Estate Manager atau Kebun.",
+        );
+      }
+
+      if (response.status === 401) {
+        throw new Error("Sesi Anda telah habis. Silakan login kembali.");
+      }
+
+      if (!response.ok) {
         throw new Error("Gagal mengambil data permintaan petani");
+      }
 
       const data = await response.json();
       setPendingPetani(data);
     } catch (error) {
       console.error("Error fetching pending petani:", error);
+      // Opsional: Anda bisa set state error di sini untuk ditampilkan di Card jika mau
+      // setErrorPending(error.message);
     } finally {
       setIsLoadingPending(false);
     }
@@ -256,46 +279,6 @@ export default function DashboardEM() {
     fetchValidasiRequests();
   }, [fetchValidasiRequests]);
 
-  /**
-   * --- HANDLE MANAGE PETANI ---
-   */
-  const handleManagePetani = async (petaniId, actionType) => {
-    if (isProcessing) return;
-    const confirmMsg =
-      actionType === "approve"
-        ? "Terima permintaan petani ini?"
-        : "Tolak permintaan petani ini?";
-
-    if (!window.confirm(confirmMsg)) return;
-
-    setIsProcessing(true);
-    try {
-      const token = getToken();
-      const response = await fetch(
-        API_ENDPOINTS.USER.KEBUN.MANAGE_PETANI(petaniId),
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ action: actionType }),
-        },
-      );
-
-      if (!response.ok) throw new Error(`Gagal ${actionType} petani`);
-
-      await fetchPendingPetani();
-      alert(
-        `Berhasil ${actionType === "approve" ? "menerima" : "menolak"} petani.`,
-      );
-    } catch (error) {
-      console.error("Error manage petani:", error);
-      alert("Terjadi kesalahan sistem.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleProfileSaved = (dataSaved) => {
     if (dataSaved) {
@@ -385,7 +368,7 @@ export default function DashboardEM() {
               {/* BAGIAN DATA TEKS (TETAP SAMA) */}
               <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 sm:gap-y-2 w-full">
                 <div className="space-y-1 sm:space-y-2">
-                  <DataRow label="Nama Kebun" value={profile.nama_kebun} />
+                  <DataRow label="Nama Lengkap" value={profile.nama_kebun} />
                   <DataRow label="Role" value={profile.role} />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
@@ -396,7 +379,10 @@ export default function DashboardEM() {
                   />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
-                  <DataRow label="Kebun Id" value={profile.kebun_id} />
+                  <DataRow
+                    label="Relasi Kebun"
+                    value={profile.nama_kebun_naungan}
+                  />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow label="Alamat Kebun" value={profile.alamat_kebun} />
@@ -416,7 +402,7 @@ export default function DashboardEM() {
          ========================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* CARD 1: PERMINTAAN RELASI (Design: Clean List with Actions) */}
-        <Card title="Permintaan Relasi Petani" icon={User}>
+        <Card title="Permintaan Relasi" icon={User}>
           {isLoadingPending ? (
             <div className="h-full flex items-center justify-center text-gray-400">
               <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
@@ -426,7 +412,9 @@ export default function DashboardEM() {
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
                 <Check className="w-8 h-8 text-gray-300" />
               </div>
-              <p className="text-sm font-medium">Tidak ada permintaan baru.</p>
+              <p className="text-sm font-medium">
+                Tidak ada data permintaan validasi relasi
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -435,41 +423,36 @@ export default function DashboardEM() {
                   key={item.id}
                   className="group border border-gray-100 rounded-2xl p-4 relative bg-white hover:bg-orange-50/30 hover:border-orange-200 transition-all duration-300 shadow-sm"
                 >
-                  {/* Indikator Garis Kiri */}
-                  <div className="absolute left-0 top-4 bottom-4 w-1 bg-[#EF8523] rounded-r-full"></div>
-
-                  <div className="pl-3 pr-16">
-                    <h4 className="font-bold text-gray-800 text-sm mb-1">
-                      {item.nama_lengkap}
-                    </h4>
-                    <div className="text-xs text-gray-500 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Phone size={12} className="text-gray-400" />{" "}
-                        {item.no_hp}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={12} className="text-gray-400" />{" "}
-                        <span className="truncate">{item.email}</span>
-                      </div>
+                  <div className="pl-3 pr-20 space-y-1.5 py-1">
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">Nama</span>
+                      <span className="font-bold text-gray-800">
+                        : {item.nama_lengkap}
+                      </span>
                     </div>
-                  </div>
 
-                  {/* Tombol Aksi Floating */}
-                  <div className="absolute top-1/2 -translate-y-1/2 right-4 flex flex-col gap-2">
-                    <button
-                      onClick={() => handleManagePetani(item.id, "approve")}
-                      className="w-8 h-8 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-600 hover:text-white transition-all shadow-sm"
-                      title="Terima"
-                    >
-                      <Check size={16} strokeWidth={3} />
-                    </button>
-                    <button
-                      onClick={() => handleManagePetani(item.id, "reject")}
-                      className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-600 rounded-full hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                      title="Tolak"
-                    >
-                      <X size={16} strokeWidth={3} />
-                    </button>
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">
+                        No Telpon
+                      </span>
+                      <span className="text-gray-700 font-medium">
+                        : {item.no_hp}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">Email</span>
+                      <span className="text-gray-700 font-medium truncate">
+                        : {item.email}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
+                      <span className="font-medium text-gray-500">Role</span>
+                      <span className="text-gray-700 font-medium capitalize">
+                        : {item.role}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -477,7 +460,7 @@ export default function DashboardEM() {
           )}
         </Card>
 
-        {/* CARD 2: PERMINTAAN VALIDASI */}
+         {/* CARD 2: PERMINTAAN VALIDASI */}
         <Card
           title="Permintaan Validasi Operasional Perkebunan"
           icon={FileText}
@@ -551,34 +534,40 @@ export default function DashboardEM() {
           )}
         </Card>
 
-        {/* CARD 3: PROGRES PENJUALAN TBS (Design: Timeline Modern) */}
-        <Card title="Progres Penjualan TBS" icon={Calendar}>
+        {/* CARD 3: PROGRES PENJUALAN TBS */}
+        <Card title="Progres Penjualan TBS Relasi" icon={Calendar}>
           <div className="space-y-0">
             {progresPenjualan.map((item, index) => (
               <div key={item.id} className="relative pl-6 py-3 group">
-                {/* Garis Konektor Vertical */}
                 {index !== progresPenjualan.length - 1 && (
                   <div className="absolute left-[9px] top-6 bottom-[-12px] w-0.5 bg-gray-200 group-hover:bg-green-200 transition-colors"></div>
                 )}
-
-                {/* Dot Indikator */}
                 <div
                   className={`absolute left-0 top-4 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 ${
                     item.status === "Diterima" ? "bg-green-500" : "bg-red-500"
                   }`}
                 ></div>
 
-                <div className="flex justify-between items-start bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-800">
-                      {item.pabrik}
-                    </h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
-                      <Calendar size={10} /> {item.tanggal}
+                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h4 className="text-sm font-bold text-gray-800 leading-tight">
+                        {item.pabrik}
+                      </h4>
+
+                      <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
+                        {item.kebun}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                      <Calendar size={10} /> Tanggal Pengajuan: {item.tanggal}
                     </p>
                   </div>
+
+                  {/* BAGIAN KANAN: Status */}
                   <div
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
                       item.status === "Diterima"
                         ? "bg-green-50 border-green-200 text-green-700"
                         : "bg-red-50 border-red-200 text-red-700"
@@ -592,26 +581,30 @@ export default function DashboardEM() {
           </div>
         </Card>
 
-        {/* CARD 4: PENGIRIMAN TBS (Design: Stepper Modern) */}
-        <Card title="Pengiriman TBS" icon={Truck}>
+        {/* CARD 4: PENGIRIMAN TBS RELASI */}
+        <Card title="Pengiriman TBS Relasi" icon={Truck}>
           <div className="space-y-6">
             {pengirimanTBS.map((item) => (
               <div
                 key={item.id}
                 className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
               >
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  {/* Icon Truck */}
                   <div className="p-1.5 bg-white rounded-lg shadow-sm text-[#EF8523]">
                     <Truck size={16} />
                   </div>
-                  <h4 className="text-sm font-bold text-gray-800">
-                    {item.pabrik}
-                  </h4>
-                </div>
 
-                {/* Visualisasi Steps */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-bold text-gray-800 leading-tight">
+                      {item.pabrik}
+                    </h4>
+                    <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
+                      {item.kebun}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between relative px-2">
-                  {/* Garis Background */}
                   <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 -z-0 rounded-full"></div>
 
                   {item.steps.map((step, idx) => (
@@ -622,7 +615,7 @@ export default function DashboardEM() {
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm transition-all ${
                           idx === 1
-                            ? "bg-white border-[#EF8523] text-[#EF8523]" // Step Aktif (Contoh)
+                            ? "bg-white border-[#EF8523] text-[#EF8523]"
                             : "bg-white border-gray-300 text-gray-400"
                         }`}
                       >

@@ -29,6 +29,10 @@ Jika menggunakan lokal maka "npm run dev:local"
 5. git branch -M main
 6. git push -u origin main
 
+git update-index --assume-unchanged src/Pages/Masuk.jsx
+
+lalu mengembalikan masuk.jsx ke update lagi di git hub
+
 
 Fungsi setiap file :
 1. Routes : Mengatur alur halaman / navigasi yang mana

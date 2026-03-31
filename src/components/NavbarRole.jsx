@@ -32,7 +32,7 @@ export default function NavbarRole({ role, children }) {
     } finally {
       // Hapus data autentikasi dari browser
       localStorage.removeItem("role");
-      localStorage.removeItem("token"); // Pastikan menghapus token juga jika ada
+      localStorage.removeItem("token");
 
       // Arahkan ke halaman login
       navigate("/masuk", { replace: true });
@@ -111,11 +111,10 @@ export default function NavbarRole({ role, children }) {
                 <Link
                   key={i}
                   to={menu.path}
-                  onClick={() => setOpen(false)}
-                  className={`block text-sm font-medium transition-colors duration-200 ${
-                    location.pathname === menu.path
-                      ? "text-[#B5302D] font-semibold"
-                      : "text-gray-700 hover:text-[#B5302D]"
+                  className={`px-4 py-2 rounded-xl text-sm transition-all duration-200 ${
+                    location.pathname.startsWith(menu.path)
+                      ? "bg-[#B5302D] text-white shadow-md font-semibold"
+                      : "text-gray-600 hover:bg-[#EF8523]/10 hover:text-[#B5302D]"
                   }`}
                 >
                   {menu.label}

@@ -12,7 +12,7 @@ export const ROLES = {
   KEBUN: "kebun",
   ESTATE_MANAGER: "estate_manager",
   GENERAL_MANAGER_DISTRIK: "general_manager_distrik",
-  TRANSPORT: "transport",
+  TRANSPORT: "logistik",
   PABRIK: "pabrik",
 };
 

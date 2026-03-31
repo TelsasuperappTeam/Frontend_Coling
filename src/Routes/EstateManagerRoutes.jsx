@@ -12,11 +12,12 @@ import EstateManagerLayout from "../layouts/EstateManagerLayout";
 import { ROLES } from "../config/constants";
 
 import DashboardEM from "../Pages/Role Estate Manager/DashboardEM/DashboardEM";
-import Penjualan from "../Pages/Role Estate Manager/Penjualan"; 
+import Penjualan from "../Pages/Role Estate Manager/Penjualan";
 import DistribusiLogistik from "../Pages/Role Estate Manager/Distribusi&Logistik";
 import InventarisKebun from "../Pages/Role Estate Manager/InventarisKebun";
 import KemitraanPetani from "../Pages/Role Estate Manager/KemitraanPetani";
-import Operasional from "../Pages/Role Estate Manager/Operasional";
+import Operasional from "../Pages/Role Estate Manager/Operasional/Operasional";
+import Operasional2 from "../Pages/Role Estate Manager/Operasional/Operasional2";
 
 const EstateManagerRoutes = () => {
   return (
@@ -30,7 +31,6 @@ const EstateManagerRoutes = () => {
             </PrivateRoute>
           }
         />
-        
         <Route
           path="dashboard"
           element={
@@ -39,7 +39,6 @@ const EstateManagerRoutes = () => {
             </PrivateRoute>
           }
         />
-
         <Route
           path="penjualan"
           element={
@@ -48,7 +47,6 @@ const EstateManagerRoutes = () => {
             </PrivateRoute>
           }
         />
-
         <Route
           path="distribusi&logistik"
           element={
@@ -57,7 +55,6 @@ const EstateManagerRoutes = () => {
             </PrivateRoute>
           }
         />
-
         <Route
           path="inventaris"
           element={
@@ -66,7 +63,6 @@ const EstateManagerRoutes = () => {
             </PrivateRoute>
           }
         />
-
         <Route
           path="kemitraanpetani"
           element={
@@ -75,12 +71,20 @@ const EstateManagerRoutes = () => {
             </PrivateRoute>
           }
         />
-
         <Route
-          path="manajemenoperasional" 
+          path="manajemenoperasional"
           element={
             <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
               <Operasional />
+            </PrivateRoute>
+          }
+        />
+        {/* Path-nya diubah jadi masuk ke dalam "manajemenoperasional/organisasi" */}
+        <Route
+          path="manajemenoperasional/organisasi"
+          element={
+            <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
+              <Operasional2 />
             </PrivateRoute>
           }
         />

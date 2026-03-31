@@ -86,8 +86,9 @@ const GMDistrikRoutes = () => {
           }
         />
 
+        {/* Path-nya diubah jadi masuk ke dalam "manajemenoperasional/organisasi" */}
         <Route
-          path="organisasi"
+          path="manajemenoperasional/organisasi"
           element={
             <PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]}>
               <Operasional2 />

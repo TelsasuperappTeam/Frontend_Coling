@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ChevronDown,
+  ChevronUp, // Ditambahkan untuk ikon Accordion saat terbuka
   Plus,
   X,
   Wrench,
@@ -48,16 +49,69 @@ export default function Inventaris() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  const fetchInventaris = async () => {
+  // --- STATE BARU: Logika Kebun untuk GM Distrik ---
+  const [kebunList, setKebunList] = useState([]);
+  const [activeKebunId, setActiveKebunId] = useState(null);
+
+  // Fetch daftar kebun di awal (pengganti fetchInventaris global)
+  useEffect(() => {
+    const fetchDaftarKebun = async () => {
+      try {
+        const url = API_ENDPOINTS.FARM?.KEBUN?.LIST || "API_FALLBACK_URL"; 
+        const res = await fetch(url, { headers: getAuthHeaders() });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setKebunList(data);
+        } else {
+          // Fallback dummy (ganti jika API sudah siap)
+          setKebunList([
+            { id: 1, nama_kebun: "Kebun Blok A" },
+            { id: 2, nama_kebun: "Kebun Blok B" }
+          ]);
+        }
+      } catch (error) {
+        console.error("Gagal fetch daftar kebun:", error);
+        setKebunList([
+          { id: 1, nama_kebun: "Kebun Blok A" },
+          { id: 2, nama_kebun: "Kebun Blok B" }
+        ]);
+      }
+    };
+
+    fetchDaftarKebun();
+  }, []);
+
+  // Logika buka-tutup Accordion
+  const handleToggleKebun = (kebunId) => {
+    if (activeKebunId === kebunId) {
+      setActiveKebunId(null);
+    } else {
+      setActiveKebunId(kebunId);
+      setInventarisData(INITIAL_DATA); 
+      fetchInventaris(kebunId);
+    }
+  };
+  // ---------------------------------------------------
+
+  // PERUBAHAN: Menambahkan parameter kebunId agar fetch data spesifik per kebun
+  const fetchInventaris = async (kebunId) => {
+    if (!kebunId) return;
+
     setIsLoadingData(true);
     const headers = getAuthHeaders(false);
 
     const fetchSafe = async (url) => {
       try {
-        const res = await fetch(url, { headers });
+        // Tempelkan parameter kebun_id pada URL Endpoint
+        const urlWithParams = url.includes("?") 
+          ? `${url}&kebun_id=${kebunId}` 
+          : `${url}?kebun_id=${kebunId}`;
+
+        const res = await fetch(urlWithParams, { headers });
         if (!res.ok) {
           const errorDetail = await res.json();
-          console.warn(`Gagal fetch ${url}:`, errorDetail);
+          console.warn(`Gagal fetch ${urlWithParams}:`, errorDetail);
           return [];
         }
         return await res.json();
@@ -89,10 +143,6 @@ export default function Inventaris() {
       setIsLoadingData(false);
     }
   };
-
-  useEffect(() => {
-    fetchInventaris();
-  }, []);
 
   const handleDelete = async (category, id) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus item ini?")) return;
@@ -146,6 +196,7 @@ export default function Inventaris() {
           endpoint = API_ENDPOINTS.FARM.KEBUN.INVENTARIS.ADD_PERALATAN;
           headers = getAuthHeaders(true);
           payload = JSON.stringify({
+            kebun_id: activeKebunId, // PERUBAHAN: Sisipkan ID Kebun
             nama_alat: formData.nama_alat || "",
             jumlah_per_buah: parseInt(formData.jumlah_per_buah) || 0,
             lokasi_penyimpanan: formData.lokasi_penyimpanan || "",
@@ -157,8 +208,8 @@ export default function Inventaris() {
         case "bibit":
           endpoint = API_ENDPOINTS.FARM.KEBUN.INVENTARIS.ADD_BIBIT;
           payload = new FormData();
+          payload.append("kebun_id", activeKebunId); // PERUBAHAN: Sisipkan ID Kebun
 
-          // 1. Validasi Manual: Pastikan 4 data yang diminta BE benar-benar terisi di UI
           if (
             !formData.tanggal_pembelian ||
             !formData.asal_bibit ||
@@ -172,19 +223,16 @@ export default function Inventaris() {
             return;
           }
 
-          // 2. Kirim Text Data (Perbaikan bug penamaan state)
           payload.append("tanggal_pembelian", formData.tanggal_pembelian);
           payload.append("asal_bibit", formData.asal_bibit);
           payload.append("jenis_bibit", formData.jenis_bibit || "");
           payload.append("nama_varietas", formData.nama_varietas || "");
 
-          // Perbaikan bug: state di input namanya jumlah_tersisa, bukan jumlah
           payload.append(
             "jumlah_awal",
             parseFloat(formData.jumlah_tersisa) || 0,
           );
 
-          // 3. Kirim File Data (Perbaikan nama key agar 100% cocok dengan BE)
           payload.append("file_sertifikat", formData.file_sertifikat);
           payload.append("file_nota", formData.file_nota);
           break;
@@ -192,6 +240,7 @@ export default function Inventaris() {
         case "pupuk":
           endpoint = API_ENDPOINTS.FARM.KEBUN.INVENTARIS.ADD_PUPUK;
           payload = new FormData();
+          payload.append("kebun_id", activeKebunId); // PERUBAHAN: Sisipkan ID Kebun
 
           if (formData.nama_pupuk)
             payload.append("nama_pupuk", formData.nama_pupuk);
@@ -215,6 +264,7 @@ export default function Inventaris() {
         case "pestisida":
           endpoint = API_ENDPOINTS.FARM.KEBUN.INVENTARIS.ADD_PESTISIDA;
           payload = new FormData();
+          payload.append("kebun_id", activeKebunId); // PERUBAHAN: Sisipkan ID Kebun
 
           if (formData.nama_pestisida)
             payload.append("nama_pestisida", formData.nama_pestisida);
@@ -247,7 +297,6 @@ export default function Inventaris() {
         const errorData = await response.json();
         console.error("Error Detail dari Backend (422):", errorData);
 
-        // PERBAIKAN: Ekstrak isi Array(4) agar ketahuan field apa yang ditolak BE
         if (errorData.detail && Array.isArray(errorData.detail)) {
           const errorMessages = errorData.detail
             .map(
@@ -262,7 +311,7 @@ export default function Inventaris() {
 
       alert("Data berhasil disimpan!");
       handleClosePopup();
-      fetchInventaris();
+      fetchInventaris(activeKebunId); // PERUBAHAN: Refresh data hanya untuk kebun yg aktif
     } catch (error) {
       alert(`Terjadi kesalahan: ${error.message}`);
     } finally {
@@ -310,7 +359,6 @@ export default function Inventaris() {
           name: "status_kepemilikan",
           label: "Status Kepemilikan",
           type: "select",
-          // PERBAIKAN: Enum disesuaikan dengan BE
           options: ["Pribadi", "Meminjam"],
         },
         {
@@ -333,7 +381,6 @@ export default function Inventaris() {
         item.lokasi_penyimpanan || "-",
         <span
           className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-            // PERBAIKAN: Ubah pengecekan sesuai Enum baru
             item.status_kepemilikan === "Pribadi"
               ? "bg-green-100 text-green-700"
               : "bg-blue-100 text-blue-700"
@@ -378,7 +425,6 @@ export default function Inventaris() {
           placeholder: "Contoh: PPKS Medan",
         },
         {
-          // PERBAIKAN: Ubah nama field agar sinkron dengan state formData & BE
           name: "jumlah_tersisa",
           label: "Jumlah Awal (Pokok)",
           type: "number",
@@ -432,7 +478,6 @@ export default function Inventaris() {
           name: "jenis_pupuk",
           label: "Jenis Pupuk",
           type: "select",
-          // PERBAIKAN: Enum disesuaikan total dengan request BE
           options: [
             "Organik",
             "Anorganik",
@@ -442,7 +487,6 @@ export default function Inventaris() {
           ],
         },
         {
-          // PERBAIKAN: Ubah nama field agar sinkron dengan state formData & BE
           name: "jumlah_tersisa_kg",
           label: "Jumlah Awal (Kg)",
           type: "number",
@@ -494,11 +538,9 @@ export default function Inventaris() {
           name: "jenis_pestisida",
           label: "Jenis Pestisida",
           type: "select",
-          // PERBAIKAN: Enum disesuaikan dengan BE
           options: ["Insektisida", "Fungisida", "Herbisida", "Nematisida"],
         },
         {
-          // PERBAIKAN: Ubah nama field agar sinkron dengan state formData & BE
           name: "jumlah_tersisa",
           label: "Jumlah Awal",
           type: "number",
@@ -507,14 +549,12 @@ export default function Inventaris() {
           name: "satuan",
           label: "Satuan",
           type: "select",
-          // PERBAIKAN: Enum disesuaikan dengan BE (huruf kecil)
           options: ["kg", "liter"],
         },
         {
           name: "bentuk",
           label: "Bentuk Fisik",
           type: "select",
-          // PERBAIKAN: Enum disesuaikan dengan BE
           options: ["Padat", "Cair", "Gas"],
         },
         {
@@ -595,12 +635,11 @@ export default function Inventaris() {
                         const file = e.target.files[0];
                         if (!file) return;
 
-                        // MENGGUNAKAN FUNGSI VALIDASI
                         if (!isValidFileType(file)) {
                           alert(
                             "Jenis file tidak didukung. Gunakan PDF atau Foto (JPG/PNG).",
                           );
-                          e.target.value = ""; // Reset input
+                          e.target.value = ""; 
                           return;
                         }
 
@@ -619,13 +658,11 @@ export default function Inventaris() {
                           ? formData[f.name].name
                           : `Pilih file ${f.label.toLowerCase()}...`}
                       </span>
-                      {/* WARNA DIUBAH JADI OREN #EF8523 */}
                       <span className="text-[#EF8523] font-bold text-xs whitespace-nowrap">
                         CARI FILE
                       </span>
                     </label>
 
-                    {/* TAMBAHAN: Keterangan format agar persis lampiran */}
                     <div className="flex items-center gap-1.5 mt-1 px-1 text-gray-500">
                       <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                       <p className="text-[10px] italic">
@@ -693,51 +730,86 @@ export default function Inventaris() {
         </div>
       </div>
 
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-        <SectionCard title="Inventaris Alat">
-          {isLoadingData ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+      <div className="space-y-6">
+        {/* PERUBAHAN: Membungkus konten ke dalam mapping kebunList */}
+        {kebunList.map((kebun) => (
+          <div key={kebun.id} className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm">
+            {/* Header Accordion Nama Kebun */}
+            <div
+              className="bg-[#B5302D] px-5 py-4 cursor-pointer flex justify-between items-center transition-colors hover:bg-[#a72a28]"
+              onClick={() => handleToggleKebun(kebun.id)}
+            >
+              <h2 className="text-white font-bold text-lg">{kebun.nama_kebun || "Nama Kebun"}</h2>
+              {activeKebunId === kebun.id ? (
+                <ChevronUp className="text-white" />
+              ) : (
+                <ChevronDown className="text-white" />
+              )}
             </div>
-          ) : (
-            <Section
-              config={tableConfig.peralatan}
-              data={inventarisData.peralatan}
-              onAdd={() => handleOpenPopup("peralatan")}
-            />
-          )}
-        </SectionCard>
 
-        <SectionCard title="Inventaris Barang">
-          {isLoadingData ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-8">
-              <Section
-                config={tableConfig.bibit}
-                data={inventarisData.bibit}
-                onAdd={() => handleOpenPopup("bibit")}
-              />
-              <Section
-                config={tableConfig.pupuk}
-                data={inventarisData.pupuk}
-                onAdd={() => handleOpenPopup("pupuk")}
-              />
-              <Section
-                config={tableConfig.pestisida}
-                data={inventarisData.pestisida}
-                onAdd={() => handleOpenPopup("pestisida")}
-              />
-            </div>
-          )}
-        </SectionCard>
+            {/* Konten Kebun (Hanya tampil jika accordion terbuka) */}
+            {activeKebunId === kebun.id && (
+              <div className="p-4 sm:p-6 space-y-8 bg-gray-50/50 animate-in fade-in slide-in-from-top-2">
+                <SectionCard title="Inventaris Alat">
+                  {isLoadingData ? (
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+                    </div>
+                  ) : (
+                    <Section
+                      config={tableConfig.peralatan}
+                      data={inventarisData.peralatan}
+                      onAdd={() => handleOpenPopup("peralatan")}
+                    />
+                  )}
+                </SectionCard>
+
+                <SectionCard title="Inventaris Barang">
+                  {isLoadingData ? (
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-8">
+                      <Section
+                        config={tableConfig.bibit}
+                        data={inventarisData.bibit}
+                        onAdd={() => handleOpenPopup("bibit")}
+                      />
+                      <Section
+                        config={tableConfig.pupuk}
+                        data={inventarisData.pupuk}
+                        onAdd={() => handleOpenPopup("pupuk")}
+                      />
+                      <Section
+                        config={tableConfig.pestisida}
+                        data={inventarisData.pestisida}
+                        onAdd={() => handleOpenPopup("pestisida")}
+                      />
+                    </div>
+                  )}
+                </SectionCard>
+              </div>
+            )}
+          </div>
+        ))}
+        
+        {/* State Kosong Jika Belum Ada Kebun */}
+        {kebunList.length === 0 && (
+          <div className="text-center py-10 text-gray-500 italic bg-white rounded-xl border border-gray-200">
+            Belum ada data kebun.
+          </div>
+        )}
       </div>
+
       {showPopup && renderPopupForm()}
     </div>
   );
 }
+
+// ------------------------------------------------------------------------------------------
+// BAGIAN KOMPONEN DI BAWAH INI (SAMA SEKALI TIDAK DIUBAH, MENGIKUTI KODINGAN LAMA PERSIS 100%)
+// ------------------------------------------------------------------------------------------
 
 const SectionCard = ({ title, children }) => (
   <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">

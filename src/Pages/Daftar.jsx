@@ -9,7 +9,7 @@ const ROLES = {
   KEBUN: "kebun",
   ESTATE_MANAGER: "estate_manager",
   GENERAL_MANAGER_DISTRIK: "general_manager_distrik",
-  TRANSPORT: "transport",
+  TRANSPORT: "logistik",
   PABRIK: "pabrik",
 };
 
@@ -29,6 +29,7 @@ export default function Daftar() {
     password: "",
     confirmPassword: "",
     kebun_id: "",
+    distrik_id: "", // Tambahan state untuk distrik_id
     aktaFile: null,
     namaPabrik: "",
     phone: "",
@@ -71,7 +72,7 @@ export default function Daftar() {
     }
     if (!isStrongPassword(form.password)) {
       setNotif(
-        "Kata sandi harus minimal 8 karakter dan berisi huruf serta angka."
+        "Kata sandi harus minimal 8 karakter dan berisi huruf serta angka.",
       );
       setIsSubmitting(false);
       return;
@@ -90,8 +91,8 @@ export default function Daftar() {
     try {
       // BUAT OBJEK FORM DATA
       const formData = new FormData();
-      // role nilainya sudah otomatis sesuai object ROLES ("petani", "transport", dll)
       formData.append("role", role.toLowerCase());
+
       const namaLengkapValue =
         role === ROLES.PABRIK ? form.namaPabrik : form.nama;
       formData.append("nama_lengkap", namaLengkapValue);
@@ -99,13 +100,21 @@ export default function Daftar() {
       formData.append("password", form.password);
       formData.append("no_hp", form.phone);
 
-      // Jika role adalah MANDOR (petani) maka kirim kebun_id
-      if (form.kebun_id && role === ROLES.MANDOR) {
+      // --- LOGIKA ID BERDASARKAN ROLE ---
+      // 1. Mandor dan Estate Manager perlu kebun_id
+      if (
+        (role === ROLES.MANDOR || role === ROLES.ESTATE_MANAGER) &&
+        form.kebun_id
+      ) {
         formData.append("kebun_id", form.kebun_id);
       }
-      if (form.aktaFile && role === ROLES.KEBUN) {
-        formData.append("akta_pendiri", form.aktaFile);
+
+      // 2. Kebun perlu distrik_id dan akta_pendiri
+      if (role === ROLES.KEBUN) {
+        if (form.distrik_id) formData.append("distrik_id", form.distrik_id);
+        if (form.aktaFile) formData.append("akta_pendiri", form.aktaFile);
       }
+      // Note: GM Distrik tidak mengirimkan ID saat pendaftaran, mereka yang akan mendapatkan/menciptakan distrik_id dari BE
 
       // KIRIM KE BACKEND REGISTER
       const res = await fetch(API_ENDPOINTS.USER.REGISTER, {
@@ -123,7 +132,7 @@ export default function Daftar() {
           throw new Error(msg);
         }
         throw new Error(
-          errorData?.detail || errorData?.message || "Pendaftaran gagal."
+          errorData?.detail || errorData?.message || "Pendaftaran gagal.",
         );
       }
 
@@ -154,7 +163,7 @@ export default function Daftar() {
       // Redirect ke OTP
       setTimeout(
         () => navigate("/verifikasiOTP", { state: { email: form.email } }),
-        2000
+        2000,
       );
     } catch (error) {
       console.error(error);
@@ -180,15 +189,23 @@ export default function Daftar() {
     if (!isPasswordMatch || !isPasswordStrong || !isEmailValid) return false;
 
     switch (role) {
-      case ROLES.MANDOR:
-        return Boolean(form.kebun_id && form.phone && isValidPhone(form.phone));
-      case ROLES.KEBUN:
-        return Boolean(form.aktaFile && form.phone && isValidPhone(form.phone));
+      case ROLES.GENERAL_MANAGER_DISTRIK:
       case ROLES.TRANSPORT:
       case ROLES.PABRIK:
-      case ROLES.ESTATE_MANAGER:
-      case ROLES.GENERAL_MANAGER_DISTRIK:
+        // GM Distrik hanya butuh data dasar + nomor HP
         return Boolean(form.phone && isValidPhone(form.phone));
+      case ROLES.KEBUN:
+        // Kebun butuh akta file, distrik id, dan nomor HP
+        return Boolean(
+          form.aktaFile &&
+          form.distrik_id &&
+          form.phone &&
+          isValidPhone(form.phone),
+        );
+      case ROLES.MANDOR:
+      case ROLES.ESTATE_MANAGER:
+        // Mandor & EM butuh kebun id dan nomor HP
+        return Boolean(form.kebun_id && form.phone && isValidPhone(form.phone));
       default:
         return false;
     }
@@ -225,11 +242,12 @@ export default function Daftar() {
               className="appearance-none w-full rounded-lg border border-gray-300 px-4 py-3 bg-white text-gray-800 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#EF8523] focus:border-transparent"
             >
               <option value="">Pilih Peran</option>
-              {/* Teks tampilan diubah sesuai kebutuhan, value mengikuti object ROLES */}
-              <option value={ROLES.MANDOR}>Mandor</option>
+              <option value={ROLES.GENERAL_MANAGER_DISTRIK}>
+                General Manager Distrik
+              </option>
               <option value={ROLES.KEBUN}>Kebun</option>
               <option value={ROLES.ESTATE_MANAGER}>Estate Manager</option>
-              <option value={ROLES.GENERAL_MANAGER_DISTRIK}>General Manager Distrik</option>
+              <option value={ROLES.MANDOR}>Mandor</option>
               <option value={ROLES.TRANSPORT}>Transport</option>
               <option value={ROLES.PABRIK}>Pabrik</option>
             </select>
@@ -241,19 +259,17 @@ export default function Daftar() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-black mb-1.5">
-                {role === ROLES.MANDOR
+                {role === ROLES.MANDOR ||
+                role === ROLES.ESTATE_MANAGER ||
+                role === ROLES.GENERAL_MANAGER_DISTRIK
                   ? "Nama Lengkap (Sesuai KTP)"
                   : role === ROLES.KEBUN
-                  ? "Nama Lembaga"
-                  : role === ROLES.TRANSPORT
-                  ? "Nama Transport"
-                  : role === ROLES.PABRIK
-                  ? "Nama Pabrik"
-                  : role === ROLES.ESTATE_MANAGER
-                  ? "Nama Estate Manager"
-                  : role === ROLES.GENERAL_MANAGER_DISTRIK
-                  ? "Nama GM Distrik"
-                  : "Nama"}
+                    ? "Nama Lembaga"
+                    : role === ROLES.TRANSPORT
+                      ? "Nama Transport"
+                      : role === ROLES.PABRIK
+                        ? "Nama Pabrik"
+                        : "Nama"}
               </label>
               <input
                 name={role === ROLES.PABRIK ? "namaPabrik" : "nama"}
@@ -339,24 +355,41 @@ export default function Daftar() {
             </div>
           </div>
 
-          {/* Field Dinamis: Kebun ID hanya untuk Mandor(petani) */}
-          {role === ROLES.MANDOR && (
-            <div>
-              <label className="block text-sm font-medium text-black mb-1.5">
-                Kebun ID
-              </label>
-              <input
-                name="kebun_id"
-                type="number"
-                value={form.kebun_id}
-                onChange={handleChange}
-                placeholder="Masukkan ID Kebun"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-4 sm:py-3 bg-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#EF8523] focus:border-transparent"
-              />
-            </div>
-          )}
+          {/* Kolom ID Dinamis berdasarkan Role */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {role === ROLES.KEBUN && (
+              <div>
+                <label className="block text-sm font-medium text-black mb-1.5">
+                  Distrik ID
+                </label>
+                <input
+                  name="distrik_id"
+                  value={form.distrik_id}
+                  onChange={handleChange}
+                  placeholder="Masukkan ID Distrik"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-4 sm:py-3 bg-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#EF8523] focus:border-transparent"
+                />
+              </div>
+            )}
 
-          {/* Nomor Telepon & Akta Pendirian (muncul jika role sudah dipilih) */}
+            {(role === ROLES.MANDOR || role === ROLES.ESTATE_MANAGER) && (
+              <div>
+                <label className="block text-sm font-medium text-black mb-1.5">
+                  Kebun ID
+                </label>
+                <input
+                  name="kebun_id"
+                  type="number"
+                  value={form.kebun_id}
+                  onChange={handleChange}
+                  placeholder="Masukkan ID Kebun"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-4 sm:py-3 bg-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#EF8523] focus:border-transparent"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Nomor Telepon & Akta Pendirian */}
           {role && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -412,7 +445,6 @@ export default function Daftar() {
             }`}
           >
             {isSubmitting ? (
-              // Tampilan Loading Spinner
               <div className="flex items-center gap-2">
                 <svg
                   className="animate-spin h-5 w-5 text-white"

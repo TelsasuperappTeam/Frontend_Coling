@@ -762,14 +762,52 @@ const ValidationCard = ({ title, children }) => {
   );
 };
 
-//Komponen PetaniProfileCard (Manajemen Petani)
+// Komponen PetaniProfileCard (Manajemen Petani)
 const PetaniProfileCard = ({ data }) => {
   const [isOpen, setIsOpen] = useState(false);
+  
+  // --- STATE BARU UNTUK PROGRESS ISPO ---
+  const [ispoProgress, setIspoProgress] = useState(null);
+  const [loadingIspo, setLoadingIspo] = useState(false);
 
   // Buat URL Foto Profil. Gunakan UI-Avatars jika foto_profil_url kosong/null
   const fotoProfilUrl = data.foto_profil_url 
     ? getFileUrl(data.foto_profil_url, "USER") 
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama_lengkap)}&background=random`;
+
+  // --- EFEK FETCH PROGRESS ISPO SAAT CARD DIBUKA ---
+  useEffect(() => {
+    // Hanya fetch jika card dibuka dan data ISPO belum ada
+    if (isOpen && !ispoProgress) {
+      const fetchProgressIspo = async () => {
+        setLoadingIspo(true);
+        try {
+          const token = localStorage.getItem("token");
+          // Pastikan API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN sudah Anda definisikan di constants.js
+          const url = API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN.replace('{petani_id}', data.id);
+          
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (res.ok) {
+            const result = await res.json();
+            // Simpan bagian progress_summary ke state
+            setIspoProgress(result.progress_summary);
+          } else {
+            console.error("Gagal mengambil progres ISPO:", await res.text());
+          }
+        } catch (error) {
+          console.error("Error fetching ISPO progress:", error);
+        } finally {
+          setLoadingIspo(false);
+        }
+      };
+
+      fetchProgressIspo();
+    }
+  }, [isOpen, data.id, ispoProgress]);
+
 
   return (
     <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
@@ -777,7 +815,7 @@ const PetaniProfileCard = ({ data }) => {
         onClick={() => setIsOpen(!isOpen)}
         className="bg-[#EF8523] px-6 py-3 flex justify-between items-center text-white cursor-pointer hover:bg-[#d6731b] transition-colors"
       >
-        <span className="font-bold text-sm">{data.nama_lengkap}</span> {/* Sesuaikan key BE */}
+        <span className="font-bold text-sm">{data.nama_lengkap}</span>
         <ChevronDown
           className={`w-5 h-5 transition-transform duration-300 ${
             isOpen ? "rotate-180" : ""
@@ -801,7 +839,7 @@ const PetaniProfileCard = ({ data }) => {
                 </div>
                 <div>
                   <p className="font-bold text-gray-500">No Telepon:</p>
-                  <p className="text-gray-800">{data.no_hp}</p> {/* Sesuaikan key BE */}
+                  <p className="text-gray-800">{data.no_hp}</p>
                 </div>
                 <div>
                   <p className="font-bold text-gray-500">Status:</p>
@@ -814,18 +852,82 @@ const PetaniProfileCard = ({ data }) => {
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-center lg:items-end gap-4">
-             {/* Dummy Score ISPO karena belum ada data skor dari UserProfilRespon BE */}
-            <div className="flex gap-3 justify-center">
-              {[0, 0, 0, 0, 0].map((score, idx) => (
-                <div key={idx} className="flex flex-col items-center gap-1">
-                  <div className="w-10 h-10 rounded-full bg-gray-300 text-white flex items-center justify-center text-[10px] font-bold shadow-md border-2 border-white">
-                    N/A
-                  </div>
-                </div>
-              ))}
-            </div>
+          
+          {/* --- BAGIAN PROGRESS ISPO DINAMIS --- */}
+          <div className="flex flex-col items-center lg:items-end gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 w-full lg:w-auto">
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
+              Progres ISPO (P1 - P5)
+            </p>
+            
+            {loadingIspo ? (
+              <div className="flex gap-3 justify-center items-center h-12">
+                <span className="text-xs text-gray-400 animate-pulse">Menghitung progres...</span>
+              </div>
+            ) : (
+              <div className="flex gap-2 justify-center">
+                {['prinsip_1', 'prinsip_2', 'prinsip_3', 'prinsip_4', 'prinsip_5'].map((prinsip, idx) => {
+                  // Ambil skor dari state, jika null/undefined jadikan 0
+                  const score = ispoProgress ? (ispoProgress[prinsip] || 0) : 0;
+                  const displayScore = Math.round(score); // Bulatkan koma
+                  
+                  return (
+                    <div key={idx} className="flex flex-col items-center gap-1.5 group relative">
+                      {/* Tooltip sederhana saat di-hover */}
+                      <span className="absolute -top-6 bg-gray-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                        Prinsip {idx + 1}: {displayScore}%
+                      </span>
+                      
+                      {/* Lingkaran Progres SVG Ultra-Tipis & Elegan */}
+                      <div className="relative w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm ring-1 ring-black/5 p-1">
+                        <svg 
+                          viewBox="0 0 36 36" 
+                          className="absolute top-0 left-0 w-full h-full transform -rotate-90"
+                        >
+                          <defs>
+                            <linearGradient id={`kemitraanGradient-${idx}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#FF7875" /> {/* Merah Terang */}
+                              <stop offset="100%" stopColor="#B5302D" /> {/* Merah Tua */}
+                            </linearGradient>
+                          </defs>
+                          
+                          {/* Lingkaran Track (Abu-abu Pudar) */}
+                          <path
+                            className="text-gray-100"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          
+                          {/* Lingkaran Progres Dinamis */}
+                          <path
+                            stroke={`url(#kemitraanGradient-${idx})`}
+                            strokeWidth="2"
+                            strokeDasharray={`${displayScore}, 100`}
+                            strokeLinecap="round"
+                            fill="none"
+                            className="transition-all duration-1000 ease-in-out"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                        </svg>
+                        
+                        {/* Teks Persentase di Tengah */}
+                        <div className="relative z-10 flex flex-col items-center">
+                          <span className="text-[10px] font-bold text-[#B5302D] leading-none">
+                            {displayScore}%
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Label P1, P2, dst */}
+                      <span className="text-[9px] font-bold text-gray-500">P{idx + 1}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+
         </div>
       )}
     </div>

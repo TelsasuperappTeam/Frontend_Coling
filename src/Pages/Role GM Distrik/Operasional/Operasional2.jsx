@@ -13,10 +13,11 @@ import {
   Save,
   Loader2,
   ShoppingCart,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 // Sesuaikan import config dengan struktur folder Anda
 import { API_ENDPOINTS } from "../../../config/constants.js";
-// import { useNavigate } from "react-router-dom"; // UNCOMMENT JIKA MENGGUNAKAN REACT ROUTER
 
 const DOKUMEN_CONFIG = [
   {
@@ -35,6 +36,10 @@ const DOKUMEN_CONFIG = [
 const Operasional2 = () => {
   const navigate = useNavigate();
 
+  // -- STATE UNTUK GM DISTRIK (BUNGKUSAN KEBUN) --
+  const [daftarKebun, setDaftarKebun] = useState([]);
+  const [expandedKebun, setExpandedKebun] = useState(null);
+
   // -- STATE UNTUK PENGURUS --
   const [pengurusList, setPengurusList] = useState([]);
   const [isLoadingPengurus, setIsLoadingPengurus] = useState(false);
@@ -46,6 +51,7 @@ const Operasional2 = () => {
     jabatan_pengurus: "",
     tugas_pengurus: "",
     no_hp: "",
+    // kebun_id: "" // (Bila diperlukan)
   });
 
   // -- STATE UNTUK HARGA TBS --
@@ -56,6 +62,7 @@ const Operasional2 = () => {
     tahun: "",
     harga: "",
     file: null,
+    // kebun_id: "" // (Bila diperlukan)
   });
 
   // -- STATE DOKUMEN --
@@ -67,6 +74,20 @@ const Operasional2 = () => {
       isUploading: false,
     })),
   );
+
+  const fetchDaftarKebun = async () => {
+    try {
+      // TODO: Ganti dengan API GM Distrik asli
+      const dummyKebun = [
+        { id: 1, nama_kebun: "Kebun Alpha" },
+        { id: 2, nama_kebun: "Kebun Beta" },
+      ];
+      setDaftarKebun(dummyKebun);
+      if (dummyKebun.length > 0) setExpandedKebun(dummyKebun[0].id);
+    } catch (e) {
+      console.error("Gagal fetch kebun", e);
+    }
+  };
 
   const fetchPengurus = async () => {
     setIsLoadingPengurus(true);
@@ -124,6 +145,7 @@ const Operasional2 = () => {
   };
 
   useEffect(() => {
+    fetchDaftarKebun();
     fetchPengurus();
     fetchDokumenExisting();
   }, []);
@@ -290,6 +312,10 @@ const Operasional2 = () => {
     }
   };
 
+  const toggleKebun = (id) => {
+    setExpandedKebun(expandedKebun === id ? null : id);
+  };
+
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
       {/* HEADER & TAB SWITCHER */}
@@ -310,7 +336,7 @@ const Operasional2 = () => {
 
         <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
           <button
-            onClick={() => navigate("../manajemenoperasional")} // Berpindah ke route awal
+            onClick={() => navigate("../manajemenoperasional")}
             className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
             <ShoppingCart className="w-4 h-4" />
@@ -323,163 +349,196 @@ const Operasional2 = () => {
         </div>
       </div>
 
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-        {/* SECTION 1 PENGURUS */}
-        <SectionCard title="Daftar Anggota Pengurus">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-xs text-gray-500">
-              Struktur organisasi kelompok tani.
-            </p>
-            <button
-              onClick={handleAddPengurus}
-              className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
-            >
-              <Plus className="w-3 h-3" /> Tambah
-            </button>
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                  <th className="p-4 font-bold rounded-tl-xl">No</th>
-                  <th className="p-4 font-bold">Nama Anggota</th>
-                  <th className="p-4 font-bold">Jabatan</th>
-                  <th className="p-4 font-bold">No. HP</th>
-                  <th className="p-4 font-bold">Tugas & Tanggung Jawab</th>
-                  <th className="p-4 font-bold text-center rounded-tr-xl">
-                    Aksi
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-xs text-gray-700 bg-white">
-                {isLoadingPengurus ? (
-                  <tr>
-                    <td colSpan="6" className="p-4 text-center">
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : pengurusList.length > 0 ? (
-                  pengurusList.map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                    >
-                      <td className="p-4 font-bold text-center">{index + 1}</td>
-                      <td className="p-4 font-bold">{item.nama_anggota}</td>
-                      <td className="p-4 font-medium text-[#B5302D]">
-                        {item.jabatan_pengurus}
-                      </td>
-                      <td className="p-4 text-gray-500">{item.no_hp || "-"}</td>
-                      <td className="p-4 text-gray-500">
-                        {item.tugas_pengurus}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleEditPengurus(item)}
-                            className="p-2 bg-gray-100 hover:bg-blue-100 text-blue-600 rounded-lg"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePengurus(item.id)}
-                            className="p-2 bg-gray-100 hover:bg-red-100 text-red-600 rounded-lg"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="p-4 text-center">
-                      Belum ada data pengurus.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        {/* LOOPING KEBUN (ROLE GM DISTRIK) */}
+        {daftarKebun.map((kebun) => {
+          // Logika Filter Data Per Kebun:
+          // const filteredPengurus = pengurusList.filter(item => item.kebun_id === kebun.id);
+          // Fallback bila blm ada API kebun_id:
+          const filteredPengurus = pengurusList;
+          
+          const isExpanded = expandedKebun === kebun.id;
 
-        {/* SECTION 2 DOKUMEN */}
-        <SectionCard title="Kelengkapan Dokumen Organisasi">
-          <div className="-mt-4 mb-6">
-            <div className="w-full h-[1px] bg-gray-300 mb-4 mt-2" />
-            <p className="text-sm text-gray-500 font-light mb-4">
-              Upload Dokumen organisasi Untuk Petani Mitra
-            </p>
-            <button
-              onClick={() => setShowModalTBS(true)}
-              className="flex items-center gap-2 bg-[#D1F7C4] hover:bg-green-200 text-green-900 border border-green-300 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
-            >
-              <FileText className="w-4 h-4" /> Tambah Harga TBS
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {dokumenStatus.map((doc, idx) => {
-              const isUploaded = !!doc.file_url;
-              return (
-                <div
-                  key={idx}
-                  className={`group bg-white border rounded-xl p-4 flex flex-row items-center gap-4 transition-all hover:shadow-md ${isUploaded ? "border-green-400 bg-green-50/30" : "border-gray-400"}`}
-                >
-                  <div
-                    className={`p-3 rounded-full flex-shrink-0 ${isUploaded ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-500"}`}
-                  >
-                    {isUploaded ? (
-                      <CheckCircle className="w-6 h-6" />
-                    ) : (
-                      <FileText className="w-6 h-6" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-gray-800 leading-snug line-clamp-2">
-                      {doc.label}
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-1">
-                      {isUploaded ? (
-                        <span className="text-green-600 font-medium">
-                          Sudah diupload ({doc.status})
-                        </span>
-                      ) : (
-                        "Belum ada file"
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label
-                      className={`cursor-pointer p-2 rounded-lg transition-colors border ${doc.isUploading ? "bg-gray-100 border-gray-200 text-gray-400" : "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"}`}
-                    >
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => handleUploadDokumen(idx, e)}
-                        disabled={doc.isUploading}
-                      />
-                      {doc.isUploading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Upload className="w-4 h-4" />
-                      )}
-                    </label>
-                    {isUploaded && (
+          return (
+            <div key={kebun.id} className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm">
+              {/* HEADER BUNGKUSAN KEBUN */}
+              <div
+                className="bg-[#B5302D] p-4 flex justify-between items-center cursor-pointer hover:bg-[#9a2825] transition-colors"
+                onClick={() => toggleKebun(kebun.id)}
+              >
+                <h2 className="text-white font-bold text-lg">{kebun.nama_kebun}</h2>
+                {isExpanded ? (
+                  <ChevronUp className="w-5 h-5 text-white" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-white" />
+                )}
+              </div>
+
+              {/* KONTEN JIKA KEBUN DIBUKA */}
+              {isExpanded && (
+                <div className="p-4 sm:p-8 space-y-8 bg-gray-50">
+                  {/* SECTION 1 PENGURUS */}
+                  <SectionCard title="Daftar Anggota Pengurus">
+                    <div className="flex justify-between items-start mb-4">
+                      <p className="text-xs text-gray-500">
+                        Struktur organisasi kelompok tani di {kebun.nama_kebun}.
+                      </p>
                       <button
-                        onClick={() => window.open(doc.file_url, "_blank")}
-                        className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100"
+                        onClick={handleAddPengurus}
+                        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
                       >
-                        <Search className="w-4 h-4" />
+                        <Plus className="w-3 h-3" /> Tambah
                       </button>
-                    )}
-                  </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                            <th className="p-4 font-bold rounded-tl-xl">No</th>
+                            <th className="p-4 font-bold">Nama Anggota</th>
+                            <th className="p-4 font-bold">Jabatan</th>
+                            <th className="p-4 font-bold">No. HP</th>
+                            <th className="p-4 font-bold">Tugas & Tanggung Jawab</th>
+                            <th className="p-4 font-bold text-center rounded-tr-xl">
+                              Aksi
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-xs text-gray-700 bg-white">
+                          {isLoadingPengurus ? (
+                            <tr>
+                              <td colSpan="6" className="p-4 text-center">
+                                Memuat data...
+                              </td>
+                            </tr>
+                          ) : filteredPengurus.length > 0 ? (
+                            filteredPengurus.map((item, index) => (
+                              <tr
+                                key={item.id}
+                                className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                              >
+                                <td className="p-4 font-bold text-center">{index + 1}</td>
+                                <td className="p-4 font-bold">{item.nama_anggota}</td>
+                                <td className="p-4 font-medium text-[#B5302D]">
+                                  {item.jabatan_pengurus}
+                                </td>
+                                <td className="p-4 text-gray-500">{item.no_hp || "-"}</td>
+                                <td className="p-4 text-gray-500">
+                                  {item.tugas_pengurus}
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => handleEditPengurus(item)}
+                                      className="p-2 bg-gray-100 hover:bg-blue-100 text-blue-600 rounded-lg"
+                                    >
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePengurus(item.id)}
+                                      className="p-2 bg-gray-100 hover:bg-red-100 text-red-600 rounded-lg"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="6" className="p-4 text-center">
+                                Belum ada data pengurus.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+
+                  {/* SECTION 2 DOKUMEN */}
+                  <SectionCard title="Kelengkapan Dokumen Organisasi">
+                    <div className="-mt-4 mb-6">
+                      <div className="w-full h-[1px] bg-gray-300 mb-4 mt-2" />
+                      <p className="text-sm text-gray-500 font-light mb-4">
+                        Upload Dokumen organisasi Untuk Petani Mitra
+                      </p>
+                      <button
+                        onClick={() => setShowModalTBS(true)}
+                        className="flex items-center gap-2 bg-[#D1F7C4] hover:bg-green-200 text-green-900 border border-green-300 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
+                      >
+                        <FileText className="w-4 h-4" /> Tambah Harga TBS
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {dokumenStatus.map((doc, idx) => {
+                        const isUploaded = !!doc.file_url;
+                        return (
+                          <div
+                            key={idx}
+                            className={`group bg-white border rounded-xl p-4 flex flex-row items-center gap-4 transition-all hover:shadow-md ${isUploaded ? "border-green-400 bg-green-50/30" : "border-gray-400"}`}
+                          >
+                            <div
+                              className={`p-3 rounded-full flex-shrink-0 ${isUploaded ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-500"}`}
+                            >
+                              {isUploaded ? (
+                                <CheckCircle className="w-6 h-6" />
+                              ) : (
+                                <FileText className="w-6 h-6" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-gray-800 leading-snug line-clamp-2">
+                                {doc.label}
+                              </p>
+                              <p className="text-[10px] text-gray-500 mt-1">
+                                {isUploaded ? (
+                                  <span className="text-green-600 font-medium">
+                                    Sudah diupload ({doc.status})
+                                  </span>
+                                ) : (
+                                  "Belum ada file"
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <label
+                                className={`cursor-pointer p-2 rounded-lg transition-colors border ${doc.isUploading ? "bg-gray-100 border-gray-200 text-gray-400" : "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"}`}
+                              >
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  onChange={(e) => handleUploadDokumen(idx, e)}
+                                  disabled={doc.isUploading}
+                                />
+                                {doc.isUploading ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Upload className="w-4 h-4" />
+                                )}
+                              </label>
+                              {isUploaded && (
+                                <button
+                                  onClick={() => window.open(doc.file_url, "_blank")}
+                                  className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100"
+                                >
+                                  <Search className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </SectionCard>
                 </div>
-              );
-            })}
-          </div>
-        </SectionCard>
+              )}
+            </div>
+          );
+        })}
       </div>
 
+      {/* SISA KODE MODAL TETAP SAMA */}
       {/* MODAL PENGURUS */}
       {showModalPengurus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -679,7 +738,7 @@ const Operasional2 = () => {
 
 // HELPER COMPONENT (Tetap butuh di sini juga)
 const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+  <div className="bg-white rounded-[20px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
     <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
       {title}

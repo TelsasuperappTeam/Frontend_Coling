@@ -14,52 +14,7 @@ import {
   Save,
   Loader2, // Icon loading tambahan
 } from "lucide-react";
-import { API_ENDPOINTS } from "../../config/constants.js";
-
-/* ===================== MOCK DATA (STATIC) ===================== */
-
-// DATA TAB 1 TRANSAKSI (PENJUALAN & PEMINJAMAN) - TETAP STATIC
-const MOCK_PENJUALAN = [
-  {
-    id: 1,
-    petani: "Pak Budi",
-    tanggal: "24 Sep 2025",
-    jenis: "Pupuk",
-    barang: "NPK Mutiara",
-    jumlah: "2 Sak",
-    total: "Rp 1.200.000",
-    nota: "INV-001",
-  },
-  {
-    id: 2,
-    petani: "Bu Siti",
-    tanggal: "23 Sep 2025",
-    jenis: "Alat",
-    barang: "Egrek Sawit",
-    jumlah: "1 Pcs",
-    total: "Rp 450.000",
-    nota: "INV-002",
-  },
-];
-
-const MOCK_PEMINJAMAN = [
-  {
-    id: 1,
-    petani: "Pak Joko",
-    tanggal: "20 Sep 2025",
-    barang: "Truk Engkel",
-    jumlah: "1 Unit",
-    status: "Sedang Dipinjam",
-  },
-  {
-    id: 2,
-    petani: "Pak Wahyu",
-    tanggal: "18 Sep 2025",
-    barang: "Mesin Genset",
-    jumlah: "1 Unit",
-    status: "Dikembalikan",
-  },
-];
+import { API_ENDPOINTS, API_BASE_URLS } from "../../config/constants.js";
 
 // DATA KEGIATAN - TETAP STATIC
 const MOCK_KEGIATAN = [
@@ -126,6 +81,10 @@ const Operasional = () => {
   });
 
   // -- STATE UNTUK TRANSAKSI (JUAL & PINJAM) --
+  const [riwayatJual, setRiwayatJual] = useState([]);
+  const [riwayatPinjam, setRiwayatPinjam] = useState([]);
+  const [isLoadingTransaksi, setIsLoadingTransaksi] = useState(false);
+
   const [showModalJual, setShowModalJual] = useState(false);
   const [isSubmittingJual, setIsSubmittingJual] = useState(false);
   const [jualFormData, setJualFormData] = useState({
@@ -154,6 +113,125 @@ const Operasional = () => {
       isUploading: false,
     })),
   );
+
+  // -- STATE UNTUK OPSI DROPDOWN (DARI BE) --
+  const [opsiPetani, setOpsiPetani] = useState([]);
+  const [opsiPeralatan, setOpsiPeralatan] = useState([]);
+  const [opsiBarang, setOpsiBarang] = useState([]); // Berubah tergantung jenis barang (Bibit/Pupuk/Pestisida)
+
+  // 1. Fetch Daftar Petani
+  const fetchOpsiPetani = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_BASE_URLS.USER}/users/kebun/me/petani-members`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setOpsiPetani(data);
+      }
+    } catch (e) {
+      console.error("Gagal fetch petani", e);
+    }
+  };
+
+  // 2. Fetch Daftar Peralatan (Untuk Peminjaman)
+  const fetchOpsiPeralatan = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_BASE_URLS.FARM}/farm/kebun/inventaris/peralatan`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        console.log("[DEBUG] Data PERALATAN dari BE:", data); // Lihat di Inspect Element -> Console
+        const arrayData = Array.isArray(data)
+          ? data
+          : data.data || data.items || [];
+        setOpsiPeralatan(arrayData);
+      }
+    } catch (e) {
+      console.error("Gagal fetch peralatan", e);
+    }
+  };
+
+  // 3. Fetch Daftar Barang (Bibit/Pupuk/Pestisida) - Dipanggil saat Jenis Barang dipilih
+  const fetchOpsiBarang = async (jenis) => {
+    if (!jenis) {
+      setOpsiBarang([]);
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      const path = jenis.toLowerCase();
+      const res = await fetch(
+        `${API_BASE_URLS.FARM}/farm/kebun/inventaris/${path}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        console.log(`[DEBUG] Data ${jenis.toUpperCase()} dari BE:`, data); // Lihat di Inspect Element -> Console
+        const arrayData = Array.isArray(data)
+          ? data
+          : data.data || data.items || [];
+        setOpsiBarang(arrayData);
+      }
+    } catch (e) {
+      console.error("Gagal fetch barang", e);
+    }
+  };
+
+  // Panggil Fetch Petani & Peralatan otomatis saat tab transaksi aktif
+  useEffect(() => {
+    if (activeTab === "transaksi") {
+      fetchOpsiPetani();
+      fetchOpsiPeralatan();
+    }
+  }, [activeTab]);
+
+  // ===================== LOGIC GET TRANSAKSI =====================
+  const fetchRiwayatTransaksi = async () => {
+    setIsLoadingTransaksi(true);
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      // Fetch Riwayat Penjualan
+      const resJual = await fetch(API_ENDPOINTS.FARM.KEBUN.TRANSAKSI.JUAL, {
+        method: "GET",
+        headers,
+      });
+      if (resJual.ok) {
+        const dataJual = await resJual.json();
+        setRiwayatJual(dataJual);
+      }
+
+      // Fetch Riwayat Peminjaman
+      const resPinjam = await fetch(
+        API_ENDPOINTS.FARM.KEBUN.TRANSAKSI.PINJAMKAN,
+        { method: "GET", headers },
+      );
+      if (resPinjam.ok) {
+        const dataPinjam = await resPinjam.json();
+        setRiwayatPinjam(dataPinjam);
+      }
+    } catch (error) {
+      console.error("Error fetching riwayat transaksi:", error);
+    } finally {
+      setIsLoadingTransaksi(false);
+    }
+  };
 
   // ===================== LOGIC PENGURUS (GET, POST, PATCH, DELETE) =====================
 
@@ -222,10 +300,13 @@ const Operasional = () => {
     }
   };
 
+  // FETCH DATA BERDASARKAN TAB AKTIF
   useEffect(() => {
     if (activeTab === "organisasi") {
       fetchPengurus();
       fetchDokumenExisting();
+    } else if (activeTab === "transaksi") {
+      fetchRiwayatTransaksi();
     }
   }, [activeTab]);
 
@@ -341,7 +422,6 @@ const Operasional = () => {
       const token = localStorage.getItem("token");
       const formDataToSend = new FormData();
 
-      // Backend mengharapkan Int, ParseInt di sini sekarang aman karena inputnya dropdown value="1", "2", dst
       formDataToSend.append("periode_bulan", parseInt(tbsFormData.bulan));
       formDataToSend.append("periode_tahun", parseInt(tbsFormData.tahun));
       formDataToSend.append("harga_per_kg", parseFloat(tbsFormData.harga));
@@ -353,7 +433,6 @@ const Operasional = () => {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          // Jangan set Content-Type manual saat pakai FormData!
         },
         body: formDataToSend,
       });
@@ -361,7 +440,6 @@ const Operasional = () => {
       if (response.ok) {
         alert("Data Harga TBS berhasil dikirim!");
         setShowModalTBS(false);
-        // Reset form
         setTbsFormData({
           bulan: "",
           tahun: "",
@@ -370,7 +448,6 @@ const Operasional = () => {
         });
       } else {
         const errorData = await response.json();
-        // Tampilkan pesan error detail dari backend jika ada
         console.log("Error Detail:", errorData);
         alert(
           `Gagal mengirim data: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`,
@@ -389,26 +466,40 @@ const Operasional = () => {
     e.preventDefault();
     setIsSubmittingJual(true);
 
+    // 1. CEGAH ERROR 422: Validasi angka
+    const parsedPetaniId = parseInt(jualFormData.petani_user_id);
+    const parsedItemId = parseInt(jualFormData.dinamis_item_id);
+    const parsedJumlah = parseFloat(jualFormData.jumlah);
+
+    if (isNaN(parsedPetaniId) || isNaN(parsedItemId) || isNaN(parsedJumlah)) {
+      alert("Harap pilih Petani, Barang, dan isi Jumlah dengan benar!");
+      setIsSubmittingJual(false);
+      return; // Berhenti di sini, jangan tembak BE
+    }
+
     try {
       const token = localStorage.getItem("token");
       const payload = {
-        petani_user_id: parseInt(jualFormData.petani_user_id),
+        petani_user_id: parsedPetaniId,
         jenis_barang: jualFormData.jenis_barang,
-        dinamis_item_id: parseInt(jualFormData.dinamis_item_id),
-        jumlah: parseFloat(jualFormData.jumlah),
+        dinamis_item_id: parsedItemId,
+        jumlah: parsedJumlah,
         total_harga: jualFormData.total_harga
           ? parseFloat(jualFormData.total_harga)
           : null,
       };
 
-      const response = await fetch(API_ENDPOINTS.FARM.KEBUN.TRANSAKSI.JUAL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${API_BASE_URLS.FARM}/farm/kebun/transaksi/jual`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
 
       if (response.ok) {
         alert("Berhasil mencatat penjualan barang ke petani!");
@@ -420,11 +511,13 @@ const Operasional = () => {
           jumlah: "",
           total_harga: "",
         });
-        // TODO: Anda bisa menambahkan trigger fetch ulang data tabel penjualan di sini jika endpoint GET-nya sudah tersedia
+        fetchRiwayatTransaksi();
       } else {
         const errorData = await response.json();
-        console.log("Response Error Backend:", errorData);
-        alert(`Gagal: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`);
+        console.log("Error Jual:", errorData);
+        alert(
+          `Gagal Jual: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`,
+        );
       }
     } catch (error) {
       console.error("Error submit jual:", error);
@@ -439,17 +532,28 @@ const Operasional = () => {
     e.preventDefault();
     setIsSubmittingPinjam(true);
 
+    // 1. CEGAH ERROR 422: Validasi angka
+    const parsedPetaniId = parseInt(pinjamFormData.petani_user_id);
+    const parsedAlatId = parseInt(pinjamFormData.dinamis_peralatan_id);
+    const parsedJumlah = parseInt(pinjamFormData.jumlah_dipinjam);
+
+    if (isNaN(parsedPetaniId) || isNaN(parsedAlatId) || isNaN(parsedJumlah)) {
+      alert("Harap pilih Petani, Peralatan, dan isi Jumlah dengan benar!");
+      setIsSubmittingPinjam(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const payload = {
-        petani_user_id: parseInt(pinjamFormData.petani_user_id),
-        dinamis_peralatan_id: parseInt(pinjamFormData.dinamis_peralatan_id),
-        jumlah_dipinjam: parseInt(pinjamFormData.jumlah_dipinjam),
-        tanggal_peminjaman: pinjamFormData.tanggal_peminjaman, // Format YYYY-MM-DD
+        petani_user_id: parsedPetaniId,
+        dinamis_peralatan_id: parsedAlatId,
+        jumlah_dipinjam: parsedJumlah,
+        tanggal_peminjaman: pinjamFormData.tanggal_peminjaman,
       };
 
       const response = await fetch(
-        API_ENDPOINTS.FARM.KEBUN.TRANSAKSI.PINJAMKAN,
+        `${API_BASE_URLS.FARM}/farm/kebun/transaksi/pinjamkan`,
         {
           method: "POST",
           headers: {
@@ -469,10 +573,13 @@ const Operasional = () => {
           jumlah_dipinjam: "",
           tanggal_peminjaman: "",
         });
-        // TODO: Anda bisa menambahkan trigger fetch ulang data tabel peminjaman di sini jika endpoint GET-nya sudah tersedia
+        fetchRiwayatTransaksi();
       } else {
         const errorData = await response.json();
-        alert(`Gagal: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`);
+        console.log("Error Pinjam:", errorData);
+        alert(
+          `Gagal Pinjam: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`,
+        );
       }
     } catch (error) {
       console.error("Error submit pinjam:", error);
@@ -524,6 +631,7 @@ const Operasional = () => {
         setDokumenStatus(updatedDocs);
 
         alert("Berhasil upload dokumen!");
+        fetchDokumenExisting();
       } else {
         const errorData = await response.json();
         alert(`Gagal upload: ${errorData.detail || "Terjadi kesalahan"}`);
@@ -602,7 +710,7 @@ const Operasional = () => {
 
       {/* --- MAIN CONTENT AREA --- */}
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-        {/* ================= TRANSAKSI (STATIC) ================= */}
+        {/* ================= TRANSAKSI (DYNAMIC) ================= */}
         {activeTab === "transaksi" && (
           <>
             {/* SECTION 1 PENJUALAN BARANG */}
@@ -630,35 +738,57 @@ const Operasional = () => {
                       <th className="p-4 font-bold">Nama Barang</th>
                       <th className="p-4 font-bold">Jumlah</th>
                       <th className="p-4 font-bold">Total Harga</th>
-                      <th className="p-4 font-bold rounded-tr-xl">Nota</th>
+                      <th className="p-4 font-bold rounded-tr-xl">ID/Nota</th>
                     </tr>
                   </thead>
                   <tbody className="text-xs text-gray-700 bg-white">
-                    {MOCK_PENJUALAN.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                      >
-                        <td className="p-4 font-bold text-center">
-                          {index + 1}
-                        </td>
-                        <td className="p-4 font-medium">{item.petani}</td>
-                        <td className="p-4 text-gray-500">{item.tanggal}</td>
-                        <td className="p-4">
-                          <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">
-                            {item.jenis}
-                          </span>
-                        </td>
-                        <td className="p-4 font-bold">{item.barang}</td>
-                        <td className="p-4">{item.jumlah}</td>
-                        <td className="p-4 font-bold text-[#B5302D]">
-                          {item.total}
-                        </td>
-                        <td className="p-4 text-blue-600 underline cursor-pointer">
-                          {item.nota}
+                    {isLoadingTransaksi ? (
+                      <tr>
+                        <td colSpan="8" className="p-4 text-center">
+                          Memuat data...
                         </td>
                       </tr>
-                    ))}
+                    ) : riwayatJual.length > 0 ? (
+                      riwayatJual.map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                        >
+                          <td className="p-4 font-bold text-center">
+                            {index + 1}
+                          </td>
+                          <td className="p-4 font-medium">
+                            {item.nama_petani || "Tidak Diketahui"}
+                          </td>
+                          <td className="p-4 text-gray-500">
+                            {item.tanggal_pembelian}
+                          </td>
+                          <td className="p-4">
+                            <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">
+                              {item.jenis_barang}
+                            </span>
+                          </td>
+                          <td className="p-4 font-bold">
+                            {item.nama_barang_tercatat}
+                          </td>
+                          <td className="p-4">{item.jumlah}</td>
+                          <td className="p-4 font-bold text-[#B5302D]">
+                            {item.total_harga
+                              ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
+                              : "-"}
+                          </td>
+                          <td className="p-4 text-gray-400 italic">
+                            #{item.id}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="8" className="p-4 text-center">
+                          Belum ada riwayat penjualan.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -686,36 +816,69 @@ const Operasional = () => {
                       <th className="p-4 font-bold">Nama Peminjam</th>
                       <th className="p-4 font-bold">Tgl Pinjam</th>
                       <th className="p-4 font-bold">Nama Barang</th>
-                      <th className="p-4 font-bold">Jumlah</th>
+                      <th className="p-4 font-bold text-center">
+                        Jumlah Dipinjam
+                      </th>
+                      <th className="p-4 font-bold text-center">
+                        Jumlah Kembali
+                      </th>
                       <th className="p-4 font-bold rounded-tr-xl">Status</th>
                     </tr>
                   </thead>
                   <tbody className="text-xs text-gray-700 bg-white">
-                    {MOCK_PEMINJAMAN.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                      >
-                        <td className="p-4 font-bold text-center">
-                          {index + 1}
-                        </td>
-                        <td className="p-4 font-medium">{item.petani}</td>
-                        <td className="p-4 text-gray-500">{item.tanggal}</td>
-                        <td className="p-4 font-bold">{item.barang}</td>
-                        <td className="p-4">{item.jumlah}</td>
-                        <td className="p-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-[10px] font-bold border ${
-                              item.status === "Sedang Dipinjam"
-                                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                                : "bg-green-50 text-green-700 border-green-200"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
+                    {isLoadingTransaksi ? (
+                      <tr>
+                        <td colSpan="6" className="p-4 text-center">
+                          Memuat data...
                         </td>
                       </tr>
-                    ))}
+                    ) : riwayatPinjam.length > 0 ? (
+                      riwayatPinjam.map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                        >
+                          <td className="p-4 font-bold text-center">
+                            {index + 1}
+                          </td>
+                          <td className="p-4 font-medium">
+                            {item.nama_petani || "Tidak Diketahui"}
+                          </td>
+                          <td className="p-4 text-gray-500">
+                            {item.tanggal_peminjaman}
+                          </td>
+                          <td className="p-4 font-bold">
+                            {item.dinamis_peralatan?.nama_alat ||
+                              item.dinamis_peralatan?.nama ||
+                              "Alat"}
+                          </td>
+                          <td className="p-4 text-center font-bold text-orange-600">
+                            {item.jumlah_dipinjam}
+                          </td>
+                          <td className="p-4 text-center font-bold text-green-600">
+                            {item.jumlah_dikembalikan}
+                          </td>
+                          <td className="p-4">
+                            <span
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold border ${
+                                item.status === "DIPINJAMKAN" ||
+                                item.status === "DIPINJAM"
+                                  ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  : "bg-green-50 text-green-700 border-green-200"
+                              }`}
+                            >
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="p-4 text-center">
+                          Belum ada riwayat peminjaman.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -739,6 +902,7 @@ const Operasional = () => {
                   <Plus className="w-3 h-3" /> Tambah
                 </button>
               </div>
+
               <div className="overflow-x-auto rounded-xl border border-gray-200">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -818,22 +982,19 @@ const Operasional = () => {
                   Upload Dokumen organisasi Untuk Petani Mitra
                 </p>
 
-                {/* TOMBOL BARU: TAMBAH HARGA TBS (YANG KITA DYNAMISKAN) */}
+                {/* TOMBOL TAMBAH HARGA TBS */}
                 <button
                   onClick={() => setShowModalTBS(true)}
                   className="flex items-center gap-2 bg-[#D1F7C4] hover:bg-green-200 text-green-900 border border-green-300 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
                 >
-                  <FileText className="w-4 h-4" />
-                  Tambah Harga TBS
+                  <FileText className="w-4 h-4" /> Tambah Harga TBS
                 </button>
               </div>
 
               {/* Grid Card Dokumen (SUDAH DINAMIS DENGAN FETCH EXISTING) */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {dokumenStatus.map((doc, idx) => {
-                  // Cek apakah dokumen sudah ada URL (berarti sudah upload)
                   const isUploaded = !!doc.file_url;
-
                   return (
                     <div
                       key={idx}
@@ -843,59 +1004,63 @@ const Operasional = () => {
                           : "border-gray-400"
                       }`}
                     >
-                      {/* Kolom Kiri: Ikon & Tombol Aksi */}
-                      <div className="flex flex-col items-center justify-center gap-2 min-w-[60px]">
-                        {/* 1. STATUS IKON */}
-                        {doc.isUploading ? (
-                          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                        ) : isUploaded ? (
-                          <CheckCircle className="w-8 h-8 text-green-500 stroke-[2]" />
+                      <div
+                        className={`p-3 rounded-full flex-shrink-0 ${
+                          isUploaded
+                            ? "bg-green-100 text-green-600"
+                            : "bg-gray-100 text-gray-500 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors"
+                        }`}
+                      >
+                        {isUploaded ? (
+                          <CheckCircle className="w-6 h-6" />
                         ) : (
-                          <FileText className="w-8 h-8 text-black stroke-[1.5]" />
-                        )}
-
-                        {/* 2. TOMBOL (UPLOAD / LIHAT) */}
-                        {doc.isUploading ? (
-                          <span className="text-[10px] text-gray-400 font-bold">
-                            Proses...
-                          </span>
-                        ) : isUploaded ? (
-                          // Jika sudah upload -> Tombol "Lihat"
-                          <button
-                            onClick={() => handleViewDocument(doc.file_url)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold px-4 py-0.5 rounded-full transition-colors shadow-sm"
-                          >
-                            Lihat
-                          </button>
-                        ) : (
-                          // Jika belum upload -> Tombol "Upload" (Memicu Endpoint Submission)
-                          <label className="cursor-pointer bg-[#4CD964] hover:bg-green-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full transition-colors shadow-sm text-center">
-                            Upload
-                            <input
-                              type="file"
-                              className="hidden"
-                              // (SESUAI BE MAHAR) Kirim file ke endpoint
-                              onChange={(e) => handleUploadDokumen(idx, e)}
-                            />
-                          </label>
+                          <FileText className="w-6 h-6" />
                         )}
                       </div>
 
-                      {/* Kolom Kanan: Teks Label */}
-                      <div className="flex-1">
-                        <p
-                          className={`text-sm leading-snug font-normal ${
-                            isUploaded
-                              ? "text-green-800 font-medium"
-                              : "text-gray-600"
-                          }`}
-                        >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-800 leading-snug line-clamp-2">
                           {doc.label}
                         </p>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          {isUploaded ? (
+                            <span className="text-green-600 font-medium">
+                              Sudah diupload ({doc.status})
+                            </span>
+                          ) : (
+                            "Belum ada file"
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label
+                          className={`cursor-pointer p-2 rounded-lg transition-colors border ${
+                            doc.isUploading
+                              ? "bg-gray-100 border-gray-200 text-gray-400"
+                              : "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"
+                          }`}
+                        >
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => handleUploadDokumen(idx, e)}
+                            disabled={doc.isUploading}
+                          />
+                          {doc.isUploading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                        </label>
                         {isUploaded && (
-                          <p className="text-[10px] text-green-600 mt-1 italic">
-                            Tersimpan
-                          </p>
+                          <button
+                            onClick={() => handleViewDocument(doc.file_url)}
+                            className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors"
+                            title="Lihat Dokumen"
+                          >
+                            <Search className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </div>
@@ -903,89 +1068,34 @@ const Operasional = () => {
                 })}
               </div>
             </SectionCard>
-
-            {/* SECTION 3 RENCANA KEGIATAN (STATIC) */}
-            <SectionCard title="Monitoring & Rencana Kegiatan">
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-xs text-gray-500">
-                  Jadwal kegiatan organisasi mendatang.
-                </p>
-                <button className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all">
-                  <Plus className="w-3 h-3" /> Tambah
-                </button>
-              </div>
-              <div className="overflow-x-auto rounded-xl border border-gray-200">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                      <th className="p-4 font-bold rounded-tl-xl">No</th>
-                      <th className="p-4 font-bold">Nama Kegiatan</th>
-                      <th className="p-4 font-bold">Tanggal Pelaksanaan</th>
-                      <th className="p-4 font-bold">Status</th>
-                      <th className="p-4 font-bold text-center rounded-tr-xl">
-                        Aksi
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-xs text-gray-700 bg-white">
-                    {MOCK_KEGIATAN.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                      >
-                        <td className="p-4 font-bold text-center">
-                          {index + 1}
-                        </td>
-                        <td className="p-4 font-bold">{item.kegiatan}</td>
-                        <td className="p-4 flex items-center gap-2">
-                          <Calendar className="w-3 h-3 text-gray-400" />{" "}
-                          {item.tanggal}
-                        </td>
-                        <td className="p-4">
-                          <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-100">
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button className="p-2 bg-gray-100 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors">
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button className="p-2 bg-gray-100 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
           </>
         )}
       </div>
 
-      {/* --- MODAL FORM PENGURUS (SESUAI BE MAHAR) --- */}
+      {/* --- MODAL PENGURUS --- */}
       {showModalPengurus && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowModalPengurus(false)}
+          />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            <div className="bg-[#B5302D] p-5 text-white flex justify-between items-center">
+              <h3 className="font-bold text-lg">
                 {isEditMode ? "Edit Pengurus" : "Tambah Pengurus Baru"}
               </h3>
               <button
                 onClick={() => setShowModalPengurus(false)}
-                className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitPengurus} className="space-y-4">
+            <form onSubmit={handleSubmitPengurus} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Nama Anggota <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Nama Anggota
                 </label>
                 <input
                   type="text"
@@ -994,70 +1104,74 @@ const Operasional = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, nama_anggota: e.target.value })
                   }
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none"
-                  placeholder="Contoh: H. Samsul"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                  placeholder="Masukkan nama"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Jabatan <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.jabatan_pengurus}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      jabatan_pengurus: e.target.value,
-                    })
-                  }
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none"
-                  placeholder="Contoh: Ketua"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Jabatan
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.jabatan_pengurus}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        jabatan_pengurus: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                    placeholder="Contoh: Ketua"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    No. HP
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.no_hp}
+                    onChange={(e) =>
+                      setFormData({ ...formData, no_hp: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                    placeholder="0812..."
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Nomor HP
-                </label>
-                <input
-                  type="number"
-                  value={formData.no_hp}
-                  onChange={(e) =>
-                    setFormData({ ...formData, no_hp: e.target.value })
-                  }
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none"
-                  placeholder="0812..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
                   Tugas & Tanggung Jawab
                 </label>
                 <textarea
-                  rows={3}
+                  rows="3"
                   value={formData.tugas_pengurus}
                   onChange={(e) =>
                     setFormData({ ...formData, tugas_pengurus: e.target.value })
                   }
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none resize-none"
-                  placeholder="Deskripsi tugas..."
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all resize-none"
+                  placeholder="Jelaskan secara singkat..."
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600 transition-colors"
+                >
+                  <Save className="w-4 h-4" /> Simpan
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowModalPengurus(false)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 transition-colors"
                 >
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:bg-[#982321] flex items-center justify-center gap-2 shadow-lg shadow-red-100"
-                >
-                  <Save className="w-3.5 h-3.5" /> Simpan
                 </button>
               </div>
             </form>
@@ -1065,104 +1179,107 @@ const Operasional = () => {
         </div>
       )}
 
-      {/* --- MODAL FORM TBS (DINAMIS - DENGAN LOGIKA BE) --- */}
+      {/* --- MODAL HARGA TBS --- */}
       {showModalTBS && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95">
-            <h3 className="text-lg font-bold text-[#B5302D] mb-6">
-              Tambah Harga TBS Dari Pemerintah
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowModalTBS(false)}
+          />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
+            <div className="bg-[#D1F7C4] p-5 text-green-900 border-b border-green-300 flex justify-between items-center">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <FileText className="w-5 h-5" /> Input SK TBS
+              </h3>
+              <button
+                onClick={() => setShowModalTBS(false)}
+                className="p-1 hover:bg-green-200 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmitTBS} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Periode bulan
-                </label>
-                <select
-                  name="bulan"
-                  value={tbsFormData.bulan}
-                  onChange={handleTBSChange}
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none"
-                  required
-                >
-                  <option value="">Pilih Bulan</option>
-                  <option value="1">Januari</option>
-                  <option value="2">Februari</option>
-                  <option value="3">Maret</option>
-                  <option value="4">April</option>
-                  <option value="5">Mei</option>
-                  <option value="6">Juni</option>
-                  <option value="7">Juli</option>
-                  <option value="8">Agustus</option>
-                  <option value="9">September</option>
-                  <option value="10">Oktober</option>
-                  <option value="11">November</option>
-                  <option value="12">Desember</option>
-                </select>
+            <form onSubmit={handleSubmitTBS} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Bulan
+                  </label>
+                  <select
+                    name="bulan"
+                    required
+                    value={tbsFormData.bulan}
+                    onChange={handleTBSChange}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  >
+                    <option value="">Pilih...</option>
+                    <option value="1">Januari</option>
+                    <option value="2">Februari</option>
+                    <option value="3">Maret</option>
+                    <option value="4">April</option>
+                    <option value="5">Mei</option>
+                    <option value="6">Juni</option>
+                    <option value="7">Juli</option>
+                    <option value="8">Agustus</option>
+                    <option value="9">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Tahun
+                  </label>
+                  <input
+                    type="number"
+                    name="tahun"
+                    required
+                    value={tbsFormData.tahun}
+                    onChange={handleTBSChange}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    placeholder="Contoh: 2026"
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Periode Tahun
-                </label>
-                <input
-                  type="number"
-                  name="tahun"
-                  value={tbsFormData.tahun}
-                  onChange={handleTBSChange}
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none"
-                  placeholder="Contoh: 2025"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Harga per kg (Rp)
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Harga per Kg (Rp)
                 </label>
                 <input
                   type="number"
                   name="harga"
+                  step="0.01"
+                  required
                   value={tbsFormData.harga}
                   onChange={handleTBSChange}
-                  className="w-full p-2.5 rounded-xl border border-gray-200 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none"
-                  placeholder="Rp 1.400"
-                  required
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  placeholder="Contoh: 2500"
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Upload File SK
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Upload SK (.pdf)
                 </label>
                 <input
                   type="file"
                   name="file"
-                  onChange={handleTBSChange}
-                  className="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#EF8523] file:text-white hover:file:bg-[#d06d1e]"
+                  accept="application/pdf"
                   required
+                  onChange={handleTBSChange}
+                  className="w-full px-4 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 cursor-pointer"
                 />
               </div>
 
-              <div className="flex gap-3 pt-6">
+              <div className="pt-4 flex gap-3">
                 <button
                   type="submit"
                   disabled={isSubmittingTBS}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-800 shadow-sm flex justify-center items-center gap-2 ${
-                    isSubmittingTBS
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-[#B0F0B5] hover:shadow-md hover:bg-green-300 border border-green-300"
-                  }`}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400"
                 >
-                  {isSubmittingTBS && (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  )}
-                  {isSubmittingTBS ? "Mengirim..." : "Kirim"}
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmittingTBS}
-                  onClick={() => setShowModalTBS(false)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 shadow-sm border-black"
-                >
-                  Batal
+                  {isSubmittingTBS ? "Mengupload..." : "Simpan Harga"}
                 </button>
               </div>
             </form>
@@ -1172,18 +1289,27 @@ const Operasional = () => {
 
       {/* --- MODAL FORM JUAL BARANG --- */}
       {showModalJual && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95">
-            <h3 className="text-lg font-bold text-[#B5302D] mb-6">
-              Jual Barang ke Petani
-            </h3>
-            <form onSubmit={handleSubmitJual} className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowModalJual(false)}
+          />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
+              <h3 className="font-bold text-lg">Catat Penjualan Barang</h3>
+              <button
+                onClick={() => setShowModalJual(false)}
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitJual} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  User ID Petani <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Pilih Petani <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   required
                   value={jualFormData.petani_user_id}
                   onChange={(e) =>
@@ -1192,37 +1318,51 @@ const Operasional = () => {
                       petani_user_id: e.target.value,
                     })
                   }
-                  className="w-full p-2.5 rounded-xl border outline-none"
-                  placeholder="ID Petani"
-                />
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                >
+                  <option value="">-- Pilih Petani --</option>
+                  {opsiPetani.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nama_lengkap}
+                    </option>
+                  ))}
+                </select>
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
                   Jenis Barang <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
                   value={jualFormData.jenis_barang}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const jenis = e.target.value;
+                    // Reset dinamis_item_id jika jenis diganti, lalu fetch barang baru
                     setJualFormData({
                       ...jualFormData,
-                      jenis_barang: e.target.value,
-                    })
-                  }
-                  className="w-full p-2.5 rounded-xl border outline-none"
+                      jenis_barang: jenis,
+                      dinamis_item_id: "",
+                    });
+                    fetchOpsiBarang(jenis);
+                  }}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
                 >
+                  <option value="">-- Pilih Jenis --</option>
                   <option value="Bibit">Bibit</option>
                   <option value="Pupuk">Pupuk</option>
                   <option value="Pestisida">Pestisida</option>
                 </select>
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  ID Item / Barang <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Pilih Barang di Inventaris{" "}
+                  <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   required
+                  disabled={!jualFormData.jenis_barang}
                   value={jualFormData.dinamis_item_id}
                   onChange={(e) =>
                     setJualFormData({
@@ -1230,18 +1370,66 @@ const Operasional = () => {
                       dinamis_item_id: e.target.value,
                     })
                   }
-                  className="w-full p-2.5 rounded-xl border outline-none"
-                  placeholder="ID Item di Inventaris"
-                />
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none disabled:bg-gray-200"
+                >
+                  <option value="">
+                    {jualFormData.jenis_barang
+                      ? "-- Pilih Barang --"
+                      : "Pilih Jenis Barang Dulu"}
+                  </option>
+
+                  {/* JIKA BE MENGIRIM ARRAY KOSONG (Stok di DB Habis/Belum diinput) */}
+                  {opsiBarang.length === 0 && jualFormData.jenis_barang && (
+                    <option value="" disabled>
+                      -- Stok Kosong di Inventaris Barang Anda! --
+                    </option>
+                  )}
+
+                  {opsiBarang.map((b, index) => {
+                    let itemId = "";
+                    if (jualFormData.jenis_barang === "Bibit") {
+                      itemId = b.dinamis_varietas_id;
+                    } else if (jualFormData.jenis_barang === "Pupuk") {
+                      itemId = b.dinamis_pupuk_id;
+                    } else if (jualFormData.jenis_barang === "Pestisida") {
+                      itemId = b.dinamis_pestisida_id;
+                    } else {
+                      itemId = b.id;
+                    }
+
+                    // 2. AMBIL NAMA BARANG
+                    const itemName =
+                      b.nama_varietas ||
+                      b.nama_pupuk ||
+                      b.nama_pestisida ||
+                      b.nama_item ||
+                      b.nama ||
+                      "Item Tidak Bernama";
+
+                    const sisa =
+                      b.jumlah_tersisa ??
+                      b.jumlah_per_buah ??
+                      b.jumlah ??
+                      b.stok ??
+                      0;
+
+                    return (
+                      <option key={b.id || `brg-${index}`} value={itemId}>
+                        {itemName} (Sisa Stok: {sisa})
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">
-                    Jumlah <span className="text-red-500">*</span>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Jumlah Barang <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
-                    step="any"
+                    step="0.01"
                     required
                     value={jualFormData.jumlah}
                     onChange={(e) =>
@@ -1250,13 +1438,12 @@ const Operasional = () => {
                         jumlah: e.target.value,
                       })
                     }
-                    className="w-full p-2.5 rounded-xl border outline-none"
-                    placeholder="Cth: 2"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">
-                    Total Harga (Opsional)
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Total Harga
                   </label>
                   <input
                     type="number"
@@ -1267,18 +1454,18 @@ const Operasional = () => {
                         total_harga: e.target.value,
                       })
                     }
-                    className="w-full p-2.5 rounded-xl border outline-none"
-                    placeholder="Rp"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-6">
+
+              <div className="pt-4 flex gap-3">
                 <button
                   type="submit"
                   disabled={isSubmittingJual}
                   className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600"
                 >
-                  {isSubmittingJual ? "Memproses..." : "Simpan Penjualan"}
+                  {isSubmittingJual ? "Memproses..." : "Catat Penjualan"}
                 </button>
                 <button
                   type="button"
@@ -1295,18 +1482,27 @@ const Operasional = () => {
 
       {/* --- MODAL FORM PINJAM ALAT --- */}
       {showModalPinjam && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95">
-            <h3 className="text-lg font-bold text-[#B5302D] mb-6">
-              Pinjamkan Alat ke Petani
-            </h3>
-            <form onSubmit={handleSubmitPinjam} className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowModalPinjam(false)}
+          />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
+              <h3 className="font-bold text-lg">Catat Peminjaman Alat</h3>
+              <button
+                onClick={() => setShowModalPinjam(false)}
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitPinjam} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  User ID Petani <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Pilih Petani <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   required
                   value={pinjamFormData.petani_user_id}
                   onChange={(e) =>
@@ -1315,16 +1511,22 @@ const Operasional = () => {
                       petani_user_id: e.target.value,
                     })
                   }
-                  className="w-full p-2.5 rounded-xl border outline-none"
-                  placeholder="ID Petani"
-                />
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                >
+                  <option value="">-- Pilih Petani --</option>
+                  {opsiPetani.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nama_lengkap}
+                    </option>
+                  ))}
+                </select>
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  ID Peralatan <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Pilih Peralatan <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   required
                   value={pinjamFormData.dinamis_peralatan_id}
                   onChange={(e) =>
@@ -1333,14 +1535,53 @@ const Operasional = () => {
                       dinamis_peralatan_id: e.target.value,
                     })
                   }
-                  className="w-full p-2.5 rounded-xl border outline-none"
-                  placeholder="ID Alat di Inventaris"
-                />
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                >
+                  <option value="">-- Pilih Alat di Inventaris --</option>
+
+                  {/* JIKA BE MENGIRIM ARRAY KOSONG */}
+                  {opsiPeralatan.length === 0 && (
+                    <option value="" disabled>
+                      -- Stok Kosong di Inventaris Alat Anda!! --
+                    </option>
+                  )}
+
+                  {opsiPeralatan.map((alat, index) => {
+                    const alatId =
+                      alat.dinamis_item_id ||
+                      alat.id ||
+                      alat.dinamis_peralatan_id;
+                    const alatName =
+                      alat.nama_item ||
+                      alat.nama_peralatan ||
+                      alat.nama_alat ||
+                      alat.nama ||
+                      "Alat Tidak Bernama";
+
+                    // DI SINI KITA TAMBAHKAN "alat.jumlah_per_buah" SESUAI RESPONS BE TERBARU
+                    const sisaAlat =
+                      alat.jumlah_per_buah ??
+                      alat.jumlah_tersisa ??
+                      alat.jumlah ??
+                      alat.stok ??
+                      alat.total_stok ??
+                      alat.sisa_stok ??
+                      alat.stok_tersisa ??
+                      0;
+
+                    return (
+                      <option key={alatId || `alat-${index}`} value={alatId}>
+                        {alatName} (Sisa: {sisaAlat})
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">
-                    Jml Dipinjam <span className="text-red-500">*</span>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Jumlah Dipinjam <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -1352,13 +1593,12 @@ const Operasional = () => {
                         jumlah_dipinjam: e.target.value,
                       })
                     }
-                    className="w-full p-2.5 rounded-xl border outline-none"
-                    placeholder="Cth: 1"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">
-                    Tanggal <span className="text-red-500">*</span>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Tanggal Peminjaman <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -1370,11 +1610,12 @@ const Operasional = () => {
                         tanggal_peminjaman: e.target.value,
                       })
                     }
-                    className="w-full p-2.5 rounded-xl border outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-6">
+
+              <div className="pt-4 flex gap-3">
                 <button
                   type="submit"
                   disabled={isSubmittingPinjam}
@@ -1402,20 +1643,12 @@ const Operasional = () => {
 
 const SectionCard = ({ title, children }) => (
   <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
-    {/* Decorative Header Line */}
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
 
     <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
       {title}
     </h3>
     {children}
-  </div>
-);
-
-const EmptyState = ({ text }) => (
-  <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-    <Search className="w-10 h-10 mb-3 opacity-20" />
-    <p className="text-xs italic">{text}</p>
   </div>
 );
 

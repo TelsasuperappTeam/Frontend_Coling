@@ -46,13 +46,16 @@ export default function DataStakeholderAdmin() {
 
   const [originalForm, setOriginalForm] = useState(null);
 
+  // --- DISESUAIKAN DENGAN ROLE BARU ---
   const [open, setOpen] = useState({
     kebun: true,
-    petani: false,
-    logistik: false,
+    mandor: false,
+    estateManager: false,
+    gmDistrik: false,
+    transport: false,
     pabrik: false,
     admin: false,
-    audit: false, //State untuk accordion Audit Log
+    audit: false,
   });
 
   const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -73,9 +76,7 @@ export default function DataStakeholderAdmin() {
         cleanData = rawData;
       } else if (rawData && Array.isArray(rawData.data)) {
         cleanData = rawData.data;
-      }
-      // TAMBAHAN: Cek jika backend membungkus dengan nama lain, misal "users"
-      else if (rawData && Array.isArray(rawData.users)) {
+      } else if (rawData && Array.isArray(rawData.users)) {
         cleanData = rawData.users;
       }
 
@@ -94,7 +95,6 @@ export default function DataStakeholderAdmin() {
       setLoadingLogs(true);
       const token = localStorage.getItem("token");
 
-      // Menggunakan key GET_AUDIT_LOG sesuai constants.js
       const url = API_ENDPOINTS.USER.ADMIN.GET_AUDIT_LOG;
 
       const res = await fetch(url, {
@@ -121,7 +121,6 @@ export default function DataStakeholderAdmin() {
 
   // ====== HAPUS USER ======
   const handleDelete = async (userId) => {
-    // Konfirmasi sebelum hapus
     if (
       !window.confirm(
         "Apakah Anda yakin ingin menghapus pengguna ini? Data yang dihapus tidak dapat dikembalikan.",
@@ -132,10 +131,8 @@ export default function DataStakeholderAdmin() {
 
     try {
       const token = localStorage.getItem("token");
-      // Menggunakan function URL dari constants
       const url = API_ENDPOINTS.USER.ADMIN.DELETE_USER(userId);
 
-      // Panggil API DELETE
       const res = await fetch(url, {
         method: "DELETE",
         headers: {
@@ -144,28 +141,25 @@ export default function DataStakeholderAdmin() {
       });
 
       if (!res.ok) {
-        // Handle jika backend mengirim error detail
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.detail || "Gagal menghapus pengguna");
       }
 
-      // Jika sukses, refresh data
       alert("Pengguna berhasil dihapus.");
       fetchUsers();
-      fetchAuditLogs(); // Refresh logs setelah hapus
+      fetchAuditLogs();
     } catch (err) {
       console.error(err);
       alert(`Error: ${err.message}`);
     }
   };
 
-  // Tambahkan pengaman (users || []) sebelum .filter
   const byRole = (role) => {
     const safeUsers = Array.isArray(users) ? users : [];
+    // Pastikan role tidak undefined sebelum dicheck
+    if (!role) return [];
     return safeUsers.filter(
-      (u) =>
-        // Ubah keduanya jadi huruf kecil saat membandingkan
-        u.role?.toLowerCase() === role?.toLowerCase(),
+      (u) => u.role?.toLowerCase() === role?.toLowerCase(),
     );
   };
 
@@ -190,7 +184,6 @@ export default function DataStakeholderAdmin() {
     setShowEdit(true);
   };
 
-  // logika simpan edit data stakeholder dan mengkosongkan koordinat
   const handleSave = async (e) => {
     e.preventDefault();
 
@@ -207,29 +200,21 @@ export default function DataStakeholderAdmin() {
     setLoading(true);
 
     try {
-      // Siapkan Payload Awal
       const payload = {};
 
-      // BANDINGKAN KOLOM TEXT BIASA
-      // Hanya masukkan ke payload jika nilainya berbeda dari originalForm
       if (form.nama_lengkap !== originalForm.nama_lengkap) {
         payload.nama_lengkap = form.nama_lengkap;
       }
-
       if (form.no_hp !== originalForm.no_hp) {
         payload.no_hp = form.no_hp;
       }
-
       if (form.alamat !== originalForm.alamat) {
         payload.alamat = form.alamat;
       }
-
       if (form.status !== originalForm.status) {
         payload.status = form.status;
       }
 
-      // BANDINGKAN KOLOM KOORDINAT
-      // Cek apakah string koordinat berubah?
       if (form.koordinat !== originalForm.koordinat) {
         if (!form.koordinat || form.koordinat.trim() === "") {
           payload.hapus_koordinat = true;
@@ -255,8 +240,6 @@ export default function DataStakeholderAdmin() {
         }
       }
 
-      // CEK APAKAH ADA PERUBAHAN?
-      // Jika payload kosong, berarti user klik simpan tanpa merubah apapun
       if (Object.keys(payload).length === 0) {
         alert("Tidak ada perubahan data yang disimpan.");
         setShowEdit(false);
@@ -264,9 +247,6 @@ export default function DataStakeholderAdmin() {
         return;
       }
 
-      console.log("Mengirim Payload Perubahan:", payload);
-
-      // 4. KIRIM DATA KE BACKEND
       const url = API_ENDPOINTS.USER.ADMIN.UPDATE_USER(selectedUser.id);
 
       const response = await fetch(url, {
@@ -304,7 +284,7 @@ export default function DataStakeholderAdmin() {
       alert("Data berhasil diperbarui!");
       setShowEdit(false);
       fetchUsers();
-      fetchAuditLogs(); // Refresh logs setelah update
+      fetchAuditLogs();
     } catch (err) {
       console.error("Error saat menyimpan:", err);
       alert(`Gagal: ${err.message}`);
@@ -335,7 +315,6 @@ export default function DataStakeholderAdmin() {
             <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-[#B5302D]">
               Data Stakeholder
             </h1>
-
             <p className="text-gray-500 text-xs md:text-sm mt-0.5">
               Kelola informasi dan status semua entitas sistem
             </p>
@@ -343,6 +322,7 @@ export default function DataStakeholderAdmin() {
         </header>
 
         <div className="space-y-6">
+          {/* --- MAP DATA DISESUAIKAN DENGAN ROLES BARU --- */}
           {[
             {
               title: "Stakeholder Kebun",
@@ -351,15 +331,27 @@ export default function DataStakeholderAdmin() {
               icon: <TreeDeciduous size={20} />,
             },
             {
-              title: "Stakeholder Petani",
-              role: ROLES.PETANI,
-              key: "petani",
+              title: "Stakeholder Mandor",
+              role: ROLES.MANDOR,
+              key: "mandor",
               icon: <User size={20} />,
             },
             {
-              title: "Stakeholder Logistik",
-              role: ROLES.LOGISTIK,
-              key: "logistik",
+              title: "Estate Manager",
+              role: ROLES.ESTATE_MANAGER,
+              key: "estateManager",
+              icon: <Shield size={20} />,
+            },
+            {
+              title: "General Manager Distrik",
+              role: ROLES.GENERAL_MANAGER_DISTRIK,
+              key: "gmDistrik",
+              icon: <Shield size={20} />,
+            },
+            {
+              title: "Stakeholder Transport",
+              role: ROLES.TRANSPORT,
+              key: "transport",
               icon: <Truck size={20} />,
             },
             {
@@ -370,7 +362,7 @@ export default function DataStakeholderAdmin() {
             },
             {
               title: "Administrator",
-              role: ROLES.ADMIN,
+              role: ROLES.ADMIN, // Tetap dibiarkan jika ada
               key: "admin",
               icon: <Settings size={20} />,
             },
@@ -458,7 +450,6 @@ export default function DataStakeholderAdmin() {
                         className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-[#B5302D] outline-none transition text-sm"
                       />
 
-                      {/* Tombol Hapus */}
                       {form.koordinat && (
                         <button
                           onClick={() => setForm({ ...form, koordinat: "" })}
@@ -482,7 +473,7 @@ export default function DataStakeholderAdmin() {
                     </label>
                     <textarea
                       rows="2"
-                      placeholder="Kosongkan jika ingin petani mengisi ulang alamat"
+                      placeholder="Kosongkan jika ingin stakeholder mengisi ulang alamat"
                       className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-[#B5302D] outline-none transition text-sm resize-none"
                       value={form.alamat}
                       onChange={(e) =>
@@ -520,7 +511,7 @@ export default function DataStakeholderAdmin() {
                   </button>
                   <button
                     type="submit"
-                    disabled={loading} // Tambahkan disabled saat loading
+                    disabled={loading}
                     className="flex-1 bg-[#B5302D] text-white rounded-xl py-3 font-bold shadow-lg shadow-red-200 hover:bg-[#962825] transition flex items-center justify-center gap-2"
                   >
                     <Save size={20} /> Simpan Perubahan
@@ -537,16 +528,15 @@ export default function DataStakeholderAdmin() {
 
 /* ================== TABLE & MOBILE CARD COMPONENTS ================== */
 
-// Pastikan props menerima 'role'
 function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
-  // LOGIKA TAMPILAN KOLOM
-  const showKebunId = role === ROLES.KEBUN; // Cuma tampil di Kebun
-  const showKebunInduk = role === ROLES.PETANI; // Cuma tampil di Petani
-  const showKoordinat = role !== ROLES.LOGISTIK; // Tampil KECUALI di Logistik
+  // --- LOGIKA TAMPILAN KOLOM DISESUAIKAN ---
+  const showDistrikId = role === ROLES.KEBUN; // Menampilkan distrik_id khusus KEBUN
+  const showKebunId = role === ROLES.KEBUN || role === ROLES.ESTATE_MANAGER; // Menampilkan kebun_id untuk KEBUN dan ESTATE MANAGER
+  const showKebunInduk = role === ROLES.MANDOR;
+  const showKoordinat = role !== ROLES.TRANSPORT;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* HEADER SECTION */}
       <div
         onClick={toggle}
         className={`cursor-pointer px-4 md:px-6 py-5 flex justify-between items-center transition-all ${
@@ -591,7 +581,6 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                   key={u.id}
                   className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-3"
                 >
-                  {/* Card Header */}
                   <div className="flex justify-between items-start border-b border-gray-50 pb-2 mb-1">
                     <div>
                       <h3 className="font-bold text-gray-800 text-sm">
@@ -604,7 +593,6 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                     <StatusBadge status={u.status} />
                   </div>
 
-                  {/* Info Detail */}
                   <div className="space-y-2 text-xs text-gray-600">
                     <div className="flex items-center gap-2">
                       <Mail size={14} className="text-gray-400 shrink-0" />
@@ -624,19 +612,27 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                       <span className="line-clamp-2">{u.alamat || "-"}</span>
                     </div>
 
-                    {/* LOGIKA TAMPILAN KHUSUS (MOBILE) */}
                     <div className="grid grid-cols-1 gap-2 mt-1">
-                      {/* Hanya Tampil jika Kebun */}
-                      {showKebunId && (
+                      {/* KOLOM BARU MOBILE: Distrik ID */}
+                      {showDistrikId && (
                         <div className="flex items-center gap-2">
                           <Tag size={14} className="text-gray-400 shrink-0" />
-                          <span className="font-mono text-blue-600 font-bold bg-blue-50 px-1.5 rounded">
-                            ID: {u.kebun_id || "-"}
+                          <span className="font-mono text-purple-600 font-bold bg-purple-50 px-1.5 rounded">
+                            Distrik ID: {u.distrik_id || "-"}
                           </span>
                         </div>
                       )}
 
-                      {/* Hanya Tampil jika Petani */}
+                      {/* KOLOM UPDATE MOBILE: Kebun ID */}
+                      {showKebunId && (
+                        <div className="flex items-center gap-2">
+                          <Tag size={14} className="text-gray-400 shrink-0" />
+                          <span className="font-mono text-blue-600 font-bold bg-blue-50 px-1.5 rounded">
+                            Kebun ID: {u.kebun_id || "-"}
+                          </span>
+                        </div>
+                      )}
+
                       {showKebunInduk && (
                         <div className="flex items-center gap-2">
                           <TreeDeciduous
@@ -670,7 +666,6 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                     </div>
                   </div>
 
-                  {/* Card Footer */}
                   <div className="flex gap-2 pt-2 mt-1 border-t border-gray-50">
                     <button
                       onClick={() => onEdit(u)}
@@ -699,15 +694,20 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  {/* Kolom Umum */}
                   <Th icon={<User size={14} />}>Nama</Th>
                   <Th icon={<Mail size={14} />}>Email</Th>
                   <Th icon={<Shield size={14} />}>Role</Th>
                   <Th icon={<Phone size={14} />}>No HP</Th>
                   <Th icon={<MapPin size={14} />}>Alamat</Th>
 
-                  {/* LOGIKA HEADER KOLOM KHUSUS */}
+                  {/* HEADER BARU: Distrik ID */}
+                  {showDistrikId && (
+                    <Th icon={<Tag size={14} />}>Distrik ID</Th>
+                  )}
+
+                  {/* HEADER UPDATE: Kebun ID */}
                   {showKebunId && <Th icon={<Tag size={14} />}>Kebun ID</Th>}
+
                   {showKebunInduk && (
                     <Th icon={<TreeDeciduous size={14} />}>Relasi Kebun</Th>
                   )}
@@ -727,7 +727,6 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                       key={u.id}
                       className="hover:bg-blue-50/30 transition-colors"
                     >
-                      {/* Kolom Umum */}
                       <Td className="font-semibold text-gray-900">
                         {u.nama_lengkap}
                       </Td>
@@ -742,21 +741,26 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                         {u.alamat || "-"}
                       </Td>
 
-                      {/* LOGIKA ISI DATA KHUSUS */}
+                      {/* KOLOM BARU DESKTOP: Distrik ID */}
+                      {showDistrikId && (
+                        <Td className="font-mono text-xs text-purple-600 font-bold">
+                          {u.distrik_id || "-"}
+                        </Td>
+                      )}
 
-                      {/* Kebun ID (Hanya Kebun) */}
+                      {/* KOLOM UPDATE DESKTOP: Kebun ID */}
                       {showKebunId && (
                         <Td className="font-mono text-xs text-blue-600 font-bold">
                           {u.kebun_id || "-"}
                         </Td>
                       )}
 
-                      {/* Relasi Kebun (Hanya Petani) */}
                       {showKebunInduk && (
                         <Td className="italic text-gray-500">
                           {u.kebun?.nama_lengkap || "-"}
                         </Td>
                       )}
+
                       {showKoordinat && (
                         <Td className="text-[11px] text-gray-400 font-mono">
                           {u.latitude && u.longitude
@@ -798,6 +802,7 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                     <td
                       colSpan={
                         7 +
+                        (showDistrikId ? 1 : 0) +
                         (showKebunId ? 1 : 0) +
                         (showKebunInduk ? 1 : 0) +
                         (showKoordinat ? 1 : 0)
@@ -818,26 +823,23 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
 }
 
 /* ================== COMPONENT AUDIT LOG SECTION ================== */
+// ... (Sisa komponen AuditLogSection, Th, Td, Input, StatusBadge, formatDate dibiarkan sama seperti aslinya karena tidak berkaitan dengan perubahan Roles)
 function AuditLogSection({ data, open, toggle, loading }) {
-  // Helper untuk parsing JSON perubahan dari Backend
   const renderChanges = (changesString) => {
     try {
       if (!changesString) return "-";
 
-      // Karena di DB tersimpan sebagai string (Text) atau sudah Dict
       const changes =
         typeof changesString === "string"
           ? JSON.parse(changesString)
           : changesString;
 
-      // Validasi apakah hasil parse adalah object valid
       if (!changes || typeof changes !== "object") return "-";
       if (Object.keys(changes).length === 0) return "-";
 
       return (
         <div className="flex flex-col gap-2">
           {Object.entries(changes).map(([field, diff]) => {
-            // --- DATA DIHAPUS ---
             if (field === "deleted_user_data") {
               return (
                 <div
@@ -858,7 +860,6 @@ function AuditLogSection({ data, open, toggle, loading }) {
               );
             }
 
-            // --- DATA DIEDIT ---
             const valOld = diff?.lama ?? diff?.old ?? "-";
             const valNew = diff?.baru ?? diff?.new ?? diff;
 
@@ -949,7 +950,6 @@ function AuditLogSection({ data, open, toggle, loading }) {
                       key={log.id}
                       className="hover:bg-orange-50/10 transition-colors"
                     >
-                      {/* Waktu */}
                       <Td className="text-xs text-gray-600 w-[150px]">
                         <div className="flex flex-col">
                           <span className="font-bold">
@@ -969,7 +969,6 @@ function AuditLogSection({ data, open, toggle, loading }) {
                         </div>
                       </Td>
 
-                      {/* Admin Info */}
                       <Td className="w-[180px] bg-gray-50/50">
                         <div className="flex flex-col">
                           <span className="font-bold text-gray-700 text-xs truncate">
@@ -981,7 +980,6 @@ function AuditLogSection({ data, open, toggle, loading }) {
                         </div>
                       </Td>
 
-                      {/* Target Info */}
                       <Td className="w-[180px]">
                         <div className="flex flex-col">
                           <span className="font-bold text-gray-700 text-xs truncate">
@@ -993,7 +991,6 @@ function AuditLogSection({ data, open, toggle, loading }) {
                         </div>
                       </Td>
 
-                      {/* Aksi */}
                       <Td className="w-[120px]">
                         <span
                           className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${
@@ -1006,7 +1003,6 @@ function AuditLogSection({ data, open, toggle, loading }) {
                         </span>
                       </Td>
 
-                      {/* Detail Perubahan */}
                       <Td className="min-w-[300px] py-3">
                         {renderChanges(log.changes)}
                       </Td>
