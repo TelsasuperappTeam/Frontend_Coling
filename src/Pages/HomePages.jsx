@@ -105,8 +105,7 @@ const HomePages = () => {
             </h1>
 
             <p className="text-white/90 text-sm sm:text-base md:text-lg leading-relaxed max-w-md mx-auto md:mx-0">
-              Satu Langkah Digital Membantu Petani Sawit Rakyat Untuk Menuju
-              Sertifikasi ISPO
+              Platform ERP Untuk Pemenuhan Sertifikasi ISPO untuk Perusahaan
             </p>
 
             <div className="flex justify-center md:justify-start">
@@ -141,8 +140,7 @@ const HomePages = () => {
               </div>
 
               <p className="text-gray-600 mb-5 md:mb-8 text-sm md:text-lg leading-relaxed pl-3 md:pl-0">
-                <strong>PalmaOne-08 ISPO</strong> adalah platform membantu petani
-                sawit rakyat mengelola pencatatan perkebunan, transability
+                <strong>PalmaOne-08 ISPO</strong> adalah platform ERP untuk mengelola pencatatan perkebunan, transability
                 sawit, koordinasi antar pelaku sawit, dan pemenuhan sertifikasi
                 ISPO dengan lebih mudah, cepat, dan efisien.
               </p>
@@ -151,7 +149,7 @@ const HomePages = () => {
                 {[
                   "<strong>100% pemenuhan persyaratan ISPO</strong> dalam sistem PalmaOne-08.",
                   "<strong>Otomatisasi dokumen</strong> berdasarkan aktivitas perkebunan.",
-                  "Didesain khusus untuk <strong>petani rakyat</strong> dan pendamping stakeholder lainnya.",
+                  "Didesain khusus untuk <strong>perusahaan</strong> dan pendamping stakeholder lainnya.",
                 ].map((text, i) => {
                   // Mapping Icon Lucide sesuai konteks
                   const IconComponent = [
