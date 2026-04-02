@@ -82,7 +82,7 @@ const Navbar = () => {
             <div className="flex items-center gap-2">
               <img src="/LogoTSA.png" alt="Logo" className="h-6 w-auto sm:h-7" />
               <h1 className="text-m sm:text-sm lg:text-base font-bold text-white whitespace-nowrap">
-                TELSA Super App
+                PalmaOne-08
               </h1>
             </div>
           </div>

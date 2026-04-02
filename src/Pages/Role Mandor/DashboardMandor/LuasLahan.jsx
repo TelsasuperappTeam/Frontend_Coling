@@ -16,7 +16,7 @@ export default function LuasLahan() {
   // === STATE FORM ===
   const [form, setForm] = useState({
     membukaLahan: null,
-    jenisPelakuUsaha: "",
+    jenisPelakuUsaha: "PERUSAHAAN",
     sertifikatTanah: null,
     jenisSertifikat: "",
     jenisLainnya: "",
@@ -572,26 +572,7 @@ export default function LuasLahan() {
         {/* --- STEP 1 --- */}
         {step === 1 && (
           <div className="space-y-6 sm:space-y-7">
-            <div>
-              <p className="text-sm font-medium text-gray-800 mb-3 text-center sm:text-left">
-                Anda mendaftar sebagai Petani Swadaya atau Perusahaan?{" "}
-                <span className="text-red-500">*</span>
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center sm:justify-start">
-                <button
-                  onClick={() => handleChange("jenisPelakuUsaha", "PEKEBUN")}
-                  className={`w-full sm:w-auto px-6 py-2.5 rounded-lg border-2 font-medium text-sm transition-all duration-200 ${form.jenisPelakuUsaha === "PEKEBUN" ? "bg-[#B5302D] text-white border-[#B5302D] shadow-sm" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
-                >
-                  Petani Swadaya
-                </button>
-                <button
-                  onClick={() => handleChange("jenisPelakuUsaha", "PERUSAHAAN")}
-                  className={`w-full sm:w-auto px-6 py-2.5 rounded-lg border-2 font-medium text-sm transition-all duration-200 ${form.jenisPelakuUsaha === "PERUSAHAAN" ? "bg-[#B5302D] text-white border-[#B5302D] shadow-sm" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
-                >
-                  Perusahaan
-                </button>
-              </div>
-            </div>
+            {/* BAGIAN PEMILIHAN JENIS PELAKU USAHA DIHAPUS DARI SINI */}
 
             <div>
               <p className="text-sm font-medium text-gray-800 mb-3 text-center sm:text-left">

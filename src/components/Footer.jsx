@@ -16,19 +16,19 @@ const Footer = () => {
           <div>
             {/* Nama aplikasi di footer */}
             <h3 className="text-base md:text-lg font-bold text-[#1E1E1E] mb-1 tracking-tight">
-              PalmaOne-08 ISPO App
+              Platform ISPO PalmaOne-08
             </h3>
 
             {/* Deskripsi singkat aplikasi */}
             <p className="text-xs md:text-sm text-gray-600 leading-relaxed max-w-xs">
-              Digitalisasi manajemen sawit untuk petani rakyat Indonesia.
+              Digitalisasi manajemen sawit untuk perusahaan.
             </p>
           </div>
 
           {/* Copyright otomatis menyesuaikan tahun sekarang */}
           <p className="mt-4 text-[10px] md:text-[11px] text-gray-500">
             © {new Date().getFullYear()}{" "}
-            <span className="font-semibold">PalmaOne-08 ISPO App</span>. Semua hak
+            <span className="font-semibold">Platform ISPO PalmaOne-08</span>. Semua hak
             cipta dilindungi.
           </p>
         </div>

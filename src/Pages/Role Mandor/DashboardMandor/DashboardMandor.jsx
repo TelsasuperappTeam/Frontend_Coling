@@ -187,7 +187,7 @@ export default function DashboardMandor() {
 
   // -----------------------------------------------------------------------------
   // FUNGSI: Mengambil Data Progres ISPO (GET)
-  // (SESUAI BE MAHAR) - Mengambil list detail poin dan menghitung persentase
+  // (SESUAI INSTRUKSI BE MAHAR)
   // -----------------------------------------------------------------------------
   const fetchIspoProgress = useCallback(async () => {
     try {
@@ -195,7 +195,6 @@ export default function DashboardMandor() {
         localStorage.getItem("accessToken") || localStorage.getItem("token");
       if (!token) return;
 
-      // (SESUAI BE MAHAR) Endpoint: /ispo/progress
       const response = await fetch(
         API_ENDPOINTS.ISPO.PETANI.GET_PROGRES_ISPO_PETANI,
         {
@@ -209,32 +208,20 @@ export default function DashboardMandor() {
 
       if (response.ok) {
         const data = await response.json();
-        // Asumsi struktur response: Array objek DetailPoin atau properti 'data' berisi array
-        const listPoints = Array.isArray(data) ? data : data.data || [];
 
-        // Inisialisasi object progress sementara
-        const newProgress = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-
-        // Loop untuk menghitung persentase setiap prinsip (1 s.d 5)
-        [1, 2, 3, 4, 5].forEach((idPrinsip) => {
-          // Filter poin berdasarkan prinsip_id
-          const items = listPoints.filter((p) => p.prinsip_id === idPrinsip);
-          const totalItems = items.length;
-
-          if (totalItems > 0) {
-            // Hitung status "TERPENUHI"
-            const fulfilled = items.filter(
-              (p) => p.status === "TERPENUHI",
-            ).length;
-            // Kalkulasi persentase
-            newProgress[idPrinsip] = Math.round((fulfilled / totalItems) * 100);
-          } else {
-            // Jika tidak ada item untuk prinsip ini, 0% (atau 100% jika dianggap N/A, tapi default 0)
-            newProgress[idPrinsip] = 0;
-          }
-        });
-
-        setIspoProgress(newProgress);
+        // Cukup ambil langsung dari progress_summary bawaan Backend!
+        // Tidak perlu dilooping atau dihitung manual lagi.
+        if (data.progress_summary) {
+          setIspoProgress({
+            1: Math.round(data.progress_summary.prinsip_1 || 0),
+            2: Math.round(data.progress_summary.prinsip_2 || 0),
+            3: Math.round(data.progress_summary.prinsip_3 || 0),
+            4: Math.round(data.progress_summary.prinsip_4 || 0),
+            5: Math.round(data.progress_summary.prinsip_5 || 0),
+          });
+        } else {
+          console.warn("Data progress_summary tidak ditemukan di response");
+        }
       } else {
         console.warn("Gagal mengambil data progres ISPO");
       }
@@ -554,7 +541,10 @@ export default function DashboardMandor() {
                   <DataRow label="Email" value={profile.email} />
                 </div>
                 <div className="space-y-1">
-                  <DataRow label="Relasi Kebun" value={profile.nama_kebun_naungan} />
+                  <DataRow
+                    label="Relasi Kebun"
+                    value={profile.nama_kebun_naungan}
+                  />
                   <DataRow
                     label="Alamat / Lokasi Kebun"
                     value={profile.alamat_kebun}
@@ -687,11 +677,58 @@ export default function DashboardMandor() {
                   key={num}
                   className="flex flex-col items-center w-[30%] sm:flex-1"
                 >
-                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full border-[3px] sm:border-[5px] border-gray-100 flex items-center justify-center bg-white shadow-sm ring-1 ring-black/5">
-                    {/* (SESUAI BE MAHAR) Menampilkan persentase dari state */}
-                    <span className="text-[10px] sm:text-sm font-black text-red-400">
-                      {ispoProgress[num]}%
-                    </span>
+                  <div className="relative w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center bg-white rounded-full shadow-sm ring-1 ring-black/5 p-1.5 sm:p-2">
+                    {/* --- SVG LINGKARAN PROGRES ULTRA-TIPIS & ELEGAN (MENERIMA REVISI) --- */}
+                    <svg
+                      viewBox="0 0 36 36"
+                      className="absolute top-0 left-0 w-full h-full transform -rotate-90"
+                    >
+                      {/* Definisi Gradien Linier Merah Halus */}
+                      <defs>
+                        <linearGradient
+                          id={`ispoGradient-elegant-${num}`}
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="0%"
+                        >
+                          <stop offset="0%" stopColor="#FF7875" />{" "}
+                          {/* Merah Terang */}
+                          <stop offset="100%" stopColor="#B5302D" />{" "}
+                          {/* Merah Tua */}
+                        </linearGradient>
+                      </defs>
+
+                      {/* Lingkaran Track (Abu-abu Pudar Ultra-Tipis) */}
+                      <path
+                        className="text-gray-100"
+                        stroke="currentColor"
+                        strokeWidth="1"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+
+                      {/* Lingkaran Progres Dinamis Merah-Merah (Garis Ultra-Tipis) */}
+                      <path
+                        stroke={`url(#ispoGradient-elegant-${num})`}
+                        strokeWidth="1.5"
+                        strokeDasharray={`${ispoProgress[num]}, 100`}
+                        strokeLinecap="round"
+                        fill="none"
+                        className="transition-all duration-1000 ease-in-out"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+
+                    {/* (SESUAI BE MAHAR) Menampilkan Teks Persentase Kecil & Elegan di Tengah */}
+                    <div className="relative z-10 flex flex-col items-center">
+                      <span className="text-lg sm:text-xl font-semibold text-[#B5302D] leading-none">
+                        {ispoProgress[num]}%
+                      </span>
+                      <p className="text-[7px] sm:text-[8px] font-medium text-gray-400 mt-0.5 uppercase tracking-tighter">
+                        Progres
+                      </p>
+                    </div>
                   </div>
                   <p className="text-[9px] sm:text-[11px] font-bold text-gray-500 mt-2 text-center uppercase tracking-tighter">
                     Prinsip {num}

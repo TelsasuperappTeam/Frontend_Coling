@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ClipboardList,
   FileText,
@@ -417,31 +417,60 @@ export default function PantauISPO() {
   ];
 
   // ==========================================================================
-  // HELPER FUNCTIONS
+  // HELPER FUNCTIONS & GET DATA PROGRES DINAMIS DARI BE
   // ==========================================================================
 
-  const calculateProgress = (data) => {
-    let totalItems = 0;
-    let checkedItems = 0;
-    data.forEach((group) => {
-      totalItems += group.items.length;
-      checkedItems += group.items.filter((item) => item.checked).length;
-    });
-    return totalItems === 0 ? 0 : Math.round((checkedItems / totalItems) * 100);
-  };
+  // 1. State untuk nyimpan progres dinamis
+  const [ispoProgress, setIspoProgress] = useState({
+    1: 0, 2: 0, 3: 0, 4: 0, 5: 0,
+  });
 
-  const progressPrinsip1 = calculateProgress(prinsip1Data);
-  const progressPrinsip2 = calculateProgress(prinsip2Data);
-  const progressPrinsip3 = calculateProgress(prinsip3Data);
-  const progressPrinsip4 = calculateProgress(prinsip4Data);
-  const progressPrinsip5 = calculateProgress(prinsip5Data);
+  // 2. Fungsi Fetching dari Backend
+  const fetchIspoProgress = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      if (!token) return;
 
+      const response = await fetch(
+        API_ENDPOINTS.ISPO.PETANI.GET_PROGRES_ISPO_PETANI,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.progress_summary) {
+          setIspoProgress({
+            1: Math.round(data.progress_summary.prinsip_1 || 0),
+            2: Math.round(data.progress_summary.prinsip_2 || 0),
+            3: Math.round(data.progress_summary.prinsip_3 || 0),
+            4: Math.round(data.progress_summary.prinsip_4 || 0),
+            5: Math.round(data.progress_summary.prinsip_5 || 0),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching ISPO progress:", error);
+    }
+  }, []);
+
+  // 3. Panggil Fetch API ketika halaman dibuka
+  useEffect(() => {
+    fetchIspoProgress();
+  }, [fetchIspoProgress]);
+
+  // 4. Update Tabs pakai data yang sudah dinamis (dari state ispoProgress)
   const tabs = [
-    { id: 1, title: "Prinsip 1", percentage: progressPrinsip1 },
-    { id: 2, title: "Prinsip 2", percentage: progressPrinsip2 },
-    { id: 3, title: "Prinsip 3", percentage: progressPrinsip3 },
-    { id: 4, title: "Prinsip 4", percentage: progressPrinsip4 },
-    { id: 5, title: "Prinsip 5", percentage: progressPrinsip5 },
+    { id: 1, title: "Prinsip 1", percentage: ispoProgress[1] },
+    { id: 2, title: "Prinsip 2", percentage: ispoProgress[2] },
+    { id: 3, title: "Prinsip 3", percentage: ispoProgress[3] },
+    { id: 4, title: "Prinsip 4", percentage: ispoProgress[4] },
+    { id: 5, title: "Prinsip 5", percentage: ispoProgress[5] },
   ];
 
   // ==========================================================================
@@ -597,31 +626,31 @@ export default function PantauISPO() {
         return renderPrinsipView(
           "Prinsip 1 (Kepatuhan Terhadap Peraturan dan Perundangan)",
           prinsip1Data,
-          progressPrinsip1,
+          ispoProgress[1]
         );
       case 2:
         return renderPrinsipView(
           "Prinsip 2 (Penerapan Praktek Perkebunan yang Baik)",
           prinsip2Data,
-          progressPrinsip2,
+          ispoProgress[2]
         );
       case 3:
         return renderPrinsipView(
           "Prinsip 3 (Pengelolaan Lingkungan, SDA, & Keanekaragaman Hayati)",
           prinsip3Data,
-          progressPrinsip3,
+          ispoProgress[3]
         );
       case 4:
         return renderPrinsipView(
           "Prinsip 4 (Penerapan Transparansi)",
           prinsip4Data,
-          progressPrinsip4,
+          ispoProgress[4]
         );
       case 5:
         return renderPrinsipView(
           "Prinsip 5 (Peningkatan Usaha Secara Berkelanjutan)",
           prinsip5Data,
-          progressPrinsip5,
+          ispoProgress[5]
         );
       default:
         return null;

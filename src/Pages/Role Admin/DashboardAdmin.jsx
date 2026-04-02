@@ -126,7 +126,7 @@ const DashboardAdmin = () => {
 
   return (
     <div className="p-6 sm:p-10 bg-white min-h-screen font-sans text-[#B5302D]">
-      <h2 className="text-xl sm:text-2xl font-bold mb-6">Data Diri Admin TELSA Super App</h2>
+      <h2 className="text-xl sm:text-2xl font-bold mb-6">Data Diri Admin</h2>
 
       {/* ====== TOP SECTION (PROFILE + VALIDASI) ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -134,7 +134,7 @@ const DashboardAdmin = () => {
         <div className="bg-[#EF8523] text-white rounded-2xl p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6 shadow-md hover:shadow-lg transition">
           <div className="text-sm sm:text-base leading-relaxed space-y-2">
             <p>
-              <strong>Nama Admin :</strong> {userData.nama || "Belum ada data"}
+              <strong>Nama Admin :</strong> "Admin Sistem"
             </p>
             <p>
               <strong>Role :</strong> {userData.role || "Belum ada data"}

@@ -35,6 +35,16 @@ export default function Inventaris() {
   const fetchInventaris = async () => {
     setIsLoadingData(true);
     const headers = getAuthHeaders(false);
+    // 1. Dapatkan target_kebun_auth_id (Misalnya dari URL param, state, atau props jika ini akun EM)
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetKebunAuthId = urlParams.get("target_kebun_auth_id");
+
+    // 2. Buat fungsi helper untuk menambahkan query parameter
+    const buildUrl = (baseUrl) => {
+      return targetKebunAuthId
+        ? `${baseUrl}?target_kebun_auth_id=${targetKebunAuthId}`
+        : baseUrl;
+    };
 
     const fetchSafe = async (url) => {
       try {
@@ -52,12 +62,17 @@ export default function Inventaris() {
     };
 
     try {
+      // 3. Terapkan buildUrl ke semua endpoint agar parameter terkirim
       const [dataAlat, dataBibit, dataPupuk, dataPestisida] = await Promise.all(
         [
-          fetchSafe(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_PERALATAN),
-          fetchSafe(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_BIBIT),
-          fetchSafe(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_PUPUK),
-          fetchSafe(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_PESTISIDA),
+          fetchSafe(
+            buildUrl(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_PERALATAN),
+          ),
+          fetchSafe(buildUrl(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_BIBIT)),
+          fetchSafe(buildUrl(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_PUPUK)),
+          fetchSafe(
+            buildUrl(API_ENDPOINTS.FARM.KEBUN.INVENTARIS.GET_PESTISIDA),
+          ),
         ],
       );
 
@@ -203,14 +218,8 @@ export default function Inventaris() {
             </div>
           ) : (
             <div className="flex flex-col gap-8">
-              <Section
-                config={tableConfig.bibit}
-                data={inventarisData.bibit}
-              />
-              <Section
-                config={tableConfig.pupuk}
-                data={inventarisData.pupuk}
-              />
+              <Section config={tableConfig.bibit} data={inventarisData.bibit} />
+              <Section config={tableConfig.pupuk} data={inventarisData.pupuk} />
               <Section
                 config={tableConfig.pestisida}
                 data={inventarisData.pestisida}
