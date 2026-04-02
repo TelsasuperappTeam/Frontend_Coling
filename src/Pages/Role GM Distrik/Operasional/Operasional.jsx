@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Users, Plus, X, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ShoppingCart,
+  Users,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 // Sesuaikan import config dengan struktur folder Anda
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../config/constants.js";
@@ -7,15 +14,17 @@ import { API_ENDPOINTS, API_BASE_URLS } from "../../../config/constants.js";
 const Operasional = () => {
   const navigate = useNavigate();
 
-  // -- STATE UNTUK GM DISTRIK (BUNGKUSAN KEBUN) --
+  // -- STATE UNTUK GM DISTRIK / KEBUN --
   const [daftarKebun, setDaftarKebun] = useState([]);
   const [expandedKebun, setExpandedKebun] = useState(null);
 
   // -- STATE UNTUK TRANSAKSI (JUAL & PINJAM) --
-  const [riwayatJual, setRiwayatJual] = useState([]);
-  const [riwayatPinjam, setRiwayatPinjam] = useState([]);
-  const [isLoadingTransaksi, setIsLoadingTransaksi] = useState(false);
+  // Menyimpan data per kebun_id: { [kebun_id]: arrayData }
+  const [riwayatJual, setRiwayatJual] = useState({});
+  const [riwayatPinjam, setRiwayatPinjam] = useState({});
+  const [isLoadingTransaksi, setIsLoadingTransaksi] = useState({});
 
+  // -- STATE MODAL INSERT TRANSAKSI (KHUSUS ROLE KEBUN) --
   const [showModalJual, setShowModalJual] = useState(false);
   const [isSubmittingJual, setIsSubmittingJual] = useState(false);
   const [jualFormData, setJualFormData] = useState({
@@ -24,8 +33,6 @@ const Operasional = () => {
     dinamis_item_id: "",
     jumlah: "",
     total_harga: "",
-    // Tambahkan field kebun_id jika API insert membutuhkannya
-    // kebun_id: "" 
   });
 
   const [showModalPinjam, setShowModalPinjam] = useState(false);
@@ -35,8 +42,6 @@ const Operasional = () => {
     dinamis_peralatan_id: "",
     jumlah_dipinjam: "",
     tanggal_peminjaman: "",
-    // Tambahkan field kebun_id jika API insert membutuhkannya
-    // kebun_id: ""
   });
 
   // -- STATE UNTUK OPSI DROPDOWN --
@@ -44,64 +49,147 @@ const Operasional = () => {
   const [opsiPeralatan, setOpsiPeralatan] = useState([]);
   const [opsiBarang, setOpsiBarang] = useState([]);
 
-  // Mock Fetching Daftar Kebun untuk GM Distrik
+  // 1. Ambil Role User dari Token untuk Deteksi GM Distrik
+  const getUserRole = () => {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.role; // e.g., "general_manager_distrik" atau "kebun"
+    } catch {
+      return null;
+    }
+  };
+  const role = getUserRole();
+  const isGM = role === "general_manager_distrik";
+
+  // 2. Fetch Daftar Kebun
   const fetchDaftarKebun = async () => {
     try {
-      // TODO: Ganti dengan API Endpoint asli untuk get list kebun GM Distrik
-      // const token = localStorage.getItem("token");
-      // const res = await fetch(`${API_BASE_URLS.FARM}/farm/gm/kebun-list`, { ... });
-      
-      // Data Mockup Sementara agar UI berjalan
-      const dummyKebun = [
-        { id: 1, nama_kebun: "Kebun Alpha" },
-        { id: 2, nama_kebun: "Kebun Beta" },
-      ];
-      setDaftarKebun(dummyKebun);
-      
-      // Otomatis buka accordion pertama
-      if (dummyKebun.length > 0) setExpandedKebun(dummyKebun[0].id);
+      const token = localStorage.getItem("token");
+
+      if (isGM) {
+        // Jika GM Distrik: Ambil seluruh daftar kebun miliknya
+        // Endpoint: /users/gm/me/kebun-list
+        const url =
+          API_ENDPOINTS.USER.GMDistrik?.GET_KEBUN_LIST ||
+          `${API_BASE_URLS.USER}/users/gm/me/kebun-list`;
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const formattedData = data.map((item) => ({
+            id: item.auth_id || item.id,
+            nama_kebun:
+              item.nama_lengkap || item.nama_kebun || "Kebun Tidak Bernama",
+          }));
+          setDaftarKebun(formattedData);
+          if (formattedData.length > 0) {
+            setExpandedKebun(formattedData[0].id);
+            fetchDataPerKebun(formattedData[0].id);
+          }
+        }
+      } else {
+        // Jika Role Kebun: Set dirinya sendiri sebagai single entitas
+        const res = await fetch(`${API_BASE_URLS.USER}/users/me`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const singleKebun = [
+            {
+              id: data.auth_id || data.id,
+              nama_kebun: data.nama_lengkap || data.nama_kebun || "Kebun Saya",
+            },
+          ];
+          setDaftarKebun(singleKebun);
+          setExpandedKebun(singleKebun[0].id);
+          fetchDataPerKebun(singleKebun[0].id);
+        }
+      }
     } catch (e) {
-      console.error("Gagal fetch kebun", e);
+      console.error("Gagal mendapatkan daftar kebun", e);
     }
   };
 
-  const fetchOpsiPetani = async () => {
+  // 3. Fetch Transaksi Sesuai 'target_kebun_auth_id' ke Backend
+  const fetchDataPerKebun = async (kebunId) => {
+    if (!kebunId) return;
+    setIsLoadingTransaksi((prev) => ({ ...prev, [kebunId]: true }));
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      // Tambahkan logic filter params
+      const params = isGM ? `?target_kebun_auth_id=${kebunId}` : "";
+
+      const urlJual =
+        API_ENDPOINTS.FARM.KEBUN.TRANSAKSI?.JUAL ||
+        `${API_BASE_URLS.FARM}/farm/kebun/transaksi/jual`;
+      const urlPinjam =
+        API_ENDPOINTS.FARM.KEBUN.TRANSAKSI?.PINJAMKAN ||
+        `${API_BASE_URLS.FARM}/farm/kebun/transaksi/pinjamkan`;
+
+      const [resJual, resPinjam] = await Promise.all([
+        fetch(`${urlJual}${params}`, { headers }),
+        fetch(`${urlPinjam}${params}`, { headers }),
+      ]);
+
+      if (resJual.ok) {
+        const dataJual = await resJual.json();
+        setRiwayatJual((prev) => ({ ...prev, [kebunId]: dataJual }));
+      }
+      if (resPinjam.ok) {
+        const dataPinjam = await resPinjam.json();
+        setRiwayatPinjam((prev) => ({ ...prev, [kebunId]: dataPinjam }));
+      }
+    } catch (error) {
+      console.error(`Error fetching transaksi kebun ${kebunId}:`, error);
+    } finally {
+      setIsLoadingTransaksi((prev) => ({ ...prev, [kebunId]: false }));
+    }
+  };
+
+  // 4. Fetch Opsi Form Insert (KHUSUS ROLE KEBUN, GM TIDAK BUTUH INSERT)
+  const fetchOpsiForKebun = async () => {
+    if (isGM) return; // Skip fetch dropdown untuk insert jika role adalah GM
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const resPetani = await fetch(
         `${API_BASE_URLS.USER}/users/kebun/me/petani-members`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers },
       );
-      if (res.ok) {
-        const data = await res.json();
-        setOpsiPetani(data);
-      }
-    } catch (e) {
-      console.error("Gagal fetch petani", e);
-    }
-  };
+      if (resPetani.ok) setOpsiPetani(await resPetani.json());
 
-  const fetchOpsiPeralatan = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
+      const resAlat = await fetch(
         `${API_BASE_URLS.FARM}/farm/kebun/inventaris/peralatan`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers },
       );
-      if (res.ok) {
-        const data = await res.json();
-        const arrayData = Array.isArray(data)
-          ? data
-          : data.data || data.items || [];
-        setOpsiPeralatan(arrayData);
+      if (resAlat.ok) {
+        const data = await resAlat.json();
+        setOpsiPeralatan(
+          Array.isArray(data) ? data : data.data || data.items || [],
+        );
       }
     } catch (e) {
-      console.error("Gagal fetch peralatan", e);
+      console.error("Gagal fetch opsi insert:", e);
     }
   };
 
   const fetchOpsiBarang = async (jenis) => {
-    if (!jenis) {
+    if (!jenis || isGM) {
       setOpsiBarang([]);
       return;
     }
@@ -110,7 +198,9 @@ const Operasional = () => {
       const path = jenis.toLowerCase();
       const res = await fetch(
         `${API_BASE_URLS.FARM}/farm/kebun/inventaris/${path}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
       if (res.ok) {
         const data = await res.json();
@@ -124,46 +214,26 @@ const Operasional = () => {
     }
   };
 
-  const fetchRiwayatTransaksi = async () => {
-    setIsLoadingTransaksi(true);
-    try {
-      const token = localStorage.getItem("token");
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
+  useEffect(() => {
+    fetchDaftarKebun();
+    fetchOpsiForKebun();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-      const resJual = await fetch(API_ENDPOINTS.FARM.KEBUN.TRANSAKSI.JUAL, {
-        method: "GET",
-        headers,
-      });
-      if (resJual.ok) {
-        const dataJual = await resJual.json();
-        setRiwayatJual(dataJual);
+  // 5. Handle Toggle Bungkusan / Accordion
+  const toggleKebun = (id) => {
+    if (expandedKebun !== id) {
+      setExpandedKebun(id);
+      // Jika data kebun belum diload, load sekalian
+      if (!riwayatJual[id] && !riwayatPinjam[id]) {
+        fetchDataPerKebun(id);
       }
-
-      const resPinjam = await fetch(
-        API_ENDPOINTS.FARM.KEBUN.TRANSAKSI.PINJAMKAN,
-        { method: "GET", headers },
-      );
-      if (resPinjam.ok) {
-        const dataPinjam = await resPinjam.json();
-        setRiwayatPinjam(dataPinjam);
-      }
-    } catch (error) {
-      console.error("Error fetching riwayat transaksi:", error);
-    } finally {
-      setIsLoadingTransaksi(false);
+    } else {
+      setExpandedKebun(null); // Tutup accordion
     }
   };
 
-  useEffect(() => {
-    fetchDaftarKebun();
-    fetchOpsiPetani();
-    fetchOpsiPeralatan();
-    fetchRiwayatTransaksi();
-  }, []);
-
+  // 6. Handle POST Form
   const handleSubmitJual = async (e) => {
     e.preventDefault();
     setIsSubmittingJual(true);
@@ -212,7 +282,8 @@ const Operasional = () => {
           jumlah: "",
           total_harga: "",
         });
-        fetchRiwayatTransaksi();
+        // Refresh tabel hanya untuk kebun dia sendiri (karena POST cuma kebun yang bisa)
+        fetchDataPerKebun(expandedKebun);
       } else {
         const errorData = await response.json();
         alert(
@@ -271,7 +342,7 @@ const Operasional = () => {
           jumlah_dipinjam: "",
           tanggal_peminjaman: "",
         });
-        fetchRiwayatTransaksi();
+        fetchDataPerKebun(expandedKebun);
       } else {
         const errorData = await response.json();
         alert(
@@ -284,10 +355,6 @@ const Operasional = () => {
     } finally {
       setIsSubmittingPinjam(false);
     }
-  };
-
-  const toggleKebun = (id) => {
-    setExpandedKebun(expandedKebun === id ? null : id);
   };
 
   return (
@@ -324,27 +391,27 @@ const Operasional = () => {
       </div>
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-        {/* LOOPING KEBUN (ROLE GM DISTRIK) */}
+        {/* LOOPING KEBUN (ROLE GM DISTRIK / KEBUN TUNGGAL) */}
         {daftarKebun.map((kebun) => {
-          // Logika Filter Data Per Kebun:
-          // Jika data dari API sudah mengandung kebun_id, gunakan filter ini:
-          // const filteredJual = riwayatJual.filter(item => item.kebun_id === kebun.id);
-          // const filteredPinjam = riwayatPinjam.filter(item => item.kebun_id === kebun.id);
-          
-          // Fallback sementara (menampilkan semua data jika kebun_id belum ada):
-          const filteredJual = riwayatJual;
-          const filteredPinjam = riwayatPinjam;
-
+          // Ambil data tabel berdasarkan ID Kebun yang di-loop
+          const filteredJual = riwayatJual[kebun.id] || [];
+          const filteredPinjam = riwayatPinjam[kebun.id] || [];
+          const isLoading = isLoadingTransaksi[kebun.id];
           const isExpanded = expandedKebun === kebun.id;
 
           return (
-            <div key={kebun.id} className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm">
+            <div
+              key={kebun.id}
+              className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm"
+            >
               {/* HEADER BUNGKUSAN KEBUN */}
               <div
                 className="bg-[#B5302D] p-4 flex justify-between items-center cursor-pointer hover:bg-[#9a2825] transition-colors"
                 onClick={() => toggleKebun(kebun.id)}
               >
-                <h2 className="text-white font-bold text-lg">{kebun.nama_kebun}</h2>
+                <h2 className="text-white font-bold text-lg">
+                  {kebun.nama_kebun}
+                </h2>
                 {isExpanded ? (
                   <ChevronUp className="w-5 h-5 text-white" />
                 ) : (
@@ -359,14 +426,18 @@ const Operasional = () => {
                   <SectionCard title="Penjualan Barang">
                     <div className="flex justify-between items-start mb-4">
                       <p className="text-xs text-gray-500">
-                        Tabel riwayat penjualan barang ke petani/anggota di {kebun.nama_kebun}.
+                        Tabel riwayat penjualan barang ke petani/anggota di{" "}
+                        {kebun.nama_kebun}.
                       </p>
-                      <button
-                        onClick={() => setShowModalJual(true)}
-                        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
-                      >
-                        <Plus className="w-3 h-3" /> Jual Barang
-                      </button>
+                      {/* Tombol Insert Jual HANYA MUNCUL kalau bukan GM */}
+                      {!isGM && (
+                        <button
+                          onClick={() => setShowModalJual(true)}
+                          className="flex items-center gap-1 bg-[#EF8523] hover:bg-[#d8721c] text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-orange-100 transition-all"
+                        >
+                          <Plus className="w-3 h-3" /> Penjualan
+                        </button>
+                      )}
                     </div>
 
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -380,11 +451,13 @@ const Operasional = () => {
                             <th className="p-4 font-bold">Nama Barang</th>
                             <th className="p-4 font-bold">Jumlah</th>
                             <th className="p-4 font-bold">Total Harga</th>
-                            <th className="p-4 font-bold rounded-tr-xl">ID/Nota</th>
+                            <th className="p-4 font-bold rounded-tr-xl">
+                              ID/Nota
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="text-xs text-gray-700 bg-white">
-                          {isLoadingTransaksi ? (
+                          {isLoading ? (
                             <tr>
                               <td colSpan="8" className="p-4 text-center">
                                 Memuat data...
@@ -396,7 +469,9 @@ const Operasional = () => {
                                 key={item.id}
                                 className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
                               >
-                                <td className="p-4 font-bold text-center">{index + 1}</td>
+                                <td className="p-4 font-bold text-center">
+                                  {index + 1}
+                                </td>
                                 <td className="p-4 font-medium">
                                   {item.nama_petani || "Tidak Diketahui"}
                                 </td>
@@ -417,13 +492,15 @@ const Operasional = () => {
                                     ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
                                     : "-"}
                                 </td>
-                                <td className="p-4 text-gray-400 italic">#{item.id}</td>
+                                <td className="p-4 text-gray-400 italic">
+                                  #{item.id}
+                                </td>
                               </tr>
                             ))
                           ) : (
                             <tr>
                               <td colSpan="8" className="p-4 text-center">
-                                Belum ada riwayat penjualan.
+                                Belum ada riwayat penjualan untuk kebun ini.
                               </td>
                             </tr>
                           )}
@@ -438,12 +515,15 @@ const Operasional = () => {
                       <p className="text-xs text-gray-500">
                         Tabel riwayat peminjaman aset kebun.
                       </p>
-                      <button
-                        onClick={() => setShowModalPinjam(true)}
-                        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
-                      >
-                        <Plus className="w-3 h-3" /> Peminjaman
-                      </button>
+                      {/* Tombol Insert Pinjam HANYA MUNCUL kalau bukan GM */}
+                      {!isGM && (
+                        <button
+                          onClick={() => setShowModalPinjam(true)}
+                          className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
+                        >
+                          <Plus className="w-3 h-3" /> Peminjaman
+                        </button>
+                      )}
                     </div>
 
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -454,15 +534,21 @@ const Operasional = () => {
                             <th className="p-4 font-bold">Nama Peminjam</th>
                             <th className="p-4 font-bold">Tgl Pinjam</th>
                             <th className="p-4 font-bold">Nama Barang</th>
-                            <th className="p-4 font-bold text-center">Jumlah Dipinjam</th>
-                            <th className="p-4 font-bold text-center">Jumlah Kembali</th>
-                            <th className="p-4 font-bold rounded-tr-xl">Status</th>
+                            <th className="p-4 font-bold text-center">
+                              Jumlah Dipinjam
+                            </th>
+                            <th className="p-4 font-bold text-center">
+                              Jumlah Kembali
+                            </th>
+                            <th className="p-4 font-bold rounded-tr-xl">
+                              Status
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="text-xs text-gray-700 bg-white">
-                          {isLoadingTransaksi ? (
+                          {isLoading ? (
                             <tr>
-                              <td colSpan="6" className="p-4 text-center">
+                              <td colSpan="7" className="p-4 text-center">
                                 Memuat data...
                               </td>
                             </tr>
@@ -472,7 +558,9 @@ const Operasional = () => {
                                 key={item.id}
                                 className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
                               >
-                                <td className="p-4 font-bold text-center">{index + 1}</td>
+                                <td className="p-4 font-bold text-center">
+                                  {index + 1}
+                                </td>
                                 <td className="p-4 font-medium">
                                   {item.nama_petani || "Tidak Diketahui"}
                                 </td>
@@ -480,28 +568,30 @@ const Operasional = () => {
                                   {item.tanggal_peminjaman}
                                 </td>
                                 <td className="p-4 font-bold">
-                                  {item.dinamis_peralatan?.nama_alat ||
-                                    item.dinamis_peralatan?.nama ||
-                                    "Alat"}
+                                  {item.nama_barang_tercatat}
                                 </td>
-                                <td className="p-4 text-center font-bold text-orange-600">
+                                <td className="p-4 text-center">
                                   {item.jumlah_dipinjam}
                                 </td>
-                                <td className="p-4 text-center font-bold text-green-600">
+                                <td className="p-4 text-center">
                                   {item.jumlah_dikembalikan}
                                 </td>
                                 <td className="p-4">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-[10px] font-bold border ${item.status === "DIPINJAMKAN" || item.status === "DIPINJAM" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-green-50 text-green-700 border-green-200"}`}
+                                    className={`px-2 py-1 rounded text-[10px] font-bold ${
+                                      item.status_peminjaman === "DIKEMBALIKAN"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                    }`}
                                   >
-                                    {item.status}
+                                    {item.status_peminjaman}
                                   </span>
                                 </td>
                               </tr>
                             ))
                           ) : (
                             <tr>
-                              <td colSpan="6" className="p-4 text-center">
+                              <td colSpan="7" className="p-4 text-center">
                                 Belum ada riwayat peminjaman.
                               </td>
                             </tr>
@@ -517,160 +607,147 @@ const Operasional = () => {
         })}
       </div>
 
-      {/* SISA KODE MODAL TETAP SAMA SEPERTI AWAL */}
-      {/* MODAL JUAL BARANG */}
-      {showModalJual && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowModalJual(false)}
-          />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">Catat Penjualan Barang</h3>
+      {/* --- MODAL PENJUALAN --- */}
+      {showModalJual && !isGM && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-in-center">
+            <div className="bg-gradient-to-r from-[#B5302D] to-[#d43f3b] p-4 flex justify-between items-center">
+              <h2 className="text-white font-bold text-sm">
+                Catat Penjualan ke Petani
+              </h2>
               <button
                 onClick={() => setShowModalJual(false)}
-                className="p-1 hover:bg-white/20 rounded-full"
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleSubmitJual} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Pilih Petani <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={jualFormData.petani_user_id}
-                  onChange={(e) =>
-                    setJualFormData({
-                      ...jualFormData,
-                      petani_user_id: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="">-- Pilih Petani --</option>
-                  {opsiPetani.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nama_lengkap}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Jenis Barang <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={jualFormData.jenis_barang}
-                  onChange={(e) => {
-                    const jenis = e.target.value;
-                    setJualFormData({
-                      ...jualFormData,
-                      jenis_barang: jenis,
-                      dinamis_item_id: "",
-                    });
-                    fetchOpsiBarang(jenis);
-                  }}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="">-- Pilih Jenis --</option>
-                  <option value="Bibit">Bibit</option>
-                  <option value="Pupuk">Pupuk</option>
-                  <option value="Pestisida">Pestisida</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Pilih Barang <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  disabled={!jualFormData.jenis_barang}
-                  value={jualFormData.dinamis_item_id}
-                  onChange={(e) =>
-                    setJualFormData({
-                      ...jualFormData,
-                      dinamis_item_id: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none disabled:bg-gray-200"
-                >
-                  <option value="">
-                    {jualFormData.jenis_barang
-                      ? "-- Pilih Barang --"
-                      : "Pilih Jenis Barang Dulu"}
-                  </option>
-                  {opsiBarang.map((b, index) => {
-                    const itemId = b.id;
-                    const itemName =
-                      b.nama_item ||
-                      b.nama_varietas ||
-                      b.nama_pupuk ||
-                      b.nama_pestisida ||
-                      b.nama ||
-                      "Item Tidak Bernama";
-                    const sisa =
-                      b.jumlah_per_buah ??
-                      b.jumlah_tersisa ??
-                      b.jumlah ??
-                      b.stok ??
-                      b.total_stok ??
-                      b.sisa_stok ??
-                      b.stok_tersisa ??
-                      0;
-                    return (
-                      <option key={itemId || `brg-${index}`} value={itemId}>
-                        {itemName} (Sisa Stok: {sisa})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Jumlah Barang <span className="text-red-500">*</span>
+                    Pilih Petani
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     required
-                    value={jualFormData.jumlah}
+                    value={jualFormData.petani_user_id}
                     onChange={(e) =>
                       setJualFormData({
                         ...jualFormData,
-                        jumlah: e.target.value,
+                        petani_user_id: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  />
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#EF8523] focus:ring-2 focus:ring-[#EF8523]/20 transition-all"
+                  >
+                    <option value="">-- Pilih Petani --</option>
+                    {opsiPetani.map((p) => (
+                      <option key={p.auth_id} value={p.auth_id}>
+                        {p.nama_lengkap} (No. {p.no_hp})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Total Harga
-                  </label>
-                  <input
-                    type="number"
-                    value={jualFormData.total_harga}
-                    onChange={(e) =>
-                      setJualFormData({
-                        ...jualFormData,
-                        total_harga: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Jenis Barang
+                    </label>
+                    <select
+                      required
+                      value={jualFormData.jenis_barang}
+                      onChange={(e) => {
+                        setJualFormData({
+                          ...jualFormData,
+                          jenis_barang: e.target.value,
+                          dinamis_item_id: "",
+                        });
+                        fetchOpsiBarang(e.target.value);
+                      }}
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    >
+                      <option value="">Pilih</option>
+                      <option value="BIBIT">Bibit</option>
+                      <option value="PUPUK">Pupuk</option>
+                      <option value="PESTISIDA">Pestisida</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Nama Barang
+                    </label>
+                    <select
+                      required
+                      disabled={!jualFormData.jenis_barang}
+                      value={jualFormData.dinamis_item_id}
+                      onChange={(e) =>
+                        setJualFormData({
+                          ...jualFormData,
+                          dinamis_item_id: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none disabled:opacity-50"
+                    >
+                      <option value="">Pilih Barang</option>
+                      {opsiBarang.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.varietas_bibit_nama ||
+                            b.nama_pupuk ||
+                            b.nama_pestisida ||
+                            `Item #${b.id}`}{" "}
+                          (Stok:{" "}
+                          {b.jumlah_tersedia ||
+                            b.stok_tersedia ||
+                            b.sisa_stok_bibit ||
+                            0}
+                          )
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Jumlah
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={jualFormData.jumlah}
+                      onChange={(e) =>
+                        setJualFormData({
+                          ...jualFormData,
+                          jumlah: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Total Harga (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      value={jualFormData.total_harga}
+                      onChange={(e) =>
+                        setJualFormData({
+                          ...jualFormData,
+                          total_harga: e.target.value,
+                        })
+                      }
+                      placeholder="Opsional"
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="pt-4 flex gap-3">
                 <button
                   type="submit"
                   disabled={isSubmittingJual}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#EF8523] hover:bg-[#d8721c]"
                 >
                   {isSubmittingJual ? "Memproses..." : "Catat Penjualan"}
                 </button>
@@ -687,125 +764,104 @@ const Operasional = () => {
         </div>
       )}
 
-      {/* MODAL PINJAM ALAT */}
-      {showModalPinjam && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowModalPinjam(false)}
-          />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">Catat Peminjaman Alat</h3>
+      {/* --- MODAL PEMINJAMAN --- */}
+      {showModalPinjam && !isGM && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-in-center">
+            <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 flex justify-between items-center">
+              <h2 className="text-white font-bold text-sm">
+                Catat Peminjaman Alat
+              </h2>
               <button
                 onClick={() => setShowModalPinjam(false)}
-                className="p-1 hover:bg-white/20 rounded-full"
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleSubmitPinjam} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Pilih Petani <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={pinjamFormData.petani_user_id}
-                  onChange={(e) =>
-                    setPinjamFormData({
-                      ...pinjamFormData,
-                      petani_user_id: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="">-- Pilih Petani --</option>
-                  {opsiPetani.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nama_lengkap}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Pilih Peralatan <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={pinjamFormData.dinamis_peralatan_id}
-                  onChange={(e) =>
-                    setPinjamFormData({
-                      ...pinjamFormData,
-                      dinamis_peralatan_id: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="">-- Pilih Alat --</option>
-                  {opsiPeralatan.map((alat, index) => {
-                    const alatId =
-                      alat.dinamis_item_id ||
-                      alat.id ||
-                      alat.dinamis_peralatan_id;
-                    const alatName =
-                      alat.nama_item ||
-                      alat.nama_peralatan ||
-                      alat.nama_alat ||
-                      alat.nama ||
-                      "Alat Tidak Bernama";
-                    const sisaAlat =
-                      alat.jumlah_per_buah ??
-                      alat.jumlah_tersisa ??
-                      alat.jumlah ??
-                      alat.stok ??
-                      alat.total_stok ??
-                      alat.sisa_stok ??
-                      alat.stok_tersisa ??
-                      0;
-                    return (
-                      <option key={alatId || `alat-${index}`} value={alatId}>
-                        {alatName} (Sisa: {sisaAlat})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Jumlah Dipinjam <span className="text-red-500">*</span>
+                    Pilih Petani
                   </label>
-                  <input
-                    type="number"
+                  <select
                     required
-                    value={pinjamFormData.jumlah_dipinjam}
+                    value={pinjamFormData.petani_user_id}
                     onChange={(e) =>
                       setPinjamFormData({
                         ...pinjamFormData,
-                        jumlah_dipinjam: e.target.value,
+                        petani_user_id: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  />
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  >
+                    <option value="">-- Pilih Petani --</option>
+                    {opsiPetani.map((p) => (
+                      <option key={p.auth_id} value={p.auth_id}>
+                        {p.nama_lengkap}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Tanggal Pinjam <span className="text-red-500">*</span>
+                    Pilih Peralatan
                   </label>
-                  <input
-                    type="date"
+                  <select
                     required
-                    value={pinjamFormData.tanggal_peminjaman}
+                    value={pinjamFormData.dinamis_peralatan_id}
                     onChange={(e) =>
                       setPinjamFormData({
                         ...pinjamFormData,
-                        tanggal_peminjaman: e.target.value,
+                        dinamis_peralatan_id: e.target.value,
                       })
                     }
                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  />
+                  >
+                    <option value="">-- Pilih Alat --</option>
+                    {opsiPeralatan.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.nama_peralatan} (Tersedia: {a.jumlah_tersedia})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Jumlah Pinjam
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={pinjamFormData.jumlah_dipinjam}
+                      onChange={(e) =>
+                        setPinjamFormData({
+                          ...pinjamFormData,
+                          jumlah_dipinjam: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Tgl Pinjam
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={pinjamFormData.tanggal_peminjaman}
+                      onChange={(e) =>
+                        setPinjamFormData({
+                          ...pinjamFormData,
+                          tanggal_peminjaman: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="pt-4 flex gap-3">
@@ -832,11 +888,11 @@ const Operasional = () => {
   );
 };
 
-// HELPER COMPONENT (Tetap butuh di sini)
+// HELPER COMPONENT
 const SectionCard = ({ title, children }) => (
   <div className="bg-white rounded-[20px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
-    <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-[#EF8523]"></div>
+    <h3 className="text-sm font-bold text-[#B5302D] uppercase tracking-widest mb-4 flex items-center gap-2">
       {title}
     </h3>
     {children}

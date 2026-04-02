@@ -16,7 +16,7 @@ const Footer = () => {
           <div>
             {/* Nama aplikasi di footer */}
             <h3 className="text-base md:text-lg font-bold text-[#1E1E1E] mb-1 tracking-tight">
-              TELSA Super App
+              PalmaOne-08 ISPO App
             </h3>
 
             {/* Deskripsi singkat aplikasi */}
@@ -28,7 +28,7 @@ const Footer = () => {
           {/* Copyright otomatis menyesuaikan tahun sekarang */}
           <p className="mt-4 text-[10px] md:text-[11px] text-gray-500">
             © {new Date().getFullYear()}{" "}
-            <span className="font-semibold">Telsa Super App</span>. Semua hak
+            <span className="font-semibold">PalmaOne-08 ISPO App</span>. Semua hak
             cipta dilindungi.
           </p>
         </div>
@@ -48,14 +48,14 @@ const Footer = () => {
 
           {/* Link email untuk menghubungi tim */}
           <a
-            href="mailto:hi.telsasuperapp@gmail.com" // klik langsung buka email
+            href="mailto:@gmail.com" // klik langsung buka email
             className="flex items-center gap-2 text-gray-600 hover:text-[#EF8523] transition-colors duration-200"
           >
             {/* Ikon amplop dari Remix Icon */}
             <i className="ri-mail-line text-sm md:text-base"></i>
             {/* Alamat email ditampilkan di samping ikon */}
             <span className="text-xs md:text-sm">
-              hi.telsasuperapp@gmail.com
+              @gmail.com
             </span>
           </a>
 

@@ -64,7 +64,7 @@ export default function NavbarRole({ role, children }) {
                   className="h-7 w-auto sm:h-8 object-contain"
                 />
                 <span className="text-lg sm:text-xl font-bold text-[#B5302D] tracking-tight">
-                  Selamat Datang di TELSA
+                  PalmaOne-08 ISPO App
                 </span>
               </div>
             </div>

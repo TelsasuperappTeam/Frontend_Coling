@@ -86,7 +86,7 @@ const HomePages = () => {
           >
             <img
               src={HomeImage}
-              alt="Tampilan Aplikasi Telsa Super App"
+              alt="Tampilan Aplikasi PalmaOne-08 ISPO"
               fetchPriority="high"
               width="500"
               height="500"
@@ -100,8 +100,8 @@ const HomePages = () => {
             transition={{ duration: 0.7, delay: 0.3 }}
             className="order-2 md:order-1 text-center md:text-left space-y-3"
           >
-            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-extrabold leading-snug drop-shadow-lg mb-3">
-              Selamat Datang di TELSA Super App
+            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-4xl font-extrabold leading-snug drop-shadow-lg mb-3">
+              Selamat Datang di PalmaOne-08 ISPO App
             </h1>
 
             <p className="text-white/90 text-sm sm:text-base md:text-lg leading-relaxed max-w-md mx-auto md:mx-0">
@@ -134,14 +134,14 @@ const HomePages = () => {
                 <div className="absolute w-full h-full bg-linear-to-br from-orange-400 to-red-500 rounded-full -bottom-8 -right-8 blur-3xl opacity-20" />
                 <img
                   src={FiturImage}
-                  alt="Fitur Unggulan Telsa App"
+                  alt="Fitur Unggulan PalmaOne-08"
                   loading="lazy"
                   className="relative w-full max-w-[260px] sm:max-w-sm rounded-2xl shadow-2xl object-cover"
                 />
               </div>
 
               <p className="text-gray-600 mb-5 md:mb-8 text-sm md:text-lg leading-relaxed pl-3 md:pl-0">
-                <strong>TELSA Super App</strong> adalah platform membantu petani
+                <strong>PalmaOne-08 ISPO</strong> adalah platform membantu petani
                 sawit rakyat mengelola pencatatan perkebunan, transability
                 sawit, koordinasi antar pelaku sawit, dan pemenuhan sertifikasi
                 ISPO dengan lebih mudah, cepat, dan efisien.
@@ -149,7 +149,7 @@ const HomePages = () => {
 
               <ul className="space-y-3 md:space-y-4 pl-4 md:pl-0">
                 {[
-                  "<strong>100% pemenuhan persyaratan ISPO</strong> dalam sistem TELSA.",
+                  "<strong>100% pemenuhan persyaratan ISPO</strong> dalam sistem PalmaOne-08.",
                   "<strong>Otomatisasi dokumen</strong> berdasarkan aktivitas perkebunan.",
                   "Didesain khusus untuk <strong>petani rakyat</strong> dan pendamping stakeholder lainnya.",
                 ].map((text, i) => {
@@ -178,7 +178,7 @@ const HomePages = () => {
             <div className="hidden md:flex justify-center md:justify-end">
               <img
                 src={FiturImage}
-                alt="Fitur Unggulan Telsa App"
+                alt="Fitur Unggulan PalmaOne-08 App"
                 className="w-full max-w-md rounded-2xl shadow-2xl object-cover"
               />
             </div>
@@ -304,7 +304,7 @@ const HomePages = () => {
             </h2>
             <p className="text-sm md:text-lg text-gray-600 mb-6 md:mb-8 leading-relaxed">
               Kami telah merangkum beberapa pertanyaan yang paling sering
-              diajukan untuk membantu Anda memahami TELSA Super App lebih baik.
+              diajukan untuk membantu Anda memahami PalmaOne-08 App lebih baik.
             </p>
 
             {/* Tombol hanya tampil di desktop */}
@@ -321,7 +321,7 @@ const HomePages = () => {
                 rel="noopener noreferrer"
                 className="inline-block w-full sm:w-auto text-center bg-white border-2 border-orange-500 text-orange-600 font-semibold px-6 py-3 md:px-8 md:py-4 rounded-full hover:bg-orange-50 hover:shadow-xl transition-all transform hover:-translate-y-1 text-sm md:text-base"
               >
-                Buku Panduan TELSA
+                Buku Panduan PalmaOne-08 ISPO
               </a>
             </div>
           </div>
@@ -330,16 +330,16 @@ const HomePages = () => {
           <div className="space-y-3 md:space-y-4">
             {[
               {
-                q: "Apa itu TELSA Super App?",
-                a: "TELSA Super App adalah platform digital untuk membantu petani sawit rakyat dalam mengelola perkebunan, dokumen, dan proses sertifikasi ISPO secara mudah dan terintegrasi dengan sistem.",
+                q: "Apa itu PalmaOne-08 ISPO?",
+                a: "PalmaOne-08 ISPO adalah platform digital untuk membantu petani sawit rakyat dalam mengelola perkebunan, dokumen, dan proses sertifikasi ISPO secara mudah dan terintegrasi dengan sistem.",
               },
               {
                 q: "Apakah aplikasi ini gratis?",
-                a: "Ya, seluruh fitur TELSA Super App dapat digunakan secara gratis oleh petani rakyat, pendamping, logistik, pabrik, stakeholder lainnya.",
+                a: "Ya, seluruh fitur PalmaOne-08 ISPO dapat digunakan secara gratis oleh petani rakyat, pendamping, logistik, pabrik, stakeholder lainnya.",
               },
               {
-                q: "Bagaimana cara memulai menggunakan TELSA?",
-                a: "Untuk mulai menggunakan TELSA Super App, kunjungi website, daftarkan akun Anda, lalu tunggu sistem memproses pengajuan. Setelah disetujui, akun dapat digunakan untuk mengelola data kebun Anda.",
+                q: "Bagaimana cara memulai menggunakan PalmaOne-08 ISPO?",
+                a: "Untuk mulai menggunakan PalmaOne-08 ISPO, kunjungi website, daftarkan akun Anda, lalu tunggu sistem memproses pengajuan. Setelah disetujui, akun dapat digunakan untuk mengelola data kebun Anda.",
               },
             ].map((faq, i) => {
               const isOpen = openFaqIndex === i;
@@ -395,7 +395,7 @@ const HomePages = () => {
                 rel="noopener noreferrer"
                 className="inline-block w-full sm:w-auto text-center bg-white border-2 border-orange-500 text-orange-600 font-semibold px-6 py-3 md:px-8 md:py-4 rounded-full hover:bg-orange-50 hover:shadow-xl transition-all transform hover:-translate-y-1 text-sm md:text-base"
               >
-                Buku Panduan TELSA
+                Buku Panduan PalmaOne-08 ISPO
               </a>
             </div>
           </div>

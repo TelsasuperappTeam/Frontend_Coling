@@ -81,6 +81,12 @@ export const API_ENDPOINTS = {
         BY_ID: (id) => `${API_BASE_URLS.USER}/users/kebun/pengurus/${id}`,
       },
     },
+
+        // ROLE GM DISTRIK
+    GMDistrik: {
+      // Ambil daftar kebun di bawah GM Distrik
+      GET_KEBUN_LIST: `${API_BASE_URLS.USER}/users/gm/me/kebun-list`,
+    },
   },
 
   // --- SERVICE FARM  ---
@@ -223,7 +229,6 @@ export const API_ENDPOINTS = {
       },
     },
 
-
     // === FITUR KEBUN ===
     KEBUN: {
       // APPROVAL
@@ -240,7 +245,6 @@ export const API_ENDPOINTS = {
         ACTION_RENCANA_PANEN: (rencanaId) =>
           `${API_BASE_URLS.FARM}/farm/kebun/approval/${rencanaId}`,
       },
-
 
       // INVENTARIS
       INVENTARIS: {
@@ -277,7 +281,6 @@ export const API_ENDPOINTS = {
           `${API_BASE_URLS.FARM}/farm/kebun/inventaris/pestisida/${id}`,
       },
 
-      
       // TRANSAKSI
       TRANSAKSI: {
         // input harga TBS berdasarkan SK pemerintah
@@ -311,6 +314,9 @@ export const API_ENDPOINTS = {
       AJUKAN_DOKUMEN_ISPO: `${API_BASE_URLS.ISPO}/ispo/submission/{id}/submit`,
     },
     KEBUN: {
+      // Melihat progress ISPO seluruh petani relasi kebun halaman kemitraan petani
+      GET_PROGRES_ISPO_PETANI_NAUNGAN: `${API_BASE_URLS.ISPO}/ispo/kebun/petani/{petani_id}/progress`,
+
       // Endpoint POST submission dokumen manual
       SUBMISSION: `${API_BASE_URLS.ISPO}/ispo/submission`,
 

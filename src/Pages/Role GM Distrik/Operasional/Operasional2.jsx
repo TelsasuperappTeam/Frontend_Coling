@@ -1,340 +1,190 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
   Plus,
   FileText,
   Trash2,
-  Edit,
   Upload,
   Search,
   CheckCircle,
   X,
-  Save,
-  Loader2,
   ShoppingCart,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from "lucide-react";
-// Sesuaikan import config dengan struktur folder Anda
-import { API_ENDPOINTS } from "../../../config/constants.js";
+// Sesuaikan import config dengan konstanta Anda
+import { API_ENDPOINTS, API_BASE_URLS } from "../../../config/constants.js";
 
 const DOKUMEN_CONFIG = [
-  {
-    id: 1,
-    label: "Berita acara pembentukan kelompok tani",
-    code: "P2_2_1_BERITA_ACARA",
-  },
-  {
-    id: 2,
-    label: "Surat Bukti Keanggotaan Kelompok Tani/Koperasi",
-    code: "P2_2_1_ANGGOTA",
-  },
+  { id: 1, label: "Berita acara pembentukan kelompok tani", code: "P2_2_1_BERITA_ACARA" },
+  { id: 2, label: "Surat Bukti Keanggotaan Kelompok Tani/Koperasi", code: "P2_2_1_ANGGOTA" },
   { id: 3, label: "Akta Pendirian dan AD/ART", code: "P2_2_1_ADART" },
 ];
 
 const Operasional2 = () => {
   const navigate = useNavigate();
 
-  // -- STATE UNTUK GM DISTRIK (BUNGKUSAN KEBUN) --
+  // -- STATE IDENTITAS & ROLE --
+  const [userRole, setUserRole] = useState(null);
   const [daftarKebun, setDaftarKebun] = useState([]);
   const [expandedKebun, setExpandedKebun] = useState(null);
 
-  // -- STATE UNTUK PENGURUS --
-  const [pengurusList, setPengurusList] = useState([]);
-  const [isLoadingPengurus, setIsLoadingPengurus] = useState(false);
-  const [showModalPengurus, setShowModalPengurus] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
-  const [formData, setFormData] = useState({
-    nama_anggota: "",
-    jabatan_pengurus: "",
-    tugas_pengurus: "",
-    no_hp: "",
-    // kebun_id: "" // (Bila diperlukan)
-  });
+  // -- STATE DATA PER KEBUN (Object Key: kebun_id) --
+  const [dataOrganisasi, setDataOrganisasi] = useState({});
+  const [loadingKebun, setLoadingKebun] = useState({});
 
-  // -- STATE UNTUK HARGA TBS --
+  // -- STATE MODAL TBS (Hanya untuk Role Kebun) --
   const [showModalTBS, setShowModalTBS] = useState(false);
   const [isSubmittingTBS, setIsSubmittingTBS] = useState(false);
   const [tbsFormData, setTbsFormData] = useState({
-    bulan: "",
-    tahun: "",
-    harga: "",
+    periode_bulan: new Date().getMonth() + 1,
+    periode_tahun: new Date().getFullYear(),
+    harga_per_kg: "",
     file: null,
-    // kebun_id: "" // (Bila diperlukan)
   });
 
-  // -- STATE DOKUMEN --
-  const [dokumenStatus, setDokumenStatus] = useState(
-    DOKUMEN_CONFIG.map((doc) => ({
-      ...doc,
-      file_url: null,
-      status: null,
-      isUploading: false,
-    })),
-  );
-
-  const fetchDaftarKebun = async () => {
-    try {
-      // TODO: Ganti dengan API GM Distrik asli
-      const dummyKebun = [
-        { id: 1, nama_kebun: "Kebun Alpha" },
-        { id: 2, nama_kebun: "Kebun Beta" },
-      ];
-      setDaftarKebun(dummyKebun);
-      if (dummyKebun.length > 0) setExpandedKebun(dummyKebun[0].id);
-    } catch (e) {
-      console.error("Gagal fetch kebun", e);
-    }
-  };
-
-  const fetchPengurus = async () => {
-    setIsLoadingPengurus(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(API_ENDPOINTS.USER.KEBUN.PENGURUS.MAIN, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPengurusList(data);
-      }
-    } catch (error) {
-      console.error("Error fetching pengurus:", error);
-    } finally {
-      setIsLoadingPengurus(false);
-    }
-  };
-
-  const fetchDokumenExisting = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(API_ENDPOINTS.ISPO.KEBUN.SUBMISSION, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const dataServer = await response.json();
-        setDokumenStatus((prevStatus) =>
-          prevStatus.map((docConfig) => {
-            const foundData = dataServer.find(
-              (serverItem) => serverItem.requirement_code === docConfig.code,
-            );
-            if (foundData)
-              return {
-                ...docConfig,
-                file_url: foundData.file_url,
-                status: foundData.status,
-              };
-            return docConfig;
-          }),
-        );
-      }
-    } catch (error) {
-      console.error("Error fetching documents:", error);
-    }
-  };
-
+  // 1. Ambil Role dari Token
   useEffect(() => {
-    fetchDaftarKebun();
-    fetchPengurus();
-    fetchDokumenExisting();
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setUserRole(payload.role);
+      } catch {
+        console.error("Invalid token");
+      }
+    }
   }, []);
 
-  const handleAddPengurus = () => {
-    setIsEditMode(false);
-    setFormData({
-      nama_anggota: "",
-      jabatan_pengurus: "",
-      tugas_pengurus: "",
-      no_hp: "",
-    });
-    setShowModalPengurus(true);
-  };
+  const isGM = userRole === "general_manager_distrik";
 
-  const handleEditPengurus = (item) => {
-    setIsEditMode(true);
-    setSelectedId(item.id);
-    setFormData({
-      nama_anggota: item.nama_anggota,
-      jabatan_pengurus: item.jabatan_pengurus,
-      tugas_pengurus: item.tugas_pengurus || "",
-      no_hp: item.no_hp || "",
-    });
-    setShowModalPengurus(true);
-  };
-
-  const handleSubmitPengurus = async (e) => {
-    e.preventDefault();
+  // 1. Bungkus fetchDataOrganisasi dengan useCallback agar referensinya stabil
+  // Letakkan fungsi ini DI ATAS fetchDaftarKebun
+  const fetchDataOrganisasi = useCallback(async (kebunAuthId) => {
+    if (!kebunAuthId) return;
+    setLoadingKebun((prev) => ({ ...prev, [kebunAuthId]: true }));
     try {
       const token = localStorage.getItem("token");
-      let url = API_ENDPOINTS.USER.KEBUN.PENGURUS.MAIN;
-      let method = "POST";
-
-      if (isEditMode && selectedId) {
-        url = API_ENDPOINTS.USER.KEBUN.PENGURUS.BY_ID(selectedId);
-        method = "PATCH";
-      }
-
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setShowModalPengurus(false);
-        fetchPengurus();
-      } else {
-        alert("Gagal menyimpan data pengurus.");
-      }
-    } catch (error) {
-      console.error("Error submitting:", error);
-    }
-  };
-
-  const handleDeletePengurus = async (id) => {
-    if (!window.confirm("Apakah anda yakin ingin menghapus pengurus ini?"))
-      return;
-    try {
-      const token = localStorage.getItem("token");
-      const url = API_ENDPOINTS.USER.KEBUN.PENGURUS.BY_ID(id);
-      const response = await fetch(url, {
-        method: "DELETE",
+      // Logika BE: Jika GM, kirim target_kebun_auth_id
+      const queryParam = isGM ? `?target_kebun_auth_id=${kebunAuthId}` : "";
+      
+      const res = await fetch(`${API_BASE_URLS.FARM}/farm/kebun/organisasi/dokumen${queryParam}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.ok) fetchPengurus();
-      else alert("Gagal menghapus data.");
+
+      if (res.ok) {
+        const data = await res.json();
+        setDataOrganisasi((prev) => ({ ...prev, [kebunAuthId]: data }));
+      }
     } catch (error) {
-      console.error("Error deleting:", error);
+      console.error("Fetch organisasi error:", error);
+    } finally {
+      setLoadingKebun((prev) => ({ ...prev, [kebunAuthId]: false }));
+    }
+  }, [isGM]); // Bergantung pada isGM karena digunakan di dalam logic queryParam
+
+  // 2. Tambahkan fetchDataOrganisasi ke dalam dependency array fetchDaftarKebun
+  const fetchDaftarKebun = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      if (isGM) {
+        const res = await fetch(`${API_BASE_URLS.USER}/users/gm/me/kebun-list`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setDaftarKebun(data);
+          if (data.length > 0) {
+            setExpandedKebun(data[0].auth_id);
+            fetchDataOrganisasi(data[0].auth_id); // Fungsi ini sekarang stabil
+          }
+        }
+      } else {
+        const res = await fetch(`${API_BASE_URLS.USER}/users/me`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          const single = [{ auth_id: data.auth_id, nama_lengkap: data.nama_lengkap }];
+          setDaftarKebun(single);
+          setExpandedKebun(data.auth_id);
+          fetchDataOrganisasi(data.auth_id);
+        }
+      }
+    } catch (error) {
+      console.error("Fetch kebun error:", error);
+    }
+  }, [isGM, fetchDataOrganisasi]);
+
+  useEffect(() => {
+    if (userRole) fetchDaftarKebun();
+  }, [userRole, fetchDaftarKebun]);
+
+  // 4. Handler Toggle Accordion
+  const toggleKebun = (id) => {
+    if (expandedKebun === id) {
+      setExpandedKebun(null);
+    } else {
+      setExpandedKebun(id);
+      if (!dataOrganisasi[id]) fetchDataOrganisasi(id);
     }
   };
 
+  // 5. Handler POST TBS (Hanya Kebun)
   const handleTBSChange = (e) => {
     const { name, value, files } = e.target;
-    if (name === "file") setTbsFormData({ ...tbsFormData, file: files[0] });
-    else setTbsFormData({ ...tbsFormData, [name]: value });
+    setTbsFormData((prev) => ({
+      ...prev,
+      [name]: files ? files[0] : value,
+    }));
   };
 
-  const handleSubmitTBS = async (e) => {
+  const submitTBS = async (e) => {
     e.preventDefault();
-    if (!tbsFormData.file) return alert("Mohon upload file SK Pemerintah.");
-    if (
-      isNaN(parseInt(tbsFormData.bulan)) ||
-      isNaN(parseInt(tbsFormData.tahun))
-    )
-      return alert("Format Bulan/Tahun salah.");
-
+    if (isGM) return alert("Hanya role Kebun yang dapat menginput harga!");
+    
     setIsSubmittingTBS(true);
     try {
       const token = localStorage.getItem("token");
-      const formDataToSend = new FormData();
-      formDataToSend.append("periode_bulan", parseInt(tbsFormData.bulan));
-      formDataToSend.append("periode_tahun", parseInt(tbsFormData.tahun));
-      formDataToSend.append("harga_per_kg", parseFloat(tbsFormData.harga));
-      formDataToSend.append("file", tbsFormData.file);
+      const formData = new FormData();
+      formData.append("periode_bulan", tbsFormData.periode_bulan);
+      formData.append("periode_tahun", tbsFormData.periode_tahun);
+      formData.append("harga_per_kg", tbsFormData.harga_per_kg);
+      formData.append("file", tbsFormData.file);
 
-      const url = API_ENDPOINTS.FARM.KEBUN.TRANSAKSI.HARGA_TBS;
-      const response = await fetch(url, {
+      const res = await fetch(`${API_BASE_URLS.FARM}/farm/kebun/harga-tbs/input`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: formDataToSend,
+        body: formData,
       });
 
-      if (response.ok) {
-        alert("Data Harga TBS berhasil dikirim!");
+      if (res.ok) {
+        alert("Harga TBS Berhasil disimpan!");
         setShowModalTBS(false);
-        setTbsFormData({ bulan: "", tahun: "", harga: "", file: null });
       } else {
-        const errorData = await response.json();
-        alert(`Gagal mengirim: ${JSON.stringify(errorData.detail)}`);
+        alert("Gagal menyimpan harga TBS.");
       }
     } catch (error) {
-      console.error("Error submitting TBS:", error);
+      console.error(error);
     } finally {
       setIsSubmittingTBS(false);
     }
   };
 
-  const handleUploadDokumen = async (index, event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const requirementCode = dokumenStatus[index].code;
-    const newDocs = [...dokumenStatus];
-    newDocs[index].isUploading = true;
-    setDokumenStatus(newDocs);
-
-    try {
-      const token = localStorage.getItem("token");
-      const formDataUpload = new FormData();
-      formDataUpload.append("requirement_code", requirementCode);
-      formDataUpload.append("file", file);
-
-      const response = await fetch(API_ENDPOINTS.ISPO.KEBUN.SUBMISSION, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formDataUpload,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        newDocs[index] = {
-          ...newDocs[index],
-          file_url: result.url,
-          status: result.status,
-          isUploading: false,
-        };
-        setDokumenStatus(newDocs);
-        alert("Berhasil upload dokumen!");
-      } else {
-        newDocs[index].isUploading = false;
-        setDokumenStatus(newDocs);
-        const errorData = await response.json();
-        alert(`Gagal upload: ${errorData.detail}`);
-      }
-    } catch (error) {
-      console.error("Error upload:", error);
-      newDocs[index].isUploading = false;
-      setDokumenStatus(newDocs);
-    }
-  };
-
-  const toggleKebun = (id) => {
-    setExpandedKebun(expandedKebun === id ? null : id);
-  };
-
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
-      {/* HEADER & TAB SWITCHER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <Users className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
-              Manajemen Organisasi
-            </h1>
-            <p className="text-gray-500 text-xs sm:text-sm">
-              Kelola struktur organisasi dan dokumen legalitas.
-            </p>
+            <h1 className="text-2xl font-bold text-[#B5302D]">Manajemen Operasional</h1>
+            <p className="text-gray-500 text-sm">Kelola struktur organisasi dan dokumen legalitas.</p>
           </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200">
           <button
             onClick={() => navigate("../manajemenoperasional")}
             className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
@@ -344,193 +194,90 @@ const Operasional2 = () => {
           </button>
           <button className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
             <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Organisasi</span>
+            <span className="hidden sm:inline">Organisasi & Dokumen</span>
           </button>
         </div>
       </div>
 
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-        {/* LOOPING KEBUN (ROLE GM DISTRIK) */}
+      {/* LIST KEBUN (ACCORDION) */}
+      <div className="space-y-4">
         {daftarKebun.map((kebun) => {
-          // Logika Filter Data Per Kebun:
-          // const filteredPengurus = pengurusList.filter(item => item.kebun_id === kebun.id);
-          // Fallback bila blm ada API kebun_id:
-          const filteredPengurus = pengurusList;
-          
-          const isExpanded = expandedKebun === kebun.id;
+          const isExpanded = expandedKebun === kebun.auth_id;
+          const docs = dataOrganisasi[kebun.auth_id] || [];
+          const loading = loadingKebun[kebun.auth_id];
 
           return (
-            <div key={kebun.id} className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm">
-              {/* HEADER BUNGKUSAN KEBUN */}
+            <div key={kebun.auth_id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm">
               <div
-                className="bg-[#B5302D] p-4 flex justify-between items-center cursor-pointer hover:bg-[#9a2825] transition-colors"
-                onClick={() => toggleKebun(kebun.id)}
+                onClick={() => toggleKebun(kebun.auth_id)}
+                className={`p-4 flex justify-between items-center cursor-pointer transition-colors ${
+                  isExpanded ? "bg-red-50" : "hover:bg-gray-50"
+                }`}
               >
-                <h2 className="text-white font-bold text-lg">{kebun.nama_kebun}</h2>
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-white" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-white" />
-                )}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#B5302D] text-white rounded-full flex items-center justify-center font-bold">
+                    {kebun.nama_lengkap?.charAt(0)}
+                  </div>
+                  <span className="font-bold text-gray-700">{kebun.nama_lengkap}</span>
+                </div>
+                {isExpanded ? <ChevronUp /> : <ChevronDown />}
               </div>
 
-              {/* KONTEN JIKA KEBUN DIBUKA */}
               {isExpanded && (
-                <div className="p-4 sm:p-8 space-y-8 bg-gray-50">
-                  {/* SECTION 1 PENGURUS */}
-                  <SectionCard title="Daftar Anggota Pengurus">
-                    <div className="flex justify-between items-start mb-4">
-                      <p className="text-xs text-gray-500">
-                        Struktur organisasi kelompok tani di {kebun.nama_kebun}.
-                      </p>
-                      <button
-                        onClick={handleAddPengurus}
-                        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
-                      >
-                        <Plus className="w-3 h-3" /> Tambah
-                      </button>
-                    </div>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                            <th className="p-4 font-bold rounded-tl-xl">No</th>
-                            <th className="p-4 font-bold">Nama Anggota</th>
-                            <th className="p-4 font-bold">Jabatan</th>
-                            <th className="p-4 font-bold">No. HP</th>
-                            <th className="p-4 font-bold">Tugas & Tanggung Jawab</th>
-                            <th className="p-4 font-bold text-center rounded-tr-xl">
-                              Aksi
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-xs text-gray-700 bg-white">
-                          {isLoadingPengurus ? (
-                            <tr>
-                              <td colSpan="6" className="p-4 text-center">
-                                Memuat data...
-                              </td>
-                            </tr>
-                          ) : filteredPengurus.length > 0 ? (
-                            filteredPengurus.map((item, index) => (
-                              <tr
-                                key={item.id}
-                                className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                              >
-                                <td className="p-4 font-bold text-center">{index + 1}</td>
-                                <td className="p-4 font-bold">{item.nama_anggota}</td>
-                                <td className="p-4 font-medium text-[#B5302D]">
-                                  {item.jabatan_pengurus}
-                                </td>
-                                <td className="p-4 text-gray-500">{item.no_hp || "-"}</td>
-                                <td className="p-4 text-gray-500">
-                                  {item.tugas_pengurus}
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex items-center justify-center gap-2">
-                                    <button
-                                      onClick={() => handleEditPengurus(item)}
-                                      className="p-2 bg-gray-100 hover:bg-blue-100 text-blue-600 rounded-lg"
-                                    >
-                                      <Edit className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeletePengurus(item.id)}
-                                      className="p-2 bg-gray-100 hover:bg-red-100 text-red-600 rounded-lg"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan="6" className="p-4 text-center">
-                                Belum ada data pengurus.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </SectionCard>
-
-                  {/* SECTION 2 DOKUMEN */}
-                  <SectionCard title="Kelengkapan Dokumen Organisasi">
-                    <div className="-mt-4 mb-6">
-                      <div className="w-full h-[1px] bg-gray-300 mb-4 mt-2" />
-                      <p className="text-sm text-gray-500 font-light mb-4">
-                        Upload Dokumen organisasi Untuk Petani Mitra
-                      </p>
-                      <button
-                        onClick={() => setShowModalTBS(true)}
-                        className="flex items-center gap-2 bg-[#D1F7C4] hover:bg-green-200 text-green-900 border border-green-300 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
-                      >
-                        <FileText className="w-4 h-4" /> Tambah Harga TBS
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {dokumenStatus.map((doc, idx) => {
-                        const isUploaded = !!doc.file_url;
-                        return (
-                          <div
-                            key={idx}
-                            className={`group bg-white border rounded-xl p-4 flex flex-row items-center gap-4 transition-all hover:shadow-md ${isUploaded ? "border-green-400 bg-green-50/30" : "border-gray-400"}`}
-                          >
-                            <div
-                              className={`p-3 rounded-full flex-shrink-0 ${isUploaded ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-500"}`}
-                            >
-                              {isUploaded ? (
-                                <CheckCircle className="w-6 h-6" />
+                <div className="p-6 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* SEKSI DOKUMEN */}
+                    <SectionCard title="Arsip Dokumen Legalitas">
+                      <div className="flex justify-between items-center mb-4">
+                        <p className="text-xs text-gray-400">Daftar kelengkapan dokumen ISPO/RSPO.</p>
+                        {!isGM && (
+                           <button className="text-[10px] bg-[#B5302D] text-white px-3 py-1 rounded-full font-bold">
+                             + Upload Baru
+                           </button>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        {loading ? (
+                          <p className="text-center py-4 text-xs">Memuat dokumen...</p>
+                        ) : DOKUMEN_CONFIG.map((conf) => {
+                          const fileExist = docs.find((d) => d.tipe_dokumen === conf.code);
+                          return (
+                            <div key={conf.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                              <div className="flex items-center gap-3">
+                                <FileText className={`w-5 h-5 ${fileExist ? "text-green-500" : "text-gray-300"}`} />
+                                <span className="text-xs font-medium text-gray-600">{conf.label}</span>
+                              </div>
+                              {fileExist ? (
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                  <button className="text-[#B5302D] hover:underline text-[10px] font-bold">Lihat</button>
+                                </div>
                               ) : (
-                                <FileText className="w-6 h-6" />
+                                <span className="text-[10px] text-gray-400 italic">Belum diunggah</span>
                               )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-gray-800 leading-snug line-clamp-2">
-                                {doc.label}
-                              </p>
-                              <p className="text-[10px] text-gray-500 mt-1">
-                                {isUploaded ? (
-                                  <span className="text-green-600 font-medium">
-                                    Sudah diupload ({doc.status})
-                                  </span>
-                                ) : (
-                                  "Belum ada file"
-                                )}
-                              </p>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              <label
-                                className={`cursor-pointer p-2 rounded-lg transition-colors border ${doc.isUploading ? "bg-gray-100 border-gray-200 text-gray-400" : "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"}`}
-                              >
-                                <input
-                                  type="file"
-                                  className="hidden"
-                                  onChange={(e) => handleUploadDokumen(idx, e)}
-                                  disabled={doc.isUploading}
-                                />
-                                {doc.isUploading ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Upload className="w-4 h-4" />
-                                )}
-                              </label>
-                              {isUploaded && (
-                                <button
-                                  onClick={() => window.open(doc.file_url, "_blank")}
-                                  className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100"
-                                >
-                                  <Search className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </SectionCard>
+                          );
+                        })}
+                      </div>
+                    </SectionCard>
+
+                    {/* SEKSI TBS (HANYA INFO UNTUK GM, TOMBOL INPUT UNTUK KEBUN) */}
+                    <SectionCard title="Harga TBS Pemerintah">
+                       <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-4">
+                          <p className="text-[10px] text-green-700 font-bold uppercase mb-1">Status Update</p>
+                          <h4 className="text-lg font-bold text-green-800">Rp 2.850 <span className="text-xs font-normal">/ Kg</span></h4>
+                          <p className="text-[10px] text-green-600">Periode: Oktober 2023</p>
+                       </div>
+                       {!isGM && (
+                         <button 
+                           onClick={() => setShowModalTBS(true)}
+                           className="w-full py-3 bg-white border-2 border-dashed border-green-300 rounded-xl text-green-600 text-xs font-bold hover:bg-green-50 transition-all flex items-center justify-center gap-2"
+                         >
+                           <Upload className="w-4 h-4" /> Perbarui Harga & Upload SK
+                         </button>
+                       )}
+                    </SectionCard>
+                  </div>
                 </div>
               )}
             </div>
@@ -538,196 +285,69 @@ const Operasional2 = () => {
         })}
       </div>
 
-      {/* SISA KODE MODAL TETAP SAMA */}
-      {/* MODAL PENGURUS */}
-      {showModalPengurus && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowModalPengurus(false)}
-          />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#B5302D] p-5 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">
-                {isEditMode ? "Edit Pengurus" : "Tambah Pengurus"}
-              </h3>
-              <button
-                onClick={() => setShowModalPengurus(false)}
-                className="p-1 hover:bg-white/20 rounded-full"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmitPengurus} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Nama Anggota
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nama_anggota}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nama_anggota: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Jabatan
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.jabatan_pengurus}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        jabatan_pengurus: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    No. HP
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.no_hp}
-                    onChange={(e) =>
-                      setFormData({ ...formData, no_hp: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Tugas & Tanggung Jawab
-                </label>
-                <textarea
-                  rows="3"
-                  value={formData.tugas_pengurus}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tugas_pengurus: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none resize-none"
-                />
-              </div>
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="submit"
-                  className="flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600"
-                >
-                  <Save className="w-4 h-4" /> Simpan
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowModalPengurus(false)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300"
-                >
-                  Batal
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL TBS */}
+      {/* MODAL INPUT TBS (Hanya muncul jika dipicu role kebun) */}
       {showModalTBS && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowModalTBS(false)}
-          />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#D1F7C4] p-5 text-green-900 border-b border-green-300 flex justify-between items-center">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <FileText className="w-5 h-5" /> Input SK TBS
-              </h3>
-              <button
-                onClick={() => setShowModalTBS(false)}
-                className="p-1 hover:bg-green-200 rounded-full"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
+            <div className="p-4 bg-green-600 flex justify-between items-center text-white">
+              <h3 className="font-bold text-sm">Input Harga TBS</h3>
+              <X className="cursor-pointer" onClick={() => setShowModalTBS(false)} />
             </div>
-            <form onSubmit={handleSubmitTBS} className="p-6 space-y-4">
+            <form onSubmit={submitTBS} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Bulan
-                  </label>
-                  <select
-                    name="bulan"
-                    required
-                    value={tbsFormData.bulan}
+                  <label className="block text-[10px] font-bold text-gray-500 mb-1">Bulan</label>
+                  <select 
+                    name="periode_bulan"
+                    value={tbsFormData.periode_bulan}
                     onChange={handleTBSChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    className="w-full p-2 border rounded-lg text-sm"
                   >
-                    <option value="">Pilih...</option>
                     {[...Array(12)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}
-                      </option>
+                      <option key={i+1} value={i+1}>{i+1}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Tahun
-                  </label>
-                  <input
-                    type="number"
-                    name="tahun"
-                    required
-                    value={tbsFormData.tahun}
-                    onChange={handleTBSChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  />
+                   <label className="block text-[10px] font-bold text-gray-500 mb-1">Tahun</label>
+                   <input 
+                     type="number"
+                     name="periode_tahun"
+                     value={tbsFormData.periode_tahun}
+                     onChange={handleTBSChange}
+                     className="w-full p-2 border rounded-lg text-sm"
+                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Harga per Kg (Rp)
-                </label>
-                <input
+                <label className="block text-[10px] font-bold text-gray-500 mb-1">Harga (Rp/Kg)</label>
+                <input 
                   type="number"
-                  step="0.01"
-                  name="harga"
+                  name="harga_per_kg"
                   required
-                  value={tbsFormData.harga}
                   onChange={handleTBSChange}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  className="w-full p-2 border rounded-lg text-sm"
+                  placeholder="Contoh: 2800"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Upload SK (.pdf)
-                </label>
-                <input
+                <label className="block text-[10px] font-bold text-gray-500 mb-1">File SK (.pdf)</label>
+                <input 
                   type="file"
                   name="file"
                   accept="application/pdf"
                   required
                   onChange={handleTBSChange}
-                  className="w-full px-4 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50"
+                  className="w-full text-xs"
                 />
               </div>
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="submit"
-                  disabled={isSubmittingTBS}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400"
-                >
-                  {isSubmittingTBS ? "Mengupload..." : "Simpan Harga"}
-                </button>
-              </div>
+              <button 
+                type="submit"
+                disabled={isSubmittingTBS}
+                className="w-full py-3 bg-green-600 text-white rounded-xl font-bold text-sm"
+              >
+                {isSubmittingTBS ? "Proses..." : "Simpan Data"}
+              </button>
             </form>
           </div>
         </div>
@@ -736,13 +356,11 @@ const Operasional2 = () => {
   );
 };
 
-// HELPER COMPONENT (Tetap butuh di sini juga)
+// HELPER COMPONENT
 const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[20px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
-    <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
-      {title}
-    </h3>
+  <div className="bg-white rounded-2xl border border-gray-100 p-5 relative overflow-hidden shadow-sm">
+    <div className="absolute top-0 left-0 w-1 h-full bg-[#B5302D]"></div>
+    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest mb-4">{title}</h3>
     {children}
   </div>
 );

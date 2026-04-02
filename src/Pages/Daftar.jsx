@@ -221,7 +221,7 @@ export default function Daftar() {
             Buat Akun Baru
           </h1>
           <p className="text-sm sm:text-base font-medium text-[#EF8523]">
-            TELSA Super App
+            PalmaOne-08 ISPO App
           </p>
           <p className="text-black mt-2 text-xs sm:text-sm">
             Daftarkan akun sesuai peran Anda di sistem

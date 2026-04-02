@@ -31,7 +31,8 @@ Jika menggunakan lokal maka "npm run dev:local"
 
 git update-index --assume-unchanged src/Pages/Masuk.jsx
 
-lalu mengembalikan masuk.jsx ke update lagi di git hub
+lalu mengembalikan masuk.jsx ke update lagi di git hub : 
+git update-index --no-assume-unchanged src/Pages/Masuk.jsx
 
 
 Fungsi setiap file :

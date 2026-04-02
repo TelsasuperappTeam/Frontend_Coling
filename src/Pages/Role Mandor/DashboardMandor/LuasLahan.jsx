@@ -40,16 +40,13 @@ export default function LuasLahan() {
 
   // === FETCH API ===
   const fetchAPI = async (url, options = {}) => {
-    // 1. KEMBALI MENGGUNAKAN "token" SESUAI FILE LAMA ANDA
     const token = localStorage.getItem("token");
 
-    // 2. Siapkan header dasar
     const headers = {
       Authorization: `Bearer ${token}`,
       ...options.headers,
     };
 
-    // 3. LOGIKA KUNCI UNTUK UPLOAD FILE (Sesuai permintaan BE)
     if (!(options.body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
@@ -59,9 +56,26 @@ export default function LuasLahan() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail || data.message || "Terjadi kesalahan server",
-        );
+        // PERBAIKAN: Parsing detail error array dari FastAPI (Pydantic)
+        let errorMessage = "Terjadi kesalahan server";
+
+        if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            // Jika error 422 dari Pydantic, gabungkan pesan error agar jelas letak salahnya
+            errorMessage = data.detail
+              .map(
+                (err) =>
+                  `Error di field '${err.loc[err.loc.length - 1]}': ${err.msg}`,
+              )
+              .join(", ");
+          } else {
+            errorMessage = data.detail;
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+
+        throw new Error(errorMessage);
       }
 
       return data;
@@ -277,9 +291,7 @@ export default function LuasLahan() {
 
   // === SUBMIT STEP 4 ===
   const submitStep4 = async () => {
-    // PERBAIKAN TitleCase "Mineral" sesuai BE
     const isSengketaValid = form.sengketa !== null;
-
     if (
       !form.namaLahan ||
       !form.jenisTanah ||
@@ -290,7 +302,6 @@ export default function LuasLahan() {
       return toast.error("Harap lengkapi semua field yang wajib diisi!");
     }
 
-    // Parsing menggunakan Number() untuk mencegah karakter cacat masuk database (Silent Bug)
     const luasLahanBersih = form.luasLahan.toString().replace(",", ".");
     const luasParse = Number(luasLahanBersih);
     const tahunParse = parseInt(form.tahunPembukaan);
@@ -302,8 +313,6 @@ export default function LuasLahan() {
     if (isNaN(tahunParse) || tahunParse < 1900 || tahunParse > 2100)
       return toast.error("Tahun pembukaan tidak valid!");
 
-    // === TAMBAHAN BARU: VALIDASI CEPAT FRONTEND ===
-    // Cegah hit API jika Petani Swadaya mengisi lahan > 25 Ha
     if (form.jenisPelakuUsaha === "PEKEBUN" && luasParse > 25) {
       return toast.error(
         "Luas lahan melebihi 25 Ha. Sesuai Permentan NO.98/2013, mohon mendaftar sebagai Perusahaan jika memiliki lahan lebih dari 25 Ha.",
@@ -311,9 +320,11 @@ export default function LuasLahan() {
     }
 
     setIsLoading(true);
+
     try {
+      // Pembentukan Payload
       const payloadStep4 = {
-        jenis_tanah: form.jenisTanah,
+        jenis_tanah: form.jenisTanah, // Gunakan format asli sesuai BE
         luas_tanah: luasParse,
         tahun_buka_lahan: tahunParse,
         nama_lahan_mineral:
@@ -322,11 +333,15 @@ export default function LuasLahan() {
           form.jenisTanah === "Gambut" ? form.namaLahan.trim() : null,
       };
 
+      // 1. Eksekusi Step 4 (Wajib pakai "await")
+      // Ini akan membuat sistem menunggu respon dari BE (sampai db.commit selesai)
       await fetchAPI(API_ENDPOINTS.FARM.PETANI.LAHAN.STEP_4(processId), {
         method: "PATCH",
         body: JSON.stringify(payloadStep4),
       });
 
+      // 2. Eksekusi Step 5 (Wajib pakai "await")
+      // Baris ini HANYA AKAN berjalan setelah Step 4 di atas sukses (status 200 OK)
       await fetchAPI(API_ENDPOINTS.FARM.PETANI.LAHAN.STEP_5(processId), {
         method: "PATCH",
         body: JSON.stringify({
@@ -334,9 +349,9 @@ export default function LuasLahan() {
         }),
       });
 
+      // Jika keduanya sukses tanpa terlempar ke catch, pindah ke step upload dokumen
       setStep(5);
     } catch (error) {
-      // Penanganan error standar
       if (error.message && error.message.includes("25")) {
         setErrorMsg(error.message);
       } else {

@@ -90,9 +90,9 @@ export default function Masuk() {
       {/* ========== KOTAK LOGIN CARD ========== */}
       <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl bg-gradient-to-br from-gray-100 to-[#EF8523]/20 shadow-xl border border-gray-200 rounded-2xl p-6 sm:p-8">
         {/* ====== JUDUL ====== */}
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight text-center tracking-tight">
+        <h1 className="text-2xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight text-center tracking-tight">
           <span className="block text-[#B5302D]">Selamat Datang di</span>
-          <span className="block">TELSA Super App!</span>
+          <span className="block">PalmaOne-08 ISPO App!</span>
         </h1>
 
         {/* ====== SUBTEKS ====== */}
@@ -207,7 +207,6 @@ export default function Masuk() {
             Daftarkan akun sekarang!
           </Link>
         </p>
-
       </div>
     </div>
   );

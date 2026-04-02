@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ShieldCheck,
   Users,
@@ -6,10 +6,8 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
-// Pastikan getFileUrl di-export dari constants.js
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 
-/* ===================== MOCK DATA (STATIC) ===================== */
 const MOCK_DOKUMEN_SERTIFIKASI = [
   {
     id: 1,
@@ -34,72 +32,121 @@ const MOCK_DOKUMEN_SERTIFIKASI = [
 ];
 
 const KemitraanPetani = () => {
-  // State manajemen tab
+  // ================= STATE =================
   const [activeTab, setActiveTab] = useState("validasi");
 
-  // State data dinamis untuk Validasi
   const [pendingPanen, setPendingPanen] = useState([]);
   const [pendingTanam, setPendingTanam] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // State data manajemen petani
   const [petaniMembers, setPetaniMembers] = useState([]);
   const [loadingManajemen, setLoadingManajemen] = useState(false);
 
-  /**
-   * Mengambil data validasi (Rencana Panen & Rencana Tanam) dari API.
-   * (Read-Only)
-   */
-  const fetchValidasiData = async () => {
-    setLoading(true);
+  // 🔥 WAJIB UNTUK GM
+  const [selectedKebunId, setSelectedKebunId] = useState(null);
+
+  // ================= GET ROLE =================
+  const getUserRole = () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) return null;
+
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.role;
+    } catch {
+      return null;
+    }
+  };
+
+  const role = getUserRole();
+
+  // ================= FETCH KEBUN GM =================
+  const fetchKebunList = useCallback(async () => {
+    if (role !== "general_manager_distrik") return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(API_ENDPOINTS.USER.GMDistrik.GET_KEBUN_LIST, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Gagal ambil kebun GM");
+      }
+
+      const data = await res.json();
+
+      if (data.length > 0) {
+        setSelectedKebunId(data[0].auth_id);
+      }
+    } catch (error) {
+      console.error("Error fetch kebun GM:", error);
+    }
+  }, [role]);
+
+  // ================= FETCH VALIDASI =================
+  const fetchValidasiData = useCallback(async () => {
+    // 🔥 WAJIB: GM harus punya kebun dulu
+    if (role === "general_manager_distrik" && !selectedKebunId) return;
+
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem("token");
+
       const headers = {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`, // <-- Backend akan mengecek role dari token ini
+        Authorization: `Bearer ${token}`,
       };
 
-      const resPanen = await fetch(API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING, { headers });
-      
-      // Tambahkan Pengecekan Akses (Role)
-      if (resPanen.status === 403) {
-        throw new Error("Akses Ditolak: Anda tidak memiliki izin untuk melihat data ini.");
-      }
-      if (resPanen.status === 401) {
-        throw new Error("Sesi habis, silakan login kembali.");
-      }
+      // 🔥 CONDITIONAL QUERY
+      const queryParam =
+        role === "general_manager_distrik"
+          ? `?target_kebun_auth_id=${selectedKebunId}`
+          : "";
 
-      const resTanam = await fetch(API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK, { headers });
-      
-      // Lakukan hal yang sama
-      if (resTanam.status === 403) {
-        throw new Error("Akses Ditolak: Anda tidak memiliki izin untuk melihat data rencana tanam.");
+      const resPanen = await fetch(
+        `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING}${queryParam}`,
+        { headers },
+      );
+
+      if (!resPanen.ok) {
+        throw new Error("Gagal fetch rencana panen");
       }
 
       const dataPanen = await resPanen.json();
+
+      const resTanam = await fetch(
+        `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK}${queryParam}`,
+        { headers },
+      );
+
+      if (!resTanam.ok) {
+        throw new Error("Gagal fetch rencana tanam");
+      }
+
       const dataTanam = await resTanam.json();
 
       if (Array.isArray(dataPanen)) setPendingPanen(dataPanen);
       if (Array.isArray(dataTanam)) setPendingTanam(dataTanam);
     } catch (error) {
       console.error("Gagal mengambil data validasi:", error);
-      // Opsional: Tampilkan error.message ini ke dalam UI (misal menggunakan alert atau toast/snackbar)
-      alert(error.message); 
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedKebunId, role]);
 
-  /**
-   * Mengambil data daftar petani yang sudah disetujui
-   */
+  // ================= FETCH PETANI =================
   const fetchPetaniMembers = async () => {
     setLoadingManajemen(true);
     try {
       const token = localStorage.getItem("token");
+
       const res = await fetch(API_ENDPOINTS.USER.KEBUN.PETANI_MEMBERS, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
@@ -117,13 +164,21 @@ const KemitraanPetani = () => {
     }
   };
 
+  // ================= USE EFFECT =================
+
+  // ambil kebun kalau GM
+  useEffect(() => {
+    fetchKebunList();
+  }, [fetchKebunList]);
+
+  // trigger data
   useEffect(() => {
     if (activeTab === "validasi") {
       fetchValidasiData();
     } else if (activeTab === "manajemen") {
       fetchPetaniMembers();
     }
-  }, [activeTab]);
+  }, [activeTab, selectedKebunId, fetchValidasiData]);
 
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
@@ -351,7 +406,7 @@ const KemitraanPetani = () => {
                                     <a
                                       href={getFileUrl(
                                         item.dok_bukti_terasering_url,
-                                        "FARM"
+                                        "FARM",
                                       )}
                                       target="_blank"
                                       rel="noreferrer"
@@ -383,7 +438,7 @@ const KemitraanPetani = () => {
                                     <a
                                       href={getFileUrl(
                                         item.dok_bukti_drainase_url,
-                                        "FARM"
+                                        "FARM",
                                       )}
                                       target="_blank"
                                       rel="noreferrer"
@@ -440,7 +495,9 @@ const KemitraanPetani = () => {
                     <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
                       <th className="p-4 font-bold rounded-tl-xl">No</th>
                       <th className="p-4 font-bold">Nama Mandor</th>
-                      <th className="p-4 font-bold border-l border-orange-400">Kebun Relasi</th>
+                      <th className="p-4 font-bold border-l border-orange-400">
+                        Kebun Relasi
+                      </th>
                       <th className="p-4 font-bold">Jenis Dokumen</th>
                       <th className="p-4 font-bold">Prinsip ISPO</th>
                       <th className="p-4 font-bold">File Dokumen</th>
@@ -457,7 +514,9 @@ const KemitraanPetani = () => {
                           {index + 1}
                         </td>
                         <td className="p-4 font-bold">{item.nama}</td>
-                        <td className="p-4 font-medium text-gray-800">{item.kebun}</td>
+                        <td className="p-4 font-medium text-gray-800">
+                          {item.kebun}
+                        </td>
                         <td className="p-4 font-medium">{item.jenisDok}</td>
                         <td className="p-4 text-gray-500">{item.prinsip}</td>
                         <td className="p-4">
@@ -560,14 +619,14 @@ const ValidationCard = ({ title, kebunName, children }) => {
 // ===================== KOMPONEN PETANI PROFILE CARD (BARU) =====================
 const PetaniProfileCard = ({ data }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // --- STATE BARU UNTUK PROGRESS ISPO ---
   const [ispoProgress, setIspoProgress] = useState(null);
   const [loadingIspo, setLoadingIspo] = useState(false);
 
   // Buat URL Foto Profil. Gunakan UI-Avatars jika foto_profil_url kosong/null
-  const fotoProfilUrl = data.foto_profil_url 
-    ? getFileUrl(data.foto_profil_url, "USER") 
+  const fotoProfilUrl = data.foto_profil_url
+    ? getFileUrl(data.foto_profil_url, "USER")
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama_lengkap)}&background=random`;
 
   // --- EFEK FETCH PROGRESS ISPO SAAT CARD DIBUKA ---
@@ -579,12 +638,16 @@ const PetaniProfileCard = ({ data }) => {
         try {
           const token = localStorage.getItem("token");
           // Pastikan API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN sudah Anda definisikan di constants.js
-          const url = API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN.replace('{petani_id}', data.id);
-          
+          const url =
+            API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN.replace(
+              "{petani_id}",
+              data.id,
+            );
+
           const res = await fetch(url, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
-          
+
           if (res.ok) {
             const result = await res.json();
             // Simpan bagian progress_summary ke state
@@ -612,7 +675,7 @@ const PetaniProfileCard = ({ data }) => {
         <div className="flex items-center gap-3">
           <span className="font-bold text-sm">{data.nama_lengkap}</span>
           <span className="bg-white text-gray-800 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm">
-             {data.nama_kebun_naungan || "Kebun Relasi"}
+            {data.nama_kebun_naungan || "Kebun Relasi"}
           </span>
         </div>
 
@@ -643,7 +706,9 @@ const PetaniProfileCard = ({ data }) => {
                 </div>
                 <div>
                   <p className="font-bold text-gray-500">Status:</p>
-                  <p className="text-gray-800 font-bold capitalize">{data.status || "Approved"}</p>
+                  <p className="text-gray-800 font-bold capitalize">
+                    {data.status || "Approved"}
+                  </p>
                 </div>
                 <div className="sm:col-span-2">
                   <p className="font-bold text-gray-500">Alamat:</p>
@@ -652,44 +717,63 @@ const PetaniProfileCard = ({ data }) => {
               </div>
             </div>
           </div>
-          
+
           {/* --- BAGIAN PROGRESS ISPO DINAMIS --- */}
           <div className="flex flex-col items-center lg:items-end gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 w-full lg:w-auto">
             <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
               Progres ISPO (P1 - P5)
             </p>
-            
+
             {loadingIspo ? (
               <div className="flex gap-3 justify-center items-center h-12">
-                <span className="text-xs text-gray-400 animate-pulse">Menghitung progres...</span>
+                <span className="text-xs text-gray-400 animate-pulse">
+                  Menghitung progres...
+                </span>
               </div>
             ) : (
               <div className="flex gap-2 justify-center">
-                {['prinsip_1', 'prinsip_2', 'prinsip_3', 'prinsip_4', 'prinsip_5'].map((prinsip, idx) => {
+                {[
+                  "prinsip_1",
+                  "prinsip_2",
+                  "prinsip_3",
+                  "prinsip_4",
+                  "prinsip_5",
+                ].map((prinsip, idx) => {
                   // Ambil skor dari state, jika null/undefined jadikan 0
-                  const score = ispoProgress ? (ispoProgress[prinsip] || 0) : 0;
+                  const score = ispoProgress ? ispoProgress[prinsip] || 0 : 0;
                   const displayScore = Math.round(score); // Bulatkan koma
-                  
+
                   return (
-                    <div key={idx} className="flex flex-col items-center gap-1.5 group relative">
+                    <div
+                      key={idx}
+                      className="flex flex-col items-center gap-1.5 group relative"
+                    >
                       {/* Tooltip sederhana saat di-hover */}
                       <span className="absolute -top-6 bg-gray-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
                         Prinsip {idx + 1}: {displayScore}%
                       </span>
-                      
+
                       {/* Lingkaran Progres SVG Ultra-Tipis & Elegan */}
                       <div className="relative w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm ring-1 ring-black/5 p-1">
-                        <svg 
-                          viewBox="0 0 36 36" 
+                        <svg
+                          viewBox="0 0 36 36"
                           className="absolute top-0 left-0 w-full h-full transform -rotate-90"
                         >
                           <defs>
-                            <linearGradient id={`kemitraanGradient-${idx}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#FF7875" /> {/* Merah Terang */}
-                              <stop offset="100%" stopColor="#B5302D" /> {/* Merah Tua */}
+                            <linearGradient
+                              id={`kemitraanGradient-${idx}`}
+                              x1="0%"
+                              y1="0%"
+                              x2="100%"
+                              y2="0%"
+                            >
+                              <stop offset="0%" stopColor="#FF7875" />{" "}
+                              {/* Merah Terang */}
+                              <stop offset="100%" stopColor="#B5302D" />{" "}
+                              {/* Merah Tua */}
                             </linearGradient>
                           </defs>
-                          
+
                           {/* Lingkaran Track (Abu-abu Pudar) */}
                           <path
                             className="text-gray-100"
@@ -698,7 +782,7 @@ const PetaniProfileCard = ({ data }) => {
                             fill="none"
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                           />
-                          
+
                           {/* Lingkaran Progres Dinamis */}
                           <path
                             stroke={`url(#kemitraanGradient-${idx})`}
@@ -710,7 +794,7 @@ const PetaniProfileCard = ({ data }) => {
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                           />
                         </svg>
-                        
+
                         {/* Teks Persentase di Tengah */}
                         <div className="relative z-10 flex flex-col items-center">
                           <span className="text-[10px] font-bold text-[#B5302D] leading-none">
@@ -718,16 +802,17 @@ const PetaniProfileCard = ({ data }) => {
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* Label P1, P2, dst */}
-                      <span className="text-[9px] font-bold text-gray-500">P{idx + 1}</span>
+                      <span className="text-[9px] font-bold text-gray-500">
+                        P{idx + 1}
+                      </span>
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
-
         </div>
       )}
     </div>

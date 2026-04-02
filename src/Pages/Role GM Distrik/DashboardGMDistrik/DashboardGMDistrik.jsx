@@ -68,9 +68,9 @@ export default function DashboardGMDistrik() {
   // --- STATE UI & LOADING ---
   const [showPopupDataDiri, setShowPopupDataDiri] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [isLoadingPending, setIsLoadingPending] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isValidasiLoading, setIsValidasiLoading] = useState(false);
+  const [daftarKebun, setDaftarKebun] = useState([]);
+  const [selectedKebunId, setSelectedKebunId] = useState("");
 
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
@@ -83,9 +83,6 @@ export default function DashboardGMDistrik() {
     koordinat: "",
     distrik_id: "",
   });
-
-  // Data dinamis dari API
-  const [pendingPetani, setPendingPetani] = useState([]);
 
   // --- DATA VALIDASI (DINAMIS & STATIC) ---
   // Rencana Tanam & Panen diubah menjadi array kosong untuk diisi API
@@ -181,44 +178,72 @@ export default function DashboardGMDistrik() {
   }, []);
 
   /**
-   * --- FETCH PENDING PETANI ---
+   * --- FETCH DAFTAR KEBUN UNTUK GM DISTRIK ---
+   * Hit ke User Service untuk mendapatkan list kebun di bawah GM ini
    */
-  const fetchPendingPetani = useCallback(async () => {
-    setIsLoadingPending(true);
-    try {
-      const token = getToken();
-      if (!token) return;
-
-      const response = await fetch(API_ENDPOINTS.USER.KEBUN.PENDING_PETANI, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok)
-        throw new Error("Gagal mengambil data permintaan petani");
-
-      const data = await response.json();
-      setPendingPetani(data);
-    } catch (error) {
-      console.error("Error fetching pending petani:", error);
-    } finally {
-      setIsLoadingPending(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchPendingPetani();
-  }, [fetchPendingPetani]);
+    const fetchDaftarKebun = async () => {
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        // Sesuaikan Base URL User Service (port 8002) dengan constant yang kamu punya
+        // Asumsi API_ENDPOINTS.USER_SERVICE_URL ada, atau gunakan domain langsung jika env terpisah
+        const response = await fetch(
+          API_ENDPOINTS.USER.GMDistrik.GET_KEBUN_LIST,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) throw new Error("Gagal mengambil daftar kebun");
+
+        const data = await response.json();
+
+        // Asumsi responsenya berupa array object.
+        // Pastikan kita mengambil 'auth_id' sesuai instruksi BE untuk passing ke target_kebun_auth_id
+        const mappedKebun = data.map((k) => ({
+          id: k.auth_id || k.id, // Sesuaikan field auth_id dari respon BE
+          nama: k.nama_kebun || k.nama_lengkap || k.nama, // Sesuaikan field nama dari respon BE
+        }));
+
+        setDaftarKebun(mappedKebun);
+
+        // (Opsional) Langsung pilih kebun pertama agar data validasi langsung muncul tanpa harus klik dropdown dulu
+        if (mappedKebun.length > 0) {
+          setSelectedKebunId(mappedKebun[0].id);
+        }
+      } catch (error) {
+        console.error("Error fetching daftar kebun:", error);
+      }
+    };
+
+    fetchDaftarKebun();
+  }, []);
 
   /**
    * --- FETCH VALIDASI ITEMS (RENCANA TANAM & PANEN) ---
    * Mengambil data dinamis untuk widget validasi dari endpoint backend.
    * (SESUAI BE MAHAR)
    */
+  /**
+   * --- FETCH VALIDASI ITEMS (RENCANA TANAM & PANEN) ---
+   */
   const fetchValidasiRequests = useCallback(async () => {
+    // 👇 PASTIKAN BERHENTI JIKA KEBUN BELUM DIPILIH
+    if (!selectedKebunId) {
+      setValidasiData((prev) => ({
+        ...prev,
+        rencanaPanen: [],
+        rencanaTanam: [],
+      }));
+      return;
+    }
+
     setIsValidasiLoading(true);
     try {
       const token = getToken();
@@ -229,21 +254,23 @@ export default function DashboardGMDistrik() {
         "Content-Type": "application/json",
       };
 
-      // 1. Fetch Pending Rencana Panen (SESUAI BE MAHAR)
+      // 👇 MENGGUNAKAN STATE DINAMIS DARI DROPDOWN
+      const queryParam = `?target_kebun_auth_id=${selectedKebunId}`;
+
+      // 1. Fetch Pending Rencana Panen
       const resPanen = await fetch(
-        API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING,
+        `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING}${queryParam}`,
         { headers },
       );
       const dataPanen = resPanen.ok ? await resPanen.json() : [];
 
-      // 2. Fetch Pending Rencana Tanam / Blok (SESUAI BE MAHAR)
+      // 2. Fetch Pending Rencana Tanam / Blok
       const resTanam = await fetch(
-        API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK,
+        `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK}${queryParam}`,
         { headers },
       );
       const dataTanam = resTanam.ok ? await resTanam.json() : [];
 
-      // Update state validasiData, merge dengan dokumenISPO static
       setValidasiData((prev) => ({
         ...prev,
         rencanaPanen: Array.isArray(dataPanen) ? dataPanen : [],
@@ -254,52 +281,12 @@ export default function DashboardGMDistrik() {
     } finally {
       setIsValidasiLoading(false);
     }
-  }, []);
+  }, [selectedKebunId]); // 👇 TAMBAHKAN dependency state di sini
 
+  // useEffect di bawahnya biarkan saja tetap sama seperti ini:
   useEffect(() => {
     fetchValidasiRequests();
   }, [fetchValidasiRequests]);
-
-  /**
-   * --- HANDLE MANAGE PETANI ---
-   */
-  const handleManagePetani = async (petaniId, actionType) => {
-    if (isProcessing) return;
-    const confirmMsg =
-      actionType === "approve"
-        ? "Terima permintaan petani ini?"
-        : "Tolak permintaan petani ini?";
-
-    if (!window.confirm(confirmMsg)) return;
-
-    setIsProcessing(true);
-    try {
-      const token = getToken();
-      const response = await fetch(
-        API_ENDPOINTS.USER.KEBUN.MANAGE_PETANI(petaniId),
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ action: actionType }),
-        },
-      );
-
-      if (!response.ok) throw new Error(`Gagal ${actionType} petani`);
-
-      await fetchPendingPetani();
-      alert(
-        `Berhasil ${actionType === "approve" ? "menerima" : "menolak"} petani.`,
-      );
-    } catch (error) {
-      console.error("Error manage petani:", error);
-      alert("Terjadi kesalahan sistem.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleProfileSaved = (dataSaved) => {
     if (dataSaved) {
@@ -419,87 +406,29 @@ export default function DashboardGMDistrik() {
           SECTION 2: WIDGETS
          ========================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* CARD 1: PERMINTAAN RELASI (Design: Clean List with Actions) */}
-        <Card title="Permintaan Relasi" icon={User}>
-          {isLoadingPending ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
-            </div>
-          ) : pendingPetani.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
-                <Check className="w-8 h-8 text-gray-300" />
-              </div>
-              <p className="text-sm font-medium">
-                Tidak ada data permintaan validasi relasi
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingPetani.map((item) => (
-                <div
-                  key={item.id}
-                  className="group border border-gray-100 rounded-2xl p-4 relative bg-white hover:bg-orange-50/30 hover:border-orange-200 transition-all duration-300 shadow-sm"
-                >
-                  <div className="pl-3 pr-20 space-y-1.5 py-1">
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">Nama</span>
-                      <span className="font-bold text-gray-800">
-                        : {item.nama_lengkap}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">
-                        No Telpon
-                      </span>
-                      <span className="text-gray-700 font-medium">
-                        : {item.no_hp}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">Email</span>
-                      <span className="text-gray-700 font-medium truncate">
-                        : {item.email}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">Role</span>
-                      <span className="text-gray-700 font-medium capitalize">
-                        : {item.role}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Tombol Aksi Floating */}
-                  <div className="absolute top-1/2 -translate-y-1/2 right-4 flex flex-col gap-2">
-                    <button
-                      onClick={() => handleManagePetani(item.id, "approve")}
-                      className="w-8 h-8 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-600 hover:text-white transition-all shadow-sm"
-                      title="Terima"
-                    >
-                      <Check size={16} strokeWidth={3} />
-                    </button>
-                    <button
-                      onClick={() => handleManagePetani(item.id, "reject")}
-                      className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-600 rounded-full hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                      title="Tolak"
-                    >
-                      <X size={16} strokeWidth={3} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-{/* CARD 2: PERMINTAAN VALIDASI */}
+        {/* CARD 2: PERMINTAAN VALIDASI */}
         <Card
           title="Permintaan Validasi Operasional Perkebunan"
           icon={FileText}
+          rightContent={
+            <select
+              value={selectedKebunId}
+              onChange={(e) => setSelectedKebunId(e.target.value)}
+              className="bg-white/20 text-white border border-white/50 rounded-lg px-2 py-1 text-xs outline-none focus:bg-white focus:text-black transition-colors"
+              disabled={daftarKebun.length === 0} // Disable jika belum ada data
+            >
+              <option value="" className="text-black">
+                {daftarKebun.length === 0
+                  ? "Memuat kebun..."
+                  : "-- Pilih Kebun --"}
+              </option>
+              {daftarKebun.map((k) => (
+                <option key={k.id} value={k.id} className="text-black">
+                  {k.nama}
+                </option>
+              ))}
+            </select>
+          }
           footer={
             <button
               // TAMBAHKAN ONCLICK DI SINI:
