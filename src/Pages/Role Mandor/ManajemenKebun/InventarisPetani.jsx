@@ -8,11 +8,11 @@ import {
   SprayCan,
   Save,
   Info,
-  ClipboardList,
   Loader2,
   Trash2,
   ChevronDown,
-  ChevronUp,
+  Box,
+  FileText,
 } from "lucide-react";
 
 import {
@@ -30,8 +30,7 @@ const isValidFileType = (file) => {
   return ALLOWED_FILE_TYPES.includes(file.type);
 };
 
-export default function Inventaris() {
-  const [openSection, setOpenSection] = useState(null);
+export default function InventarisPetani() {
   const [popupType, setPopupType] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
 
@@ -56,22 +55,15 @@ export default function Inventaris() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Ref untuk menyimpan fungsi fetchInventaris agar bisa dipanggil di handleDelete
-  // tanpa menyebabkan circular dependency (infinite loop) pada useEffect/useCallback
   const fetchRef = useRef(null);
-
   const getToken = () => localStorage.getItem("token");
 
   // --- LOGIC: DELETE PERALATAN ---
-  /**
-   * Menghapus data peralatan berdasarkan ID.
-   * (SESUAI BE MAHAR): Menggunakan method DELETE ke endpoint spesifik ID peralatan.
-   */
   const handleDeletePeralatan = useCallback(async (id) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus alat ini?")) return;
 
     try {
-      const token = localStorage.getItem("token"); // Ambil token langsung
+      const token = getToken();
       const url = `${API_BASE_URLS.FARM}/farm/me/inventaris/peralatan/${id}`;
 
       const response = await fetch(url, {
@@ -87,7 +79,6 @@ export default function Inventaris() {
 
       alert("Peralatan berhasil dihapus.");
 
-      // Refresh data tabel setelah delete berhasil
       if (fetchRef.current) {
         fetchRef.current();
       }
@@ -98,11 +89,6 @@ export default function Inventaris() {
   }, []);
 
   // --- LOGIC: FETCH DATA (GET) ---
-  /**
-   * Mengambil semua data inventaris (Alat, Bibit, Pupuk, Pestisida) dari server.
-   * (SESUAI BE MAHAR): Melakukan 4 request paralel (Promise.all) agar efisien,
-   * lalu memetakan data JSON menjadi format Array untuk tabel.
-   */
   const fetchInventaris = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -112,7 +98,6 @@ export default function Inventaris() {
         Accept: "application/json",
       };
 
-      // Request paralel ke semua endpoint inventaris
       const [resAlat, resBibit, resPupuk, resPestisida] = await Promise.all([
         fetch(API_ENDPOINTS.FARM.PETANI.INVENTARIS.GET_PERALATAN, { headers }),
         fetch(API_ENDPOINTS.FARM.PETANI.INVENTARIS.GET_BIBIT, { headers }),
@@ -136,38 +121,48 @@ export default function Inventaris() {
         pestisida: dataPestisida,
       });
 
-      // Fungsi internal untuk merubah data JSON menjadi baris Tabel (Array)
       const mapToTable = (items, type) => {
         return items.map((item) => {
           if (type === "alat") {
             return [
-              item.nama_alat,
+              <span className="font-semibold text-gray-800">
+                {item.nama_alat}
+              </span>,
               `${item.jumlah_per_buah} unit`,
               item.lokasi_penyimpanan || "-",
-              item.status_kepemilikan,
-              item.catatan || "-",
-              // Tombol Delete menggunakan handleDeletePeralatan
-              <button
-                key={`del-${item.id}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeletePeralatan(item.id);
-                }}
-                className="p-1.5 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors"
-                title="Hapus Alat"
+              <span
+                className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                  item.status_kepemilikan === "Pribadi"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-blue-100 text-blue-700"
+                }`}
               >
-                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-              </button>,
+                {item.status_kepemilikan}
+              </span>,
+              item.catatan || "-",
+              <ActionButtons
+                onClick={() => handleDeletePeralatan(item.id)}
+                title="Hapus Alat"
+              />,
             ];
           }
           if (type === "bibit") {
             return [
               item.tanggal_pembelian,
               item.nama_varietas || "-",
-              item.jenis_bibit,
-              `${item.jumlah_tersisa} batang`,
-              renderFileLink(item.sertifikat_bibit_url),
-              renderFileLink(item.nota_pembelian_url),
+              <span className="font-bold text-gray-700">
+                {item.jenis_bibit}
+              </span>,
+              <span className="font-mono text-blue-600">
+                {item.jumlah_tersisa} batang
+              </span>,
+              <div className="flex gap-2">
+                {renderFileLink(item.sertifikat_bibit_url, "Sertifikat")}
+                {renderFileLink(item.nota_pembelian_url, "Nota")}
+                {!item.sertifikat_bibit_url && !item.nota_pembelian_url && (
+                  <span className="text-gray-400">-</span>
+                )}
+              </div>,
             ];
           }
           if (type === "pupuk") {
@@ -175,9 +170,16 @@ export default function Inventaris() {
               item.nama_pupuk,
               item.jenis_pupuk,
               item.asal_pupuk,
-              `${item.jumlah_tersisa_kg} kg`,
+              <span className="font-bold text-gray-700">
+                {item.jumlah_tersisa_kg} Kg
+              </span>,
               item.tanggal_pembelian,
-              renderFileLink(item.nota_pembelian_url),
+              <div className="flex gap-2">
+                {renderFileLink(item.nota_pembelian_url, "Nota")}
+                {!item.nota_pembelian_url && (
+                  <span className="text-gray-400">-</span>
+                )}
+              </div>,
             ];
           }
           if (type === "pestisida") {
@@ -186,8 +188,15 @@ export default function Inventaris() {
               item.jenis_pestisida,
               `${item.jumlah_tersisa} ${item.satuan}`,
               item.bentuk || "-",
-              item.tanggal_expired || "-",
-              renderFileLink(item.sertifikat_pestisida_url),
+              <span className="text-red-500 font-medium">
+                {item.tanggal_expired || "-"}
+              </span>,
+              <div className="flex gap-2">
+                {renderFileLink(item.sertifikat_pestisida_url, "Sertifikat")}
+                {!item.sertifikat_pestisida_url && (
+                  <span className="text-gray-400">-</span>
+                )}
+              </div>,
             ];
           }
           return [];
@@ -207,23 +216,28 @@ export default function Inventaris() {
     }
   }, [handleDeletePeralatan]);
 
-  // Helper untuk render link download dokumen
-  const renderFileLink = (path) => {
-    if (!path) return <span className="text-gray-400">-</span>;
+// Helper render link dokumen
+  const renderFileLink = (path, title = "Dokumen") => {
+    if (!path) return null;
     return (
       <a
         href={getFileUrl(path, "FARM")}
         target="_blank"
         rel="noreferrer"
-        className="text-blue-600 hover:text-blue-800 underline text-[10px] sm:text-xs font-medium"
         onClick={(e) => e.stopPropagation()}
+        title={title}
+        className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
+          title === "Nota"
+            ? "bg-green-50 text-green-600 hover:bg-green-100"
+            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+        }`}
       >
-        Lihat Dokumen
+        {/* SVG dihapus dan diganti dengan FileText */}
+        <FileText className="w-4 h-4" />
       </a>
     );
   };
 
-  // Sinkronisasi fetchRef dengan fungsi fetchInventaris saat ini
   useEffect(() => {
     fetchRef.current = fetchInventaris;
   }, [fetchInventaris]);
@@ -231,10 +245,6 @@ export default function Inventaris() {
   useEffect(() => {
     fetchInventaris();
   }, [fetchInventaris]);
-
-  const toggleSection = (section) => {
-    setOpenSection(openSection === section ? null : section);
-  };
 
   const handleOpenPopup = (type) => {
     setPopupType(type);
@@ -254,10 +264,10 @@ export default function Inventaris() {
   // --- KONFIGURASI TABEL & FORM ---
   const tableConfig = {
     peralatan: {
-      title: "Inventaris Alat",
+      title: "Daftar Peralatan",
       endpoint: API_ENDPOINTS.FARM.PETANI.INVENTARIS.ADD_PERALATAN,
-      icon: <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />,
-      columns: ["Nama Alat", "Jumlah", "Lokasi", "Status", "Kondisi", "Aksi"],
+      icon: <Wrench className="w-5 h-5" />,
+      columns: ["Nama Alat", "Jumlah", "Lokasi", "Status", "Catatan", "Aksi"],
       fields: [
         {
           name: "nama_alat",
@@ -278,7 +288,6 @@ export default function Inventaris() {
         {
           name: "status_kepemilikan",
           label: "Status Kepemilikan",
-          placeholder: "Contoh: Gudang Belakang",
           type: "select",
           options: [
             { label: "Milik Pribadi", value: "Pribadi" },
@@ -302,16 +311,17 @@ export default function Inventaris() {
         },
       ],
     },
+
+
     bibit: {
       title: "Stok Bibit",
       endpoint: API_ENDPOINTS.FARM.PETANI.INVENTARIS.ADD_BIBIT,
-      icon: <Sprout className="w-4 h-4 sm:w-5 sm:h-5" />,
-      columns: ["Tgl Beli", "Varietas", "Jenis", "Jumlah", "Sertif", "Nota"],
+      icon: <Sprout className="w-5 h-5" />,
+      columns: ["Tgl Beli", "Varietas", "Jenis", "Jumlah", "Dokumen"],
       fields: [
         {
           name: "jenis_bibit",
           label: "Jenis Bibit",
-          placeholder: "Contoh: Dura/Tenera/Pisifera",
           type: "select",
           options: [
             { label: "Dura", value: "Dura" },
@@ -348,19 +358,18 @@ export default function Inventaris() {
         {
           name: "tanggal_pembelian",
           label: "Tanggal Pembelian",
-          placeholder: "dd/mm/yyyy",
           type: "date",
           required: true,
         },
         {
           name: "file_sertifikat",
-          label: "Sertifikat Bibit",
+          label: "Sertifikat Bibit (Wajib)",
           type: "file",
           required: true,
         },
         {
           name: "file_nota",
-          label: "Nota Pembelian",
+          label: "Nota Pembelian (Wajib)",
           type: "file",
           required: true,
         },
@@ -369,8 +378,8 @@ export default function Inventaris() {
     pupuk: {
       title: "Stok Pupuk",
       endpoint: API_ENDPOINTS.FARM.PETANI.INVENTARIS.ADD_PUPUK,
-      icon: <Wheat className="w-4 h-4 sm:w-5 sm:h-5" />,
-      columns: ["Nama Pupuk", "Jenis", "Asal", "Jumlah", "Tgl Beli", "Nota"],
+      icon: <Wheat className="w-5 h-5" />,
+      columns: ["Nama Pupuk", "Jenis", "Asal", "Jumlah", "Tgl Beli", "Dokumen"],
       fields: [
         {
           name: "nama_pupuk",
@@ -416,13 +425,13 @@ export default function Inventaris() {
         },
         {
           name: "file_sertifikat",
-          label: "Sertifikat Bibit",
+          label: "Foto / Sertifikat Pupuk (wajib)",
           type: "file",
           required: true,
         },
         {
           name: "file_nota",
-          label: "Nota Pembelian",
+          label: "Nota Pembelian (wajib)",
           type: "file",
           required: true,
         },
@@ -431,8 +440,8 @@ export default function Inventaris() {
     pestisida: {
       title: "Stok Pestisida",
       endpoint: API_ENDPOINTS.FARM.PETANI.INVENTARIS.ADD_PESTISIDA,
-      icon: <SprayCan className="w-4 h-4 sm:w-5 sm:h-5" />,
-      columns: ["Nama", "Jenis", "Jumlah", "Bentuk", "Expired", "Sertif"],
+      icon: <SprayCan className="w-5 h-5" />,
+      columns: ["Nama", "Jenis", "Jumlah", "Bentuk", "Expired", "Dokumen"],
       fields: [
         {
           name: "nama_pestisida",
@@ -458,7 +467,6 @@ export default function Inventaris() {
         {
           name: "satuan",
           label: "Satuan",
-          placeholder: "LITER / KG / BOTOL",
           type: "select",
           options: [
             { label: "Liter", value: "liter" },
@@ -491,7 +499,7 @@ export default function Inventaris() {
         },
         {
           name: "file_sertifikat",
-          label: "file Sertifikat",
+          label: "Foto / Sertifikat Pestisida (Wajib)",
           type: "file",
           required: true,
         },
@@ -500,10 +508,6 @@ export default function Inventaris() {
   };
 
   // --- LOGIC: SAVE DATA (POST) ---
-  /**
-   * Menangani pengiriman data form ke server.
-   * (SESUAI BE MAHAR): Menggunakan FormData untuk menghandle file upload dan JSON fields sekaligus.
-   */
   const handleSave = async () => {
     if (!popupType) return;
     setIsSaving(true);
@@ -516,7 +520,6 @@ export default function Inventaris() {
     const token = getToken();
     const payload = new FormData();
 
-    // Validasi Field Wajib
     for (const field of config.fields) {
       if (field.showIf && !field.showIf(formData)) {
         continue;
@@ -531,7 +534,6 @@ export default function Inventaris() {
       }
     }
 
-    // Append data ke FormData (Format disesuaikan dengan BE Python)
     config.fields.forEach((field) => {
       if (field.showIf && !field.showIf(formData)) return;
       const val = formData[field.name];
@@ -588,45 +590,45 @@ export default function Inventaris() {
     const config = tableConfig[popupType];
 
     return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto border border-gray-100 animate-in fade-in zoom-in duration-200">
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
           <button
             onClick={handleClosePopup}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
           >
-            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            <X className="w-6 h-6" />
           </button>
 
-          <div className="flex items-center gap-3 mb-4 sm:mb-6">
+          <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-red-50 rounded-lg text-[#B5302D]">
-              {config.icon ?? <Wrench className="w-5 h-5 opacity-40" />}
+              {config.icon}
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800">
-              Tambah {config.title.split(" ")[1]}
+            <h3 className="text-xl font-bold text-gray-800">
+              Tambah {config.title.replace("Stok ", "").replace("Daftar ", "")}
             </h3>
           </div>
 
           {errorMsg && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm rounded-md flex gap-2 items-start">
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm rounded-xl flex gap-2 items-start">
               <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
 
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-4">
             {config.fields.map((f, i) => {
               if (f.showIf && !f.showIf(formData)) {
                 return null;
               }
 
-              // Label Styling
               const labelEl = (
-                <label className="block font-semibold text-gray-800 mb-1 text-xs sm:text-base">
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   {f.label}{" "}
                   {f.required && <span className="text-red-500">*</span>}
                 </label>
               );
 
+              // 1. Render Logic untuk History Text (Auto-complete/Input)
               if (f.type === "history_text") {
                 let sourceData = rawInventarisData[f.historySource] || [];
                 if (f.historyFilter) {
@@ -644,7 +646,7 @@ export default function Inventaris() {
 
                 return (
                   <div key={i}>
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="flex justify-between items-center mb-1.5">
                       {labelEl}
                       {historyOptions.length > 0 && (
                         <button
@@ -656,16 +658,16 @@ export default function Inventaris() {
                             }));
                             setFormData((prev) => ({ ...prev, [f.name]: "" }));
                           }}
-                          className="text-[10px] sm:text-xs text-blue-600 hover:underline font-medium"
+                          className="text-[10px] text-blue-600 hover:underline font-bold"
                         >
-                          {isManual ? "Pilih dari Riwayat" : "+ Input Baru"}
+                          {isManual ? "Pilih dari Riwayat" : "+ Input Manual"}
                         </button>
                       )}
                     </div>
-
                     {showAsSelect ? (
                       <div className="relative">
                         <select
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-100 outline-none appearance-none bg-white"
                           value={formData[f.name] || ""}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -682,7 +684,6 @@ export default function Inventaris() {
                               setFormData({ ...formData, [f.name]: val });
                             }
                           }}
-                          className="w-full bg-gray-50 border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:ring-1 focus:ring-red-200 outline-none"
                         >
                           <option value="" disabled>
                             Pilih {f.label}
@@ -696,9 +697,10 @@ export default function Inventaris() {
                             value="MANUAL_TRIGGER"
                             className="font-bold text-blue-600 bg-blue-50"
                           >
-                            + Tambahkan Baru
+                            + Ketik Baru Manual
                           </option>
                         </select>
+                        <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
                       </div>
                     ) : (
                       <input
@@ -709,47 +711,27 @@ export default function Inventaris() {
                         onChange={(e) =>
                           setFormData({ ...formData, [f.name]: e.target.value })
                         }
-                        className="w-full bg-gray-50 border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:ring-1 focus:ring-red-200 outline-none"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-100 outline-none"
                       />
                     )}
                   </div>
                 );
               }
 
+              // 2. Render Logic Default (Input, Select, Textarea, File)
               return (
                 <div key={i}>
                   {labelEl}
-                  {f.type === "file" ? (
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
-                        if (!isValidFileType(file)) {
-                          setErrorMsg(
-                            "Jenis file tidak didukung. Gunakan PDF atau foto (JPG / PNG).",
-                          );
-                          e.target.value = "";
-                          return;
-                        }
-                        setErrorMsg("");
-                        setFormData({ ...formData, [f.name]: file });
-                      }}
-                      className="block w-full text-xs text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-[#EF8523] file:text-white hover:file:bg-[#d06d1e]"
-                    />
-                  ) : f.type === "select" ? (
+                  {f.type === "select" ? (
                     <div className="relative">
                       <select
+                        className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-100 outline-none appearance-none bg-white"
                         value={formData[f.name] || ""}
                         onChange={(e) =>
                           setFormData({ ...formData, [f.name]: e.target.value })
                         }
-                        className="w-full bg-gray-50 border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:ring-1 focus:ring-red-200 outline-none"
                       >
-                        <option value="" disabled>
-                          Pilih {f.label}
-                        </option>
+                        <option value="">Pilih {f.label}</option>
                         {f.options.map((opt, idx) => {
                           const val = typeof opt === "object" ? opt.value : opt;
                           const lbl = typeof opt === "object" ? opt.label : opt;
@@ -760,6 +742,50 @@ export default function Inventaris() {
                           );
                         })}
                       </select>
+                      <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  ) : f.type === "file" ? (
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id={`file-${f.name}`}
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          if (!isValidFileType(file)) {
+                            alert(
+                              "Jenis file tidak didukung. Gunakan PDF atau Foto (JPG/PNG).",
+                            );
+                            e.target.value = "";
+                            return;
+                          }
+                          setFormData({ ...formData, [f.name]: file });
+                        }}
+                      />
+                      <label
+                        htmlFor={`file-${f.name}`}
+                        className="flex items-center justify-between w-full border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white cursor-pointer hover:border-gray-400 transition-all"
+                      >
+                        <span className="text-gray-400 truncate pr-4">
+                          {formData[f.name]
+                            ? formData[f.name].name
+                            : `Pilih file ${f.label.toLowerCase()}...`}
+                        </span>
+                        <span className="text-[#EF8523] font-bold text-xs whitespace-nowrap">
+                          CARI FILE
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-1.5 mt-1 px-1 text-gray-500">
+                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                        <p className="text-[10px] italic">
+                          Format yang didukung:{" "}
+                          <span className="font-semibold uppercase">
+                            JPG, PNG, PDF
+                          </span>
+                        </p>
+                      </div>
                     </div>
                   ) : f.type === "textarea" ? (
                     <textarea
@@ -769,7 +795,7 @@ export default function Inventaris() {
                       onChange={(e) =>
                         setFormData({ ...formData, [f.name]: e.target.value })
                       }
-                      className="w-full bg-gray-50 border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:ring-1 focus:ring-red-200 outline-none"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-100 outline-none resize-none"
                     />
                   ) : (
                     <input
@@ -779,21 +805,24 @@ export default function Inventaris() {
                       onChange={(e) =>
                         setFormData({ ...formData, [f.name]: e.target.value })
                       }
-                      className="w-full bg-gray-50 border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:ring-1 focus:ring-red-200 outline-none"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-100 outline-none"
                     />
+                  )}
+                  {f.note && (
+                    <p className="text-[10px] text-gray-400 mt-1 italic">
+                      {f.note}
+                    </p>
                   )}
                 </div>
               );
             })}
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end mt-8">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className={`w-full sm:w-auto px-6 py-2 rounded-md text-sm font-medium text-white transition flex items-center justify-center gap-2 ${
-                isSaving ? "bg-gray-400" : "bg-[#B5302D] hover:bg-[#a72a28]"
-              }`}
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#B5302D] text-white rounded-xl text-sm font-bold hover:bg-[#a72a28] shadow-lg shadow-red-200 transition-all"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -808,164 +837,153 @@ export default function Inventaris() {
     );
   };
 
+  // --- RENDER UTAMA ---
   return (
-    // Update container utama: rounded-2xl, shadow-md, p-3 sm:p-8
-    <div className="bg-white border border-gray-300 rounded-2xl shadow-md p-3 sm:p-8 text-gray-800">
-      <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8 bg-blue-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-blue-100">
+    // DIBUNGKUS CARD UTAMA DI SINI SESUAI PERMINTAAN
+    <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-5 sm:p-8 text-gray-800 font-sans animate-in fade-in">
+      {/* INFO BOX KHUSUS PETANI (Tetap dipertahankan) */}
+      <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8 bg-blue-50 p-4 sm:p-5 rounded-2xl border border-blue-100 shadow-sm">
         <Info className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 mt-0.5 flex-shrink-0" />
         <p className="text-xs sm:text-sm text-blue-800 leading-relaxed">
-          Gunakan menu ini untuk mencatat aset dan stok gudang Anda (Bibit,
-          Pupuk, Pestisida). Stok akan <strong>berkurang otomatis</strong> saat
-          Anda melakukan kegiatan Rencana Tanam atau Monitoring.
+          Fitur ini harus diisi sebelum input data blok/rencana tanam. Gunakan
+          menu ini untuk mencatat aset dan stok gudang Anda (Bibit, Pupuk,
+          Pestisida). Stok akan <strong>berkurang otomatis</strong> saat Anda
+          melakukan kegiatan Rencana Tanam atau Monitoring.
         </p>
       </div>
 
-      {isLoading && (
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-10 h-10 text-[#EF8523] animate-spin" />
-          <p className="text-sm font-medium text-gray-500">Memuat Halaman...</p>
-        </div>
-      )}
+      <div className="space-y-6 sm:space-y-8">
+        {/* CARD INVENTARIS ALAT */}
+        <SectionCard title="Inventaris Alat">
+          {isLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+            </div>
+          ) : (
+            <Section
+              config={tableConfig.peralatan}
+              data={inventarisData.peralatan}
+              onAdd={() => handleOpenPopup("peralatan")}
+            />
+          )}
+        </SectionCard>
 
-      {/* Accordion Sections */}
-      {!isLoading &&
-        [
-          { id: "peralatan", config: tableConfig.peralatan },
-          {
-            id: "barang",
-            title: "Inventaris Barang",
-            icon: <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />,
-            subKeys: ["bibit", "pupuk", "pestisida"],
-          },
-        ].map((section) => (
-          // Update container accordion: rounded-xl (agar sesuai referensi), mb-6
-          <div
-            key={section.id}
-            className="border border-gray-300 rounded-xl mb-6 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-          >
-            {/* Update button accordion: px-4 py-3 sm:px-5 sm:py-5, text-sm sm:text-base */}
-            <button
-              onClick={() => toggleSection(section.id)}
-              className="w-full flex justify-between items-center px-4 py-3 sm:px-5 sm:py-5 font-bold text-white text-left bg-[#EF8523] hover:bg-[#e07a1f] transition-colors"
-            >
-              <div className="flex items-center gap-2 sm:gap-3">
-                {section.config?.icon || section.icon || (
-                  <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
-                )}
-                <span className="text-sm sm:text-base">
-                  {section.config?.title || section.title}
-                </span>
-              </div>
-              {/* REVISI: Logika Dropdown Icon (Arrow Up/Down) */}
-              {openSection === section.id ? (
-                <ChevronUp className="w-5 h-5 text-white transition-transform duration-300" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-white transition-transform duration-300" />
-              )}
-            </button>
-
-            {openSection === section.id && (
-              // Update content padding: p-3 sm:p-6
-              <div className="p-3 sm:p-6 bg-white space-y-8 overflow-x-auto">
-                {section.subKeys ? (
-                  section.subKeys.map((key) => (
-                    <Section
-                      key={key}
-                      title={tableConfig[key].title}
-                      icon={tableConfig[key].icon}
-                      color="black"
-                      onAdd={() => handleOpenPopup(key)}
-                      columns={tableConfig[key].columns}
-                      data={inventarisData[key]}
-                    />
-                  ))
-                ) : (
-                  <Section
-                    title={section.config?.title}
-                    icon={section.config?.icon}
-                    color="black"
-                    onAdd={() => handleOpenPopup(section.id)}
-                    columns={section.config?.columns || []}
-                    data={inventarisData[section.id]}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+        {/* CARD INVENTARIS BARANG */}
+        <SectionCard title="Inventaris Barang">
+          {isLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6 sm:gap-8">
+              <Section
+                config={tableConfig.bibit}
+                data={inventarisData.bibit}
+                onAdd={() => handleOpenPopup("bibit")}
+              />
+              <Section
+                config={tableConfig.pupuk}
+                data={inventarisData.pupuk}
+                onAdd={() => handleOpenPopup("pupuk")}
+              />
+              <Section
+                config={tableConfig.pestisida}
+                data={inventarisData.pestisida}
+                onAdd={() => handleOpenPopup("pestisida")}
+              />
+            </div>
+          )}
+        </SectionCard>
+      </div>
 
       {showPopup && renderPopupForm()}
     </div>
   );
 }
 
-// Sub-Component untuk Tabel Per Bagian
-function Section({ title, icon, color, onAdd, columns, data }) {
-  const safeColumns = Array.isArray(columns) ? columns : [];
+// ===================== COMPONENT HELPERS ===================== //
 
-  return (
-    <div className="border border-gray-300 rounded-xl overflow-hidden">
-      <div className="flex justify-between items-center px-3 py-3 sm:px-5 sm:py-4 bg-gray-50 border-b border-gray-300">
-        <div className="flex items-center gap-2 font-bold text-gray-700">
-          <div style={{ color }}>{icon}</div>
-          <span className="text-sm sm:text-base">{title}</span>
-        </div>
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-1.5 text-[10px] sm:text-xs px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all font-medium shadow-sm"
-        >
-          <Plus className="w-3.5 h-3.5" /> Tambah Stok
-        </button>
-      </div>
+// SAMA PERSIS DENGAN KEBUN (GARIS GRADIENT)
+const SectionCard = ({ title, children }) => (
+  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
+    <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
+      <Box className="w-5 h-5 opacity-80" />
+      {title}
+    </h3>
+    {children}
+  </div>
+);
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs sm:text-sm min-w-[600px] sm:min-w-0">
-          <thead className="bg-[#B5302D] text-white">
-            <tr>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold pl-3 sm:pl-5 w-8 sm:w-10 whitespace-nowrap">
-                No
-              </th>
-              {safeColumns.map((col, i) => (
-                <th
-                  key={`col-${i}-${col}`}
-                  className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold whitespace-nowrap"
-                >
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {!data || data.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={safeColumns.length + 1}
-                  className="text-center py-6 sm:py-8 text-gray-400 italic bg-gray-50/50"
-                >
-                  Belum ada data {title ? title.toLowerCase() : "item"}. Klik
-                  "Tambah Stok".
-                </td>
-              </tr>
-            ) : (
-              data.map((row, i) => (
-                <tr key={i} className="hover:bg-red-50/30 transition-colors">
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-500 pl-3 sm:pl-5">
-                    {i + 1}
-                  </td>
-                  {row.map((val, j) => (
-                    <td
-                      key={`r${i}-c${j}`}
-                      className="px-2 sm:px-4 py-2 sm:py-3 text-gray-700"
-                    >
-                      {val}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+// TABEL DAN HEADER TABEL SAMA PERSIS DENGAN KEBUN
+const Section = ({ config, data, onAdd }) => (
+  <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm">
+    <div className="flex justify-between items-center px-4 sm:px-5 py-3 bg-gray-50 border-b border-gray-200">
+      <div className="flex items-center gap-2 font-bold text-gray-700">
+        <div className="text-gray-800">{config.icon}</div>
+        <span className="text-sm sm:text-base">{config.title}</span>
       </div>
+      <button
+        onClick={onAdd}
+        className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-md shadow-green-100 transition-all"
+      >
+        <Plus className="w-3.5 h-3.5" /> Tambah Stok
+      </button>
     </div>
-  );
-}
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs sm:text-sm min-w-[600px] sm:min-w-0">
+        <thead className="bg-[#B5302D] text-white">
+          <tr>
+            <th className="px-3 sm:px-4 py-3 text-left font-semibold pl-4 sm:pl-5 w-10">
+              No
+            </th>
+            {config.columns.map((col, i) => (
+              <th key={i} className="px-3 sm:px-4 py-3 text-left font-semibold">
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {!data || data.length === 0 ? (
+            <tr>
+              <td
+                colSpan={config.columns.length + 1}
+                className="text-center py-8 text-gray-400 italic bg-gray-50/50"
+              >
+                Belum ada data. Klik "Tambah Stok".
+              </td>
+            </tr>
+          ) : (
+            data.map((row, i) => (
+              <tr key={i} className="hover:bg-red-50/30 transition-colors">
+                <td className="px-3 sm:px-4 py-3 font-medium text-gray-400 pl-4 sm:pl-5">
+                  {i + 1}
+                </td>
+                {row.map((cell, j) => (
+                  <td key={j} className="px-3 sm:px-4 py-3 text-gray-700">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+// TOMBOL HAPUS ALAT (SAMA PERSIS DENGAN KEBUN)
+const ActionButtons = ({ onClick, title }) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+    className="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+    title={title || "Hapus Item"}
+  >
+    <Trash2 className="w-4 h-4" />
+  </button>
+);

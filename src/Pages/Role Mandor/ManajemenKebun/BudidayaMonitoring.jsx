@@ -49,6 +49,7 @@ export default function BudidayaMonitoring() {
 
   // (BE MAHARANI) State List Lahan Gambut (Data Dinamis User)
   const [listLahanGambut, setListLahanGambut] = useState([]);
+  const [listLahanMineral, setListLahanMineral] = useState([]);
 
   // === STATE FORM ===
   const [formData, setFormData] = useState({
@@ -62,6 +63,7 @@ export default function BudidayaMonitoring() {
 
     // (BE MAHARANI) Titik Percabangan Utama
     jenis_tanah: "", // Mineral / Gambut
+    sumber_lahan: [],
     jenis_lahan: "", // Datar / Miring / Konservasi
 
     // Bibit
@@ -78,10 +80,14 @@ export default function BudidayaMonitoring() {
     jenis_drainase: "",
     jenis_drainase_lainnya: "",
 
-    // Data Gambut (BE MAHARANI)
+    // Data Gambut dan mineral (BE MAHARANI)
     nama_lahan_gambut: "",
+    id_lahan_mineral: "",
     gambut_lapisan_mineral: [],
     gambut_kematangan: [],
+    // STATE BARU UNTUK KERANJANG LAHAN
+    keranjang_lahan_gambut: [], // Array of: { id: string, luas_diambil: string }
+    keranjang_lahan_mineral: [], // Array of: { id: string, luas_diambil: string }
   });
 
   // === STATE FILE ===
@@ -147,6 +153,15 @@ export default function BudidayaMonitoring() {
           );
           setListLahanGambut([]);
         }
+
+        // 👇 TAMBAHKAN BLOK INI TEPAT DI BAWAHNYA (Masih di dalam if response.ok) 👇
+        if (data && data.lahan_mineral) {
+          // Mengambil dari detail_batch jika ada, atau langsung dari lahan_mineral jika itu array
+          const mineralData =
+            data.lahan_mineral.detail_batch || data.lahan_mineral;
+          setListLahanMineral(Array.isArray(mineralData) ? mineralData : []);
+        }
+        // 👆 SAMPAI SINI 👆
       } else {
         console.error("Gagal fetch lahan, status:", response.status);
       }
@@ -193,6 +208,7 @@ export default function BudidayaMonitoring() {
 
   useEffect(() => {
     fetchRiwayat();
+    fetchLahanUser();
   }, []);
 
   const toggleSection = (key) => {
@@ -207,7 +223,11 @@ export default function BudidayaMonitoring() {
       let newData = { ...prev, [name]: value };
 
       // Jika Jenis Tanah berubah, reset field turunannya agar payload bersih
+      // Jika Jenis Tanah berubah, reset field turunannya agar payload bersih
       if (name === "jenis_tanah") {
+        // PANGGIL API DI SINI, agar berlaku untuk Gambut MAUPUN Mineral
+        fetchLahanUser();
+
         if (value === "Gambut") {
           // Reset data Mineral
           newData.jenis_lahan = "Datar"; // Default dummy untuk Gambut
@@ -215,13 +235,13 @@ export default function BudidayaMonitoring() {
           newData.jenis_terasering_lainnya = "";
           newData.jenis_drainase = "";
           newData.jenis_drainase_lainnya = "";
-          // Fetch lahan gambut trigger
-          fetchLahanUser();
+          newData.keranjang_lahan_mineral = [];
         } else if (value === "Mineral") {
           // Reset data Gambut
           newData.nama_lahan_gambut = "";
           newData.gambut_lapisan_mineral = [];
           newData.gambut_kematangan = [];
+          newData.keranjang_lahan_gambut = [];
           newData.jenis_lahan = ""; // Force user pilih ulang Datar/Miring/Konservasi
         }
       }
@@ -284,12 +304,40 @@ export default function BudidayaMonitoring() {
       return;
     }
 
-    // (BE MAHARANI) Validasi Gambut
-    if (isGambut) {
-      if (!formData.nama_lahan_gambut) {
-        alert("Untuk lahan Gambut, wajib memilih Nama Lahan!");
+    // (BE MAHARANI) Validasi Keranjang Lahan (Total Luas Diambil harus = Luas Unit)
+    const targetLuas = parseFloat(formData.luas_unit || 0);
+    let totalDiambil = 0;
+
+    if (isMineral) {
+      if (formData.keranjang_lahan_mineral.length === 0) {
+        alert("Wajib memilih minimal satu Lahan Mineral!");
         return;
       }
+      totalDiambil = formData.keranjang_lahan_mineral.reduce(
+        (sum, item) => sum + parseFloat(item.luas_diambil || 0),
+        0,
+      );
+    } else if (isGambut) {
+      if (formData.keranjang_lahan_gambut.length === 0) {
+        alert("Wajib memilih minimal satu Lahan Gambut!");
+        return;
+      }
+      totalDiambil = formData.keranjang_lahan_gambut.reduce(
+        (sum, item) => sum + parseFloat(item.luas_diambil || 0),
+        0,
+      );
+    }
+
+    // Toleransi koma kecil
+    if (Math.abs(totalDiambil - targetLuas) > 0.01) {
+      alert(
+        `Total luas lahan yang diambil (${totalDiambil} Ha) tidak sama dengan Luas Unit Blok (${targetLuas} Ha)!`,
+      );
+      return;
+    }
+
+    // (BE MAHARANI) Validasi Lanjutan Gambut
+    if (isGambut) {
       if (formData.gambut_lapisan_mineral.length === 0) {
         alert(
           "Untuk lahan Gambut, wajib memilih minimal satu Lapisan Mineral!",
@@ -306,23 +354,6 @@ export default function BudidayaMonitoring() {
 
     try {
       const token = localStorage.getItem("token");
-      let selectedLahanGambutId = null;
-      if (isGambut && formData.nama_lahan_gambut) {
-        const lahanTerpilih = listLahanGambut.find(
-          (lahan) => lahan.nama_lahan_gambut === formData.nama_lahan_gambut,
-        );
-
-        if (lahanTerpilih) {
-          selectedLahanGambutId = lahanTerpilih.id;
-        } else {
-          alert(
-            "Sistem tidak dapat menemukan ID untuk lahan gambut yang dipilih.",
-          );
-          setLoading(false);
-          return;
-        }
-      }
-
       // Siapkan Payload JSON (BE MAHARANI)
       const dataPayload = {
         nama_unit: formData.nama_unit,
@@ -351,22 +382,17 @@ export default function BudidayaMonitoring() {
             ? formData.jarak_tanam_lainnya
             : null,
 
-      sumber_lahan: isMineral
-        ? formData.sumber_lahan.map((lahan) => ({
-            // Kembalikan ke format asli FE untuk mineral (mengambil dari checkbox)
-            // Mendukung jika key-nya id_lahan_mineral ataupun id_lahan bawaan FE-mu
-            lahan_mineral_id: lahan.id_lahan_mineral || lahan.id_lahan || lahan.id, 
-            lahan_gambut_id: null,
-            luas_diambil: parseFloat(formData.luas_unit || 0) / (formData.sumber_lahan.length || 1)
-          }))
-        : [
-            {
-              // Jika Gambut, pakai logika dropdown BE yang baru
+        sumber_lahan: isMineral
+          ? formData.keranjang_lahan_mineral.map((lahan) => ({
+              lahan_mineral_id: parseInt(lahan.id),
+              lahan_gambut_id: null,
+              luas_diambil: parseFloat(lahan.luas_diambil || 0),
+            }))
+          : formData.keranjang_lahan_gambut.map((lahan) => ({
               lahan_mineral_id: null,
-              lahan_gambut_id: selectedLahanGambutId,
-              luas_diambil: parseFloat(formData.luas_unit || 0)
-            }
-          ],
+              lahan_gambut_id: parseInt(lahan.id),
+              luas_diambil: parseFloat(lahan.luas_diambil || 0),
+            })),
 
         // (BE MAHARANI) LOGIC MINERAL
         jenis_terasering_mineral:
@@ -392,13 +418,15 @@ export default function BudidayaMonitoring() {
 
         // Convert List Label UI ke Enum BE (Mapping Strict)
         gambut_lapisan_mineral: isGambut
-          ? formData.gambut_lapisan_mineral.map(
+          ? formData.gambut_lapisan_mineral?.map(
+              // <-- Tambahkan tanda tanya (?)
               (item) => MAPPING_LAPISAN_MINERAL[item],
             )
           : [],
 
         gambut_kematangan: isGambut
-          ? formData.gambut_kematangan.map(
+          ? formData.gambut_kematangan?.map(
+              // <-- Tambahkan tanda tanya (?)
               (item) => MAPPING_KEMATANGAN_GAMBUT[item],
             )
           : [],
@@ -537,11 +565,18 @@ export default function BudidayaMonitoring() {
           className="w-full flex justify-between items-center px-4 py-4 sm:px-5 sm:py-5 bg-[#EF8523] hover:bg-[#e07a1f] transition-colors font-bold text-white text-left"
         >
           <div className="flex items-center gap-3">
-            <Sprout className="w-5 h-5" />
-            <span className="text-base">Rencana Tanam</span>
+            <Sprout className="w-5 h-5 flex-shrink-0" />
+            {/* Container Vertikal untuk Judul dan Catatan */}
+            <div className="flex flex-col">
+              <span className="text-base leading-tight">Input Data Blok/Rencana Tanam</span>
+              <span className="text-[11px] sm:text-xs font-normal opacity-90 mt-1 leading-tight">
+                *Harap isi menu tambah lahan (di dashboard) dan inventaris terlebih dahulu
+                sebelum input data blok/rencana tanam.
+              </span>
+            </div>
           </div>
           <ChevronDown
-            className={`w-5 h-5 transition-transform ${
+            className={`w-5 h-5 transition-transform flex-shrink-0 ${
               openSection === "rencanaTanam" ? "rotate-180" : ""
             }`}
           />
@@ -760,29 +795,103 @@ export default function BudidayaMonitoring() {
                     Data Lahan Gambut (Wajib)
                   </p>
 
-                  {/* (BE MAHARANI) Dropdown Nama Lahan Gambut dari API */}
+                  {/* (BE MAHARANI) List Keranjang Lahan Gambut */}
                   <div>
                     <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                      Nama Lahan Gambut
+                      Pilih Lahan Gambut & Masukkan Luas (Ha){" "} sesuai dengan Luas Unit yang akan di tanam
+                      <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      name="nama_lahan_gambut"
-                      value={formData.nama_lahan_gambut || ""}
-                      onChange={handleInputChange}
-                      className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 w-full"
-                      required
-                    >
-                      <option value="" disabled>
-                        Pilih Lahan Gambut milik Anda
-                      </option>
+                    <div className="space-y-3 bg-white p-3 rounded-lg border border-emerald-200 max-h-60 overflow-y-auto">
+                      {listLahanGambut.map((lahan) => {
+                        const selectedItem =
+                          formData.keranjang_lahan_gambut.find(
+                            (item) => item.id === lahan.id,
+                          );
+                        const isChecked = !!selectedItem;
 
-                      {/* PERBAIKAN: Gunakan lahan.nama_lahan_gambut sesuai data BE */}
-                      {listLahanGambut.map((lahan) => (
-                        <option key={lahan.id} value={lahan.nama_lahan_gambut}>
-                          {lahan.nama_lahan_gambut}
-                        </option>
-                      ))}
-                    </select>
+                        return (
+                          <div
+                            key={lahan.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border-b border-gray-100 last:border-0"
+                          >
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setFormData((prev) => {
+                                    if (checked) {
+                                      return {
+                                        ...prev,
+                                        keranjang_lahan_gambut: [
+                                          ...prev.keranjang_lahan_gambut,
+                                          { id: lahan.id, luas_diambil: "" },
+                                        ],
+                                      };
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        keranjang_lahan_gambut:
+                                          prev.keranjang_lahan_gambut.filter(
+                                            (item) => item.id !== lahan.id,
+                                          ),
+                                      };
+                                    }
+                                  });
+                                }}
+                                className="w-4 h-4 text-emerald-600 rounded border-gray-300"
+                              />
+                              {/* Kita ambil nilai dari BE berdasarkan console log Anda */}
+                              {(() => {
+                                const sisaGambut =
+                                  lahan.lahan_tidak_digunakan_gambut ??
+                                  lahan.luas_total_boleh_ditanam ??
+                                  0;
+                                return (
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {lahan.nama_lahan_gambut} (Sisa:{" "}
+                                    {sisaGambut} Ha)
+                                  </span>
+                                );
+                              })()}
+                            </label>
+
+                            {isChecked && (
+                              <div className="flex items-center gap-2 ml-6 sm:ml-0">
+                                <input
+                                  type="number"
+                                  placeholder="Luas (Ha)"
+                                  value={selectedItem.luas_diambil}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      keranjang_lahan_gambut:
+                                        prev.keranjang_lahan_gambut.map(
+                                          (item) =>
+                                            item.id === lahan.id
+                                              ? { ...item, luas_diambil: val }
+                                              : item,
+                                        ),
+                                    }));
+                                  }}
+                                  className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                                <span className="text-xs text-gray-500">
+                                  Ha
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {listLahanGambut.length === 0 && (
+                        <p className="text-xs text-gray-500 italic">
+                          Tidak ada lahan gambut tersedia.
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Lapisan Mineral */}
@@ -837,6 +946,101 @@ export default function BudidayaMonitoring() {
                         </label>
                       ))}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BLOK MINERAL (REVISI MULTI-SELECT KERANJANG) */}
+              {formData.jenis_tanah === "Mineral" && (
+                <div className="col-span-1 sm:col-span-2 mb-4 mt-2 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
+                    Pilih Lahan Mineral & Masukkan Luas (Ha){" "} sesuai dengan Luas Unit yang akan di tanam
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-3 bg-white p-3 rounded-lg border border-gray-300 max-h-60 overflow-y-auto">
+                    {listLahanMineral.map((lahan) => {
+                      const selectedItem =
+                        formData.keranjang_lahan_mineral.find(
+                          (item) => item.id === lahan.id,
+                        );
+                      const isChecked = !!selectedItem;
+                      // 1. PERBAIKAN: Gunakan key luas_sisa sesuai gambar BE
+                      const labelLuas = lahan.luas_sisa ?? 0;
+
+                      return (
+                        <div
+                          key={lahan.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border-b border-gray-100 last:border-0"
+                        >
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            {/* ... input checkbox biarkan sama ... */}
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setFormData((prev) => {
+                                  if (checked) {
+                                    return {
+                                      ...prev,
+                                      keranjang_lahan_mineral: [
+                                        ...prev.keranjang_lahan_mineral,
+                                        { id: lahan.id, luas_diambil: "" },
+                                      ],
+                                    };
+                                  } else {
+                                    return {
+                                      ...prev,
+                                      keranjang_lahan_mineral:
+                                        prev.keranjang_lahan_mineral.filter(
+                                          (item) => item.id !== lahan.id,
+                                        ),
+                                    };
+                                  }
+                                });
+                              }}
+                              className="w-4 h-4 text-[#EF8523] rounded border-gray-300 focus:ring-[#EF8523]"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                              {/* 2. PERBAIKAN: Gunakan key nama_lahan_mineral */}
+                              {lahan.nama_lahan_mineral ||
+                                `Lahan ID: ${lahan.id}`}{" "}
+                              (Sisa: {labelLuas} Ha)
+                            </span>
+                          </label>
+
+                          {isChecked && (
+                            <div className="flex items-center gap-2 ml-6 sm:ml-0">
+                              <input
+                                type="number"
+                                placeholder="Luas (Ha)"
+                                value={selectedItem.luas_diambil}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    keranjang_lahan_mineral:
+                                      prev.keranjang_lahan_mineral.map(
+                                        (item) =>
+                                          item.id === lahan.id
+                                            ? { ...item, luas_diambil: val }
+                                            : item,
+                                      ),
+                                  }));
+                                }}
+                                className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-[#EF8523] focus:border-[#EF8523]"
+                              />
+                              <span className="text-xs text-gray-500">Ha</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {listLahanMineral.length === 0 && (
+                      <p className="text-xs text-gray-500 italic">
+                        Tidak ada lahan mineral tersedia.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -1023,10 +1227,12 @@ export default function BudidayaMonitoring() {
           onClick={() => toggleSection("monitoring")}
           className="w-full flex justify-between items-center px-4 py-4 sm:px-5 sm:py-5 bg-[#EF8523] hover:bg-[#e07a1f] transition-colors font-bold text-white text-left"
         >
-          <div className="flex items-center gap-3">
-            <Activity className="w-5 h-5" />
-            <span className="text-base">Aktivitas & Monitoring</span>
-          </div>
+            <div className="flex flex-col">
+              <span className="text-base leading-tight">Aktivitas & Monitoring</span>
+              <span className="text-[11px] sm:text-xs font-normal opacity-90 mt-1 leading-tight">
+                *Bisa mencatat aktivitas harian dan memantau perkembangan tanaman jika rencana tanam sudah disetujui oleh Kebun.
+              </span>
+            </div>
           <ChevronDown
             className={`w-5 h-5 transition-transform ${
               openSection === "monitoring" ? "rotate-180" : ""

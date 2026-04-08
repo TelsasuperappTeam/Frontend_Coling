@@ -72,6 +72,12 @@ export default function DashboardGMDistrik() {
   const [daftarKebun, setDaftarKebun] = useState([]);
   const [selectedKebunId, setSelectedKebunId] = useState("");
 
+  // --- STATE GRAFIK HARGA TBS (Dinamis) ---
+  const [hargaTbsData, setHargaTbsData] = useState([]);
+  const [isLoadingHargaTbs, setIsLoadingHargaTbs] = useState(false);
+  const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear());
+
+
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
     nama_kebun: "",
@@ -209,6 +215,7 @@ export default function DashboardGMDistrik() {
         const mappedKebun = data.map((k) => ({
           id: k.auth_id || k.id, // Sesuaikan field auth_id dari respon BE
           nama: k.nama_kebun || k.nama_lengkap || k.nama, // Sesuaikan field nama dari respon BE
+          kebun_ref_id: k.id || k.profile_id // Simpan juga database ID lokalnya untuk URL grafik
         }));
 
         setDaftarKebun(mappedKebun);
@@ -229,9 +236,6 @@ export default function DashboardGMDistrik() {
    * --- FETCH VALIDASI ITEMS (RENCANA TANAM & PANEN) ---
    * Mengambil data dinamis untuk widget validasi dari endpoint backend.
    * (SESUAI BE MAHAR)
-   */
-  /**
-   * --- FETCH VALIDASI ITEMS (RENCANA TANAM & PANEN) ---
    */
   const fetchValidasiRequests = useCallback(async () => {
     // 👇 PASTIKAN BERHENTI JIKA KEBUN BELUM DIPILIH
@@ -254,7 +258,7 @@ export default function DashboardGMDistrik() {
         "Content-Type": "application/json",
       };
 
-      // 👇 MENGGUNAKAN STATE DINAMIS DARI DROPDOWN
+      // 👇 MENGGUNAKAN STATE DINAMIS DARI DROPDOWN (Membutuhkan Auth ID)
       const queryParam = `?target_kebun_auth_id=${selectedKebunId}`;
 
       // 1. Fetch Pending Rencana Panen
@@ -283,10 +287,72 @@ export default function DashboardGMDistrik() {
     }
   }, [selectedKebunId]); // 👇 TAMBAHKAN dependency state di sini
 
-  // useEffect di bawahnya biarkan saja tetap sama seperti ini:
   useEffect(() => {
     fetchValidasiRequests();
   }, [fetchValidasiRequests]);
+
+  /**
+   * --- FETCH GRAFIK HARGA TBS (Dinamis u/ GM Distrik) ---
+   * Bergantung pada selectedKebunId (Pilihan Dropdown) dan tahunTbs
+   */
+  useEffect(() => {
+    const fetchGrafikHarga = async () => {
+      // Tunggu sampai ada kebun yang dipilih dari dropdown GM
+      if (!selectedKebunId) {
+        setHargaTbsData([]);
+        return;
+      }
+
+      // --- PERBAIKAN: Ekstrak Profile ID Lokal ---
+      const selectedKebunObj = daftarKebun.find(k => String(k.id) === String(selectedKebunId));
+      
+      // Ambil Profile ID. 
+      const targetProfileId = selectedKebunObj?.kebun_ref_id || selectedKebunObj?.profile_id || selectedKebunId;
+
+      setIsLoadingHargaTbs(true);
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        // Gunakan targetProfileId (Contoh: 2), BUKAN Auth ID (Contoh: 624016)
+        const baseUrl =
+          API_ENDPOINTS.FARM?.KEBUN?.TRANSAKSI?.GET_HARGA_TBS_GRAPH.replace(
+            "{kebun_id}",
+            targetProfileId, 
+          );
+
+        const url = `${baseUrl}?tahun=${tahunTbs}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) throw new Error("Gagal mengambil data grafik");
+
+        const resData = await response.json();
+
+        // Mapping Objek BE ke format Array FE
+        let chartData = [];
+        if (resData && resData.labels && resData.data_harga) {
+          chartData = resData.labels.map((namaBulan, index) => ({
+            bulan: namaBulan,
+            harga: Number(resData.data_harga[index]) || 0,
+          }));
+        }
+        setHargaTbsData(chartData);
+      } catch (error) {
+        console.error("Error fetching grafik:", error);
+      } finally {
+        setIsLoadingHargaTbs(false);
+      }
+    };
+
+    fetchGrafikHarga();
+  }, [selectedKebunId, tahunTbs, daftarKebun]); // <--- Dependency sudah benar menggunakan daftarKebun
+
 
   const handleProfileSaved = (dataSaved) => {
     if (dataSaved) {
@@ -398,29 +464,27 @@ export default function DashboardGMDistrik() {
         </div>
       </div>
 
-      <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Dashboard Fitur Utama General Manager Distrik
-      </h2>
-
       {/* =========================================
-          SECTION 2: WIDGETS
+          SECTION GLOBAL CONTROLS
          ========================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* CARD 2: PERMINTAAN VALIDASI */}
-        <Card
-          title="Permintaan Validasi Operasional Perkebunan"
-          icon={FileText}
-          rightContent={
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 sm:mt-8 mb-6 sm:mb-10 gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] px-1 border-l-4 border-[#B5302D] pl-3">
+          Dashboard Fitur Utama General Manager Distrik
+        </h2>
+
+        {/* DROPDOWN GLOBAL UNTUK MEMILIH KEBUN */}
+        <div className="flex items-center gap-3 bg-red-50 px-4 py-2 rounded-xl border border-red-100 shadow-sm w-full sm:w-auto">
+          <MapPin className="w-5 h-5 text-[#B5302D]" />
+          <div className="flex flex-col w-full">
+            <span className="text-[10px] font-bold text-[#B5302D] uppercase tracking-wider">Pilih Kebun:</span>
             <select
               value={selectedKebunId}
               onChange={(e) => setSelectedKebunId(e.target.value)}
-              className="bg-white/20 text-white border border-white/50 rounded-lg px-2 py-1 text-xs outline-none focus:bg-white focus:text-black transition-colors"
-              disabled={daftarKebun.length === 0} // Disable jika belum ada data
+              className="bg-transparent text-gray-800 font-bold text-sm outline-none focus:ring-0 cursor-pointer w-full min-w-[150px]"
+              disabled={daftarKebun.length === 0}
             >
-              <option value="" className="text-black">
-                {daftarKebun.length === 0
-                  ? "Memuat kebun..."
-                  : "-- Pilih Kebun --"}
+              <option value="" className="text-gray-500">
+                {daftarKebun.length === 0 ? "Memuat data kebun..." : "-- Silakan Pilih Kebun --"}
               </option>
               {daftarKebun.map((k) => (
                 <option key={k.id} value={k.id} className="text-black">
@@ -428,10 +492,29 @@ export default function DashboardGMDistrik() {
                 </option>
               ))}
             </select>
-          }
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================
+          SECTION 2: WIDGETS
+         ========================================= */}
+      {/* Tampilkan konten hanya jika kebun sudah dipilih */}
+      {!selectedKebunId ? (
+         <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-10 flex flex-col items-center justify-center text-center">
+            <MapPin className="w-12 h-12 text-gray-300 mb-4" />
+            <h3 className="text-lg font-bold text-gray-600 mb-1">Silakan Pilih Kebun Terlebih Dahulu</h3>
+            <p className="text-sm text-gray-400">Gunakan dropdown di atas untuk memilih kebun dan melihat data dashboard terkait.</p>
+         </div>
+      ) : (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        
+        {/* CARD 2: PERMINTAAN VALIDASI */}
+        <Card
+          title="Permintaan Validasi Operasional Perkebunan"
+          icon={FileText}
           footer={
             <button
-              // TAMBAHKAN ONCLICK DI SINI:
               onClick={() => navigate("/kebun/kemitraanpetani")}
               className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
             >
@@ -609,183 +692,111 @@ export default function DashboardGMDistrik() {
             {/* Badge Tahun & Indikator Scroll */}
             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
-                {/* Petunjuk Scroll (Hanya muncul jika layar kecil/data banyak) */}
                 <span className="text-[9px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md flex items-center gap-1 animate-pulse">
                   <span className="text-xs">↔</span> Geser grafik
                 </span>
               </div>
-              <div className="bg-orange-50 border border-orange-200 text-orange-600 px-3 py-0.5 rounded-lg text-[10px] font-black shadow-sm">
-                2025
-              </div>
+              
+              {/* Dropdown Filter Tahun Dinamis */}
+              <select
+                value={tahunTbs}
+                onChange={(e) => setTahunTbs(parseInt(e.target.value))}
+                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer"
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
             </div>
 
-            {(() => {
-              // --- DATA DUMMY (Bisa Ditambah Sepuasnya) ---
-              const dataBE = [
-                { bulan: "JANUARI", harga: 1100 },
-                { bulan: "FEBRUARI", harga: 1350 },
-                { bulan: "MARET", harga: 2100 },
-                { bulan: "APRIL", harga: 1800 },
-                { bulan: "MEI", harga: 2000 },
-                { bulan: "JUNI", harga: 2500 },
-                { bulan: "JULI", harga: 2200 },
-                { bulan: "AGUSTUS", harga: 2400 },
-                { bulan: "SEPTEMBER", harga: 2150 },
-                { bulan: "OKTOBER", harga: 2600 }, // Data banyak tetap aman
-              ];
+            {/* State Handling: Loading, Empty, atau Tampilkan SVG */}
+            {isLoadingHargaTbs ? (
+              <div className="flex-1 min-h-[180px] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              </div>
+            ) : hargaTbsData.length === 0 ? (
+              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium italic">
+                Belum ada riwayat harga TBS untuk tahun ini.
+              </div>
+            ) : (() => {
+                const dataBE = hargaTbsData;
+                const hargaTertinggi = Math.max(...dataBE.map((d) => d.harga || 0));
+                const maxHarga = Math.max(4000, hargaTertinggi + 500); 
+                const svgHeight = 140;
 
-              // KONFIGURASI
-              const maxHarga = 4000;
-              const svgHeight = 140;
+                const yLabels = [
+                  `${(maxHarga / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.75) / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.5) / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.25) / 1000).toFixed(1)}k`,
+                  "0"
+                ];
 
-              // LOGIKA LEBAR DINAMIS (SCROLLABLE)
-              // Setiap data poin kita beri jatah lebar minimal 70px
-              // Jika datanya sedikit, dia akan memenuhi lebar container (100%)
-              // Jika datanya banyak, dia akan melebar melebihi container sehingga bisa di-scroll
-              const minWidthPerPoint = 70;
-              const calculatedWidth = Math.max(
-                dataBE.length * minWidthPerPoint,
-                500,
-              ); // Minimal lebar 500px agar tidak gepeng
-              const svgWidth = calculatedWidth;
+                const minWidthPerPoint = 70;
+                const svgWidth = Math.max(dataBE.length * minWidthPerPoint, 500);
+                const paddingX = 40;
+                const effectiveWidth = svgWidth - paddingX * 2;
 
-              // PADDING AGAR TIDAK KEPOTONG
-              const paddingX = 40;
-              const effectiveWidth = svgWidth - paddingX * 2;
+                const points = dataBE.map((d, i) => {
+                  const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
+                  const x = paddingX + (i / divider) * effectiveWidth;
+                  const y = svgHeight - (d.harga / maxHarga) * svgHeight;
+                  return { x, y, harga: d.harga, bulan: d.bulan };
+                });
 
-              const points = dataBE.map((d, i) => {
-                const x = paddingX + (i / (dataBE.length - 1)) * effectiveWidth;
-                const y = svgHeight - (d.harga / maxHarga) * svgHeight;
-                return { x, y, harga: d.harga, bulan: d.bulan };
-              });
+                const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
+                const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
 
-              const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
-              const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
+                return (
+                  <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
+                    {/* SUMBU Y FIXED */}
+                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-sm">
+                      {yLabels.map((l, idx) => (
+                        <span key={idx} className="text-right pr-2">{l.replace(".0k", "k")}</span>
+                      ))}
+                    </div>
 
-              return (
-                <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
-                  {/* BAGIAN 1: SUMBU Y (FIXED / DIAM) */}
-                  {/* Kita taruh di layer paling atas (z-10) dan background putih agar menutupi grafik saat discroll */}
-                  <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 backdrop-blur-[1px] flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
-                    {["4k", "3k", "2k", "1k", "0"].map((l) => (
-                      <span key={l} className="text-right pr-2">
-                        {l}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* BAGIAN 2: AREA GRAFIK (SCROLLABLE) */}
-                  {/* Margin-left disesuaikan dengan lebar Sumbu Y (w-10) */}
-                  <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-                    <div
-                      style={{ width: `${svgWidth}px`, height: "100%" }}
-                      className="relative"
-                    >
-                      <svg
-                        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                        preserveAspectRatio="none"
-                        className="block w-full h-full overflow-visible"
-                      >
-                        <defs>
-                          <linearGradient
-                            id="scrollGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="#EF8523"
-                              stopOpacity="0.2"
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="#EF8523"
-                              stopOpacity="0"
-                            />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Grid Lines Horizontal */}
-                        {[0, 35, 70, 105, 140].map((y) => (
-                          <line
-                            key={y}
-                            x1="0"
-                            y1={y}
-                            x2={svgWidth}
-                            y2={y}
-                            stroke="#f8f9fa"
-                            strokeWidth="1"
-                          />
-                        ))}
-
-                        {/* Area & Line */}
-                        <path d={areaPath} fill="url(#scrollGradient)" />
-                        <polyline
-                          fill="none"
-                          stroke="#EF8523"
-                          strokeWidth="3"
-                          strokeLinejoin="round"
-                          points={linePath}
-                        />
-
-                        {/* Data Points */}
-                        {points.map((pt, i) => (
-                          <g key={i}>
-                            <circle
-                              cx={pt.x}
-                              cy={pt.y}
-                              r="4"
-                              fill="white"
-                              stroke="#EF8523"
-                              strokeWidth="2.5"
-                            />
-                            <g
-                              transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
-                            >
-                              <rect
-                                width="44"
-                                height="16"
-                                rx="4"
-                                fill="black"
-                              />
-                              <text
-                                x="22"
-                                y="11"
-                                textAnchor="middle"
-                                className="text-[9px] font-black fill-white"
-                              >
-                                {pt.harga.toLocaleString()}
-                              </text>
+                    {/* AREA GRAFIK SCROLLABLE */}
+                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin">
+                      <div style={{ width: `${svgWidth}px`, height: "100%" }} className="relative">
+                        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none" className="block w-full h-full overflow-visible">
+                          <defs>
+                            <linearGradient id="gmGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#EF8523" stopOpacity="0.2" />
+                              <stop offset="100%" stopColor="#EF8523" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          {/* Garis Grid */}
+                          {[0, 35, 70, 105, 140].map((y) => (
+                            <line key={y} x1="0" y1={y} x2={svgWidth} y2={y} stroke="#f8f9fa" strokeWidth="1" />
+                          ))}
+                          <path d={areaPath} fill="url(#gmGradient)" />
+                          <polyline fill="none" stroke="#EF8523" strokeWidth="3" points={linePath} strokeLinejoin="round" />
+                          {points.map((pt, i) => (
+                            <g key={i}>
+                              <circle cx={pt.x} cy={pt.y} r="4" fill="white" stroke="#EF8523" strokeWidth="2.5" />
+                              <g transform={`translate(${pt.x - 22}, ${pt.y - 28})`}>
+                                <rect width="44" height="16" rx="4" fill="black" />
+                                <text x="22" y="11" textAnchor="middle" className="text-[9px] font-black fill-white">{pt.harga.toLocaleString()}</text>
+                              </g>
                             </g>
-                          </g>
-                        ))}
-                      </svg>
-
-                      {/* Label Bulan (Ikut Scroll) */}
-                      <div className="absolute bottom-0 left-0 w-full h-6">
-                        {points.map((pt, i) => (
-                          <div
-                            key={i}
-                            className="absolute flex flex-col items-center top-0"
-                            style={{
-                              left: `${pt.x}px`,
-                              transform: "translateX(-50%)",
-                            }}
-                          >
-                            <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
-                            <span className="text-[9px] font-bold text-gray-500 uppercase whitespace-nowrap">
-                              {pt.bulan.substring(0, 3)}
-                            </span>
-                          </div>
-                        ))}
+                          ))}
+                        </svg>
+                        {/* Label Bulan */}
+                        <div className="absolute bottom-0 left-0 w-full h-6">
+                          {points.map((pt, i) => (
+                            <div key={i} className="absolute flex flex-col items-center" style={{ left: `${pt.x}px`, transform: "translateX(-50%)" }}>
+                              <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
+                              <span className="text-[9px] font-bold text-gray-500 uppercase">{pt.bulan.substring(0, 3)}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
 
             {/* Footer Info */}
             <div className="mt-2 border-t border-gray-50 pt-2 flex justify-between items-center">
@@ -796,6 +807,7 @@ export default function DashboardGMDistrik() {
           </div>
         </Card>
       </div>
+      )}
 
       {/* --- POPUP DATA DIRI --- */}
       {showPopupDataDiri && (

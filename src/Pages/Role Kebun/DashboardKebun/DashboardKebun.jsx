@@ -15,11 +15,6 @@ import {
   Coins,
 } from "lucide-react";
 
-/**
- * --- Komponen Card Reusable ---
- * Menggunakan styling yang lebih modern dengan rounded corners yang lebih besar,
- * shadow yang lebih soft, dan header yang lebih clean.
- */
 const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
   <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-full overflow-hidden">
     {/* Header Lebih Compact (Versi Petani) */}
@@ -87,6 +82,11 @@ export default function DashboardKebun() {
   // Data dinamis dari API
   const [pendingPetani, setPendingPetani] = useState([]);
 
+  // --- STATE GRAFIK HARGA TBS ---
+  const [hargaTbsData, setHargaTbsData] = useState([]);
+  const [isLoadingHargaTbs, setIsLoadingHargaTbs] = useState(false);
+  const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear()); // Default tahun saat ini
+
   // --- DATA VALIDASI (DINAMIS & STATIC) ---
   // Rencana Tanam & Panen diubah menjadi array kosong untuk diisi API
   // Dokumen ISPO tetap static sesuai instruksi
@@ -99,7 +99,7 @@ export default function DashboardKebun() {
     ],
   });
 
-  // --- MOCK DATA LAINNYA (Tetap sama sesuai request) ---
+  // --- MOCK DATA LAINNYA ---
   const [progresPenjualan] = useState([
     {
       id: 1,
@@ -161,7 +161,7 @@ export default function DashboardKebun() {
           nomor_telepon: userData.no_hp || "-",
           alamat_kebun: userData.alamat || "",
           foto: getFileUrl(userData.foto_profil_url) || "",
-          kebun_id: userData.kebun_id || "-",
+          kebun_id: userData.id || "-",
           koordinat: userData.koordinat
             ? JSON.stringify(userData.koordinat)
             : "",
@@ -175,6 +175,70 @@ export default function DashboardKebun() {
 
     fetchUserProfile();
   }, []);
+
+  /**
+   * --- FETCH GRAFIK HARGA TBS ---
+   * Sesuai Backend: kebun_routes.py -> @kebun_blok_router.get("/harga-tbs/grafik/{kebun_id}")
+   */
+  useEffect(() => {
+    const fetchGrafikHarga = async () => {
+      // Pastikan kebun_id sudah ada dan bukan default "-"
+      if (!profile.kebun_id || profile.kebun_id === "-") return;
+
+      setIsLoadingHargaTbs(true);
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        const baseUrl =
+          API_ENDPOINTS.FARM?.KEBUN?.TRANSAKSI?.GET_HARGA_TBS_GRAPH.replace(
+            "{kebun_id}",
+            profile.kebun_id,
+          );
+
+        const url = `${baseUrl}?tahun=${tahunTbs}`;
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok)
+          throw new Error("Gagal mengambil data grafik Harga TBS");
+
+        const resData = await response.json();
+        console.log("Cek Data dari BE:", resData);
+
+        // --- PERBAIKAN: Mapping Format Data BE -> Format yang dimengerti SVG FE ---
+        let chartData = [];
+
+        // Cek apakah balikan dari BE (Objek) memiliki key 'labels' dan 'data_harga'
+        if (resData && resData.labels && resData.data_harga) {
+          chartData = resData.labels.map((namaBulan, index) => ({
+            bulan: namaBulan,
+            harga: Number(resData.data_harga[index]) || 0, // Tetap dibungkus Number agar SVG aman dari NaN
+            dokumen: resData.meta_dokumen ? resData.meta_dokumen[index] : null,
+          }));
+        } else {
+          // Fallback bawaan lama
+          chartData = Array.isArray(resData)
+            ? resData
+            : resData.data || resData.grafik || [];
+        }
+
+        setHargaTbsData(chartData);
+      } catch (error) {
+        console.error("Error fetching grafik harga:", error);
+      } finally {
+        setIsLoadingHargaTbs(false);
+      }
+    };
+
+    fetchGrafikHarga();
+  }, [profile.kebun_id, tahunTbs]);
 
   /**
    * --- FETCH PENDING PETANI ---
@@ -415,7 +479,7 @@ export default function DashboardKebun() {
           SECTION 2: WIDGETS
          ========================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* CARD 1: PERMINTAAN RELASI (Design: Clean List with Actions) */}
+        {/* CARD 1: PERMINTAAN RELASI */}
         <Card title="Permintaan Relasi Mandor" icon={User}>
           {isLoadingPending ? (
             <div className="h-full flex items-center justify-center text-gray-400">
@@ -523,7 +587,7 @@ export default function DashboardKebun() {
                         >
                           <span className="font-medium text-gray-700 group-hover:text-black transition-colors flex items-center gap-2">
                             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-[#EF8523]"></span>
-                            {/* LOGIC DISPLAY NAMA (Sesuai Data Source) */}
+                            {/* LOGIC DISPLAY NAMA */}
                             {title === "Dokumen ISPO" ? (
                               item.nama
                             ) : (
@@ -551,7 +615,7 @@ export default function DashboardKebun() {
           )}
         </Card>
 
-        {/* CARD 3: PROGRES PENJUALAN TBS (Design: Timeline Modern) */}
+        {/* CARD 3: PROGRES PENJUALAN TBS */}
         <Card title="Progres Penjualan TBS" icon={Calendar}>
           <div className="space-y-0">
             {progresPenjualan.map((item, index) => (
@@ -592,7 +656,7 @@ export default function DashboardKebun() {
           </div>
         </Card>
 
-        {/* CARD 4: PENGIRIMAN TBS (Design: Stepper Modern) */}
+        {/* CARD 4: PENGIRIMAN TBS */}
         <Card title="Pengiriman TBS" icon={Truck}>
           <div className="space-y-6">
             {pengirimanTBS.map((item) => (
@@ -609,9 +673,7 @@ export default function DashboardKebun() {
                   </h4>
                 </div>
 
-                {/* Visualisasi Steps */}
                 <div className="flex items-center justify-between relative px-2">
-                  {/* Garis Background */}
                   <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 -z-0 rounded-full"></div>
 
                   {item.steps.map((step, idx) => (
@@ -645,189 +707,212 @@ export default function DashboardKebun() {
           </div>
         </Card>
 
-        {/* FITUR 5: Harga TBS - SCROLLABLE VERSION */}
+        {/* FITUR 5: Harga TBS */}
         <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}>
           <div className="relative h-full flex flex-col pt-2 w-full">
-            {/* Badge Tahun & Indikator Scroll */}
             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
-                {/* Petunjuk Scroll (Hanya muncul jika layar kecil/data banyak) */}
                 <span className="text-[9px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md flex items-center gap-1 animate-pulse">
                   <span className="text-xs">↔</span> Geser grafik
                 </span>
               </div>
-              <div className="bg-orange-50 border border-orange-200 text-orange-600 px-3 py-0.5 rounded-lg text-[10px] font-black shadow-sm">
-                2025
-              </div>
+              {/* Dropdown Filter Tahun */}
+              <select
+                value={tahunTbs}
+                onChange={(e) => setTahunTbs(parseInt(e.target.value))}
+                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer focus:ring-1 focus:ring-[#EF8523]"
+              >
+                {/* Looping untuk membuat pilihan 5 tahun terakhir secara otomatis */}
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return (
+                    <option key={year} value={year} className="font-bold">
+                      {year}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
-            {(() => {
-              // --- DATA DUMMY (Bisa Ditambah Sepuasnya) ---
-              const dataBE = [
-                { bulan: "JANUARI", harga: 1100 },
-                { bulan: "FEBRUARI", harga: 1350 },
-                { bulan: "MARET", harga: 2100 },
-                { bulan: "APRIL", harga: 1800 },
-                { bulan: "MEI", harga: 2000 },
-                { bulan: "JUNI", harga: 2500 },
-                { bulan: "JULI", harga: 2200 },
-                { bulan: "AGUSTUS", harga: 2400 },
-                { bulan: "SEPTEMBER", harga: 2150 },
-                { bulan: "OKTOBER", harga: 2600 }, // Data banyak tetap aman
-              ];
+            {/* Tampilkan loader jika data sedang ditarik dari BE */}
+            {isLoadingHargaTbs ? (
+              <div className="flex-1 min-h-[180px] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              </div>
+            ) : hargaTbsData.length === 0 ? (
+              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium">
+                Belum ada riwayat harga TBS untuk tahun ini.
+              </div>
+            ) : (
+              (() => {
+                // --- 1. LOGIKA PERHITUNGAN DATA ---
+                const dataBE = hargaTbsData;
 
-              // KONFIGURASI
-              const maxHarga = 4000;
-              const svgHeight = 140;
+                // Pastikan harga diconvert ke Number agar Math.max tidak error
+                const hargaTertinggi = Math.max(
+                  ...dataBE.map((d) => Number(d.harga) || 0),
+                );
+                const maxHarga = Math.max(4000, hargaTertinggi + 500);
+                const svgHeight = 140;
 
-              // LOGIKA LEBAR DINAMIS (SCROLLABLE)
-              // Setiap data poin kita beri jatah lebar minimal 70px
-              // Jika datanya sedikit, dia akan memenuhi lebar container (100%)
-              // Jika datanya banyak, dia akan melebar melebihi container sehingga bisa di-scroll
-              const minWidthPerPoint = 70;
-              const calculatedWidth = Math.max(
-                dataBE.length * minWidthPerPoint,
-                500,
-              ); // Minimal lebar 500px agar tidak gepeng
-              const svgWidth = calculatedWidth;
+                const yLabels = [
+                  `${(maxHarga / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.75) / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.5) / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.25) / 1000).toFixed(1)}k`,
+                  "0",
+                ];
 
-              // PADDING AGAR TIDAK KEPOTONG
-              const paddingX = 40;
-              const effectiveWidth = svgWidth - paddingX * 2;
+                const minWidthPerPoint = 70;
+                const calculatedWidth = Math.max(
+                  dataBE.length * minWidthPerPoint,
+                  500,
+                );
+                const svgWidth = calculatedWidth;
 
-              const points = dataBE.map((d, i) => {
-                const x = paddingX + (i / (dataBE.length - 1)) * effectiveWidth;
-                const y = svgHeight - (d.harga / maxHarga) * svgHeight;
-                return { x, y, harga: d.harga, bulan: d.bulan };
-              });
+                const paddingX = 40;
+                const effectiveWidth = svgWidth - paddingX * 2;
 
-              const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
-              const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
+                // --- Generate Titik Koordinat (X, Y) Anti-NaN ---
+                const points = dataBE.map((d, i) => {
+                  // Mencegah pembagian dengan 0 jika datanya cuma 1
+                  const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
 
-              return (
-                <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
-                  {/* BAGIAN 1: SUMBU Y (FIXED / DIAM) */}
-                  {/* Kita taruh di layer paling atas (z-10) dan background putih agar menutupi grafik saat discroll */}
-                  <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 backdrop-blur-[1px] flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
-                    {["4k", "3k", "2k", "1k", "0"].map((l) => (
-                      <span key={l} className="text-right pr-2">
-                        {l}
-                      </span>
-                    ))}
-                  </div>
+                  const x = paddingX + (i / divider) * effectiveWidth;
 
-                  {/* BAGIAN 2: AREA GRAFIK (SCROLLABLE) */}
-                  {/* Margin-left disesuaikan dengan lebar Sumbu Y (w-10) */}
-                  <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-                    <div
-                      style={{ width: `${svgWidth}px`, height: "100%" }}
-                      className="relative"
-                    >
-                      <svg
-                        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                        preserveAspectRatio="none"
-                        className="block w-full h-full overflow-visible"
+                  const hargaNum = Number(d.harga) || 0;
+                  const y = svgHeight - (hargaNum / maxHarga) * svgHeight;
+
+                  return { x, y, harga: hargaNum, bulan: d.bulan || "-" };
+                });
+
+                // Generate Garis
+                const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
+                const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
+
+                return (
+                  <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
+                    {/* BAGIAN A: SUMBU Y (FIXED / DIAM) */}
+                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 backdrop-blur-[1px] flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
+                      {yLabels.map((l, index) => (
+                        <span key={index} className="text-right pr-2">
+                          {l.replace(".0k", "k")}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* BAGIAN B: AREA GRAFIK (SCROLLABLE) */}
+                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+                      <div
+                        style={{ width: `${svgWidth}px`, height: "100%" }}
+                        className="relative"
                       >
-                        <defs>
-                          <linearGradient
-                            id="scrollGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="#EF8523"
-                              stopOpacity="0.2"
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="#EF8523"
-                              stopOpacity="0"
-                            />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Grid Lines Horizontal */}
-                        {[0, 35, 70, 105, 140].map((y) => (
-                          <line
-                            key={y}
-                            x1="0"
-                            y1={y}
-                            x2={svgWidth}
-                            y2={y}
-                            stroke="#f8f9fa"
-                            strokeWidth="1"
-                          />
-                        ))}
-
-                        {/* Area & Line */}
-                        <path d={areaPath} fill="url(#scrollGradient)" />
-                        <polyline
-                          fill="none"
-                          stroke="#EF8523"
-                          strokeWidth="3"
-                          strokeLinejoin="round"
-                          points={linePath}
-                        />
-
-                        {/* Data Points */}
-                        {points.map((pt, i) => (
-                          <g key={i}>
-                            <circle
-                              cx={pt.x}
-                              cy={pt.y}
-                              r="4"
-                              fill="white"
-                              stroke="#EF8523"
-                              strokeWidth="2.5"
-                            />
-                            <g
-                              transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
+                        <svg
+                          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                          preserveAspectRatio="none"
+                          className="block w-full h-full overflow-visible"
+                        >
+                          <defs>
+                            <linearGradient
+                              id="scrollGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
                             >
-                              <rect
-                                width="44"
-                                height="16"
-                                rx="4"
-                                fill="black"
+                              <stop
+                                offset="0%"
+                                stopColor="#EF8523"
+                                stopOpacity="0.2"
                               />
-                              <text
-                                x="22"
-                                y="11"
-                                textAnchor="middle"
-                                className="text-[9px] font-black fill-white"
-                              >
-                                {pt.harga.toLocaleString()}
-                              </text>
-                            </g>
-                          </g>
-                        ))}
-                      </svg>
+                              <stop
+                                offset="100%"
+                                stopColor="#EF8523"
+                                stopOpacity="0"
+                              />
+                            </linearGradient>
+                          </defs>
 
-                      {/* Label Bulan (Ikut Scroll) */}
-                      <div className="absolute bottom-0 left-0 w-full h-6">
-                        {points.map((pt, i) => (
-                          <div
-                            key={i}
-                            className="absolute flex flex-col items-center top-0"
-                            style={{
-                              left: `${pt.x}px`,
-                              transform: "translateX(-50%)",
-                            }}
-                          >
-                            <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
-                            <span className="text-[9px] font-bold text-gray-500 uppercase whitespace-nowrap">
-                              {pt.bulan.substring(0, 3)}
-                            </span>
-                          </div>
-                        ))}
+                          {/* Garis Grid Horizontal */}
+                          {[0, 35, 70, 105, 140].map((y) => (
+                            <line
+                              key={y}
+                              x1="0"
+                              y1={y}
+                              x2={svgWidth}
+                              y2={y}
+                              stroke="#f8f9fa"
+                              strokeWidth="1"
+                            />
+                          ))}
+
+                          {/* Area & Garis Line */}
+                          <path d={areaPath} fill="url(#scrollGradient)" />
+                          <polyline
+                            fill="none"
+                            stroke="#EF8523"
+                            strokeWidth="3"
+                            strokeLinejoin="round"
+                            points={linePath}
+                          />
+
+                          {/* Titik-titik Data & Label Harga */}
+                          {points.map((pt, i) => (
+                            <g key={i}>
+                              <circle
+                                cx={pt.x}
+                                cy={pt.y}
+                                r="4"
+                                fill="white"
+                                stroke="#EF8523"
+                                strokeWidth="2.5"
+                              />
+                              <g
+                                transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
+                              >
+                                <rect
+                                  width="44"
+                                  height="16"
+                                  rx="4"
+                                  fill="black"
+                                />
+                                <text
+                                  x="22"
+                                  y="11"
+                                  textAnchor="middle"
+                                  className="text-[9px] font-black fill-white"
+                                >
+                                  {pt.harga.toLocaleString()}
+                                </text>
+                              </g>
+                            </g>
+                          ))}
+                        </svg>
+
+                        {/* Label Bulan (Ikut Scroll di sumbu X bawah) */}
+                        <div className="absolute bottom-0 left-0 w-full h-6">
+                          {points.map((pt, i) => (
+                            <div
+                              key={i}
+                              className="absolute flex flex-col items-center top-0"
+                              style={{
+                                left: `${pt.x}px`,
+                                transform: "translateX(-50%)",
+                              }}
+                            >
+                              <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
+                              <span className="text-[9px] font-bold text-gray-500 uppercase whitespace-nowrap">
+                                {pt.bulan.substring(0, 3)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()
+            )}
 
             {/* Footer Info */}
             <div className="mt-2 border-t border-gray-50 pt-2 flex justify-between items-center">

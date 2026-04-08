@@ -313,6 +313,7 @@ export const API_ENDPOINTS = {
       // Endpoint POST ajukan submission dokumen ISPO dari petani ke kebun
       AJUKAN_DOKUMEN_ISPO: `${API_BASE_URLS.ISPO}/ispo/submission/{id}/submit`,
     },
+    
     KEBUN: {
       // Melihat progress ISPO seluruh petani relasi kebun halaman kemitraan petani
       GET_PROGRES_ISPO_PETANI_NAUNGAN: `${API_BASE_URLS.ISPO}/ispo/kebun/petani/{petani_id}/progress`,

@@ -29,44 +29,9 @@ const RiwayatPenjualan = () => {
   // State untuk mengontrol dropdown detail pada setiap item transaksi
   const [openDetail, setOpenDetail] = useState(null);
 
-  // Data transaksi (Mock data tetap)
-  // Menyimpan informasi dummy untuk simulasi riwayat penjualan
-  const [dataPenjualan] = useState([
-    {
-      id: 1,
-      kebun: "Kebun Sinar Makmur",
-      blok: "Blok A-12",
-      petani: "Pak Jaya",
-      jumlah: 5,
-      tanggal: "12/11/2025",
-      status: "Menunggu",
-      asal_unit: "Kebun Berseri – Blok B-05",
-      jenis_sawit: "Dura",
-      tanggal_tanam: "01/01/2020",
-      tanggal_panen: "12/11/2025",
-      pabrik_pembeli: "Pabrik Cahaya",
-      jumlah_pembelian: "100 ton",
-      harga_pengiriman: "Rp 2.000.000",
-      tanggal_pembayaran: "-",
-    },
-    {
-      id: 2,
-      kebun: "Kebun Sejahtera",
-      blok: "Blok C-09",
-      petani: "Bu Rani",
-      jumlah: 7,
-      tanggal: "08/11/2025",
-      status: "Selesai",
-      asal_unit: "Kebun Jaya – Blok D-02",
-      jenis_sawit: "Tenera",
-      tanggal_tanam: "15/02/2019",
-      tanggal_panen: "08/11/2025",
-      pabrik_pembeli: "Pabrik Maju Jaya",
-      jumlah_pembelian: "150 ton",
-      harga_pengiriman: "Rp 2.300.000",
-      tanggal_pembayaran: "10/11/2025",
-    },
-  ]);
+  // Data statis dihapus dan diubah menjadi array kosong agar mensimulasikan tampilan kosong.
+  // Nantinya setDataPenjualan bisa digunakan untuk memasukkan data dari API/Backend.
+  const [dataPenjualan] = useState([]);
 
   return (
     <div className="p-4 sm:p-10 min-h-screen font-sans">
@@ -93,13 +58,17 @@ const RiwayatPenjualan = () => {
       {/* ======================== KONTEN DAFTAR TRANSAKSI ============================ */}
       <SectionCard title="Daftar Transaksi">
         <div className="animate-fadeIn">
+          {/* Karena dataPenjualan.length sekarang 0, ini akan mengeksekusi tampilan kosong di bawah ini */}
           {dataPenjualan.length === 0 ? (
             // Tampilan jika data kosong
-            <div className="text-center py-10 text-gray-500 border border-dashed border-gray-300 rounded-xl">
-              <p>Belum ada data transaksi.</p>
+            <div className="text-center py-10 text-gray-500 border border-dashed border-gray-300 rounded-xl bg-gray-50/50">
+              <History className="mx-auto mb-3 text-gray-400" size={32} />
+              <p className="font-medium">Belum ada data transaksi.</p>
+              <p className="text-xs text-gray-400 mt-1">Riwayat penjualan Anda akan muncul di sini.</p>
             </div>
           ) : (
-            // Mapping data transaksi ke UI
+            // Mapping data transaksi ke UI (Bagian ini dibiarkan persis seperti codingan Anda 
+            // agar siap menerima dan menampilkan data dinamis dari backend)
             <div className="space-y-4">
               {dataPenjualan.map((item) => (
                 <div

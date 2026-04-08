@@ -6,9 +6,10 @@ import {
   Search,
   CheckCircle,
   ShoppingCart,
+  Upload,
+  Loader2,
 } from "lucide-react";
-// Sesuaikan import config dengan struktur folder Anda
-import { API_ENDPOINTS } from "../../../config/constants.js";
+import { API_ENDPOINTS, getFileUrl } from "../../../config/constants.js";
 
 const DOKUMEN_CONFIG = [
   {
@@ -37,6 +38,7 @@ const Operasional2 = () => {
       ...doc,
       file_url: null,
       status: null,
+      isUploading: false,
     })),
   );
 
@@ -92,6 +94,65 @@ const Operasional2 = () => {
       }
     } catch (error) {
       console.error("Error fetching documents:", error);
+    }
+  };
+  const handleUploadDokumen = async (index, event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const targetDoc = dokumenStatus[index];
+    const requirementCode = targetDoc.code;
+
+    const newDocs = [...dokumenStatus];
+    newDocs[index].isUploading = true;
+    setDokumenStatus(newDocs);
+
+    try {
+      const token = localStorage.getItem("token");
+      const formDataUpload = new FormData();
+      formDataUpload.append("requirement_code", requirementCode);
+      formDataUpload.append("file", file);
+
+      const response = await fetch(API_ENDPOINTS.ISPO.KEBUN.SUBMISSION, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataUpload,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const updatedDocs = [...dokumenStatus];
+        updatedDocs[index].file_url = result.url;
+        updatedDocs[index].status = result.status;
+        updatedDocs[index].isUploading = false;
+        setDokumenStatus(updatedDocs);
+
+        alert("Berhasil upload dokumen!");
+        fetchDokumenExisting();
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal upload: ${errorData.detail || "Terjadi kesalahan"}`);
+
+        const updatedDocs = [...dokumenStatus];
+        updatedDocs[index].isUploading = false;
+        setDokumenStatus(updatedDocs);
+      }
+    } catch (error) {
+      console.error("Error upload:", error);
+      alert("Terjadi kesalahan jaringan saat upload.");
+
+      const updatedDocs = [...dokumenStatus];
+      updatedDocs[index].isUploading = false;
+      setDokumenStatus(updatedDocs);
+    }
+  };
+
+  const handleViewDocument = (url) => {
+    if (url) {
+      const fullUrl = getFileUrl(url, "ISPO");
+      window.open(fullUrl, "_blank");
     }
   };
 
@@ -190,24 +251,34 @@ const Operasional2 = () => {
           </div>
         </SectionCard>
 
-        {/* SECTION 2 DOKUMEN */}
+        {/* SECTION 2 DOKUMEN ORGANISASI */}
         <SectionCard title="Kelengkapan Dokumen Organisasi">
           <div className="-mt-4 mb-6">
+            {/* Garis Pemisah */}
             <div className="w-full h-[1px] bg-gray-300 mb-4 mt-2" />
             <p className="text-sm text-gray-500 font-light mb-4">
-              Status Dokumen organisasi Untuk Petani Mitra
+              Upload Dokumen organisasi Untuk Petani Mitra
             </p>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {dokumenStatus.map((doc, idx) => {
               const isUploaded = !!doc.file_url;
               return (
                 <div
                   key={idx}
-                  className={`group bg-white border rounded-xl p-4 flex flex-row items-center gap-4 transition-all hover:shadow-md ${isUploaded ? "border-green-400 bg-green-50/30" : "border-gray-400"}`}
+                  className={`group bg-white border rounded-xl p-4 flex flex-row items-center gap-4 transition-all hover:shadow-md ${
+                    isUploaded
+                      ? "border-green-400 bg-green-50/30"
+                      : "border-gray-400"
+                  }`}
                 >
                   <div
-                    className={`p-3 rounded-full flex-shrink-0 ${isUploaded ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-500"}`}
+                    className={`p-3 rounded-full flex-shrink-0 ${
+                      isUploaded
+                        ? "bg-green-100 text-green-600"
+                        : "bg-gray-100 text-gray-500 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors"
+                    }`}
                   >
                     {isUploaded ? (
                       <CheckCircle className="w-6 h-6" />
@@ -215,6 +286,7 @@ const Operasional2 = () => {
                       <FileText className="w-6 h-6" />
                     )}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-gray-800 leading-snug line-clamp-2">
                       {doc.label}
@@ -229,11 +301,31 @@ const Operasional2 = () => {
                       )}
                     </p>
                   </div>
+
                   <div className="flex flex-col gap-2">
+                    <label
+                      className={`cursor-pointer p-2 rounded-lg transition-colors border ${
+                        doc.isUploading
+                          ? "bg-gray-100 border-gray-200 text-gray-400"
+                          : "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => handleUploadDokumen(idx, e)}
+                        disabled={doc.isUploading}
+                      />
+                      {doc.isUploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                    </label>
                     {isUploaded && (
                       <button
-                        onClick={() => window.open(doc.file_url, "_blank")}
-                        className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100"
+                        onClick={() => handleViewDocument(doc.file_url)}
+                        className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors"
                         title="Lihat Dokumen"
                       >
                         <Search className="w-4 h-4" />

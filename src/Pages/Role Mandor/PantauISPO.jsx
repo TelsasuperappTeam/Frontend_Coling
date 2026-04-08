@@ -16,12 +16,15 @@ import {
   Loader,
 } from "lucide-react";
 
-import { API_ENDPOINTS, API_BASE_URLS } from "./../../config/constants";
+import { API_ENDPOINTS, API_BASE_URLS, getFileUrl } from "./../../config/constants";
 
 export default function PantauISPO() {
   // State untuk Tab Prinsip (1-5)
   const [activeSubTab, setActiveSubTab] = useState(1);
-  
+
+  // State untuk menyimpan data dokumen manual dari server
+  const [manualDocsStatus, setManualDocsStatus] = useState({});
+
   // (SESUAI BE MAHAR) State untuk handle loading saat generate dokumen
   const [loadingDoc, setLoadingDoc] = useState(false);
 
@@ -117,23 +120,23 @@ export default function PantauISPO() {
           checked: false,
           actionType: "system",
         },
-        { 
-          label: "Daftar Susunan Pengurus & Uraian Tugas", 
+        {
+          label: "Daftar Susunan Pengurus & Uraian Tugas",
           checked: false,
           actionType: "system",
         },
-        { 
-          label: "Akta Pendirian dan AD/ART Koperasi", 
-          checked: false,
-          actionType: "system", 
-        },
-        { 
-          label: "Dokumen Badan Hukum Koperasi", 
+        {
+          label: "Akta Pendirian dan AD/ART Koperasi",
           checked: false,
           actionType: "system",
         },
-        { 
-          label: "Daftar Anggota (20–30 Pekebun)", 
+        {
+          label: "Dokumen Badan Hukum Koperasi",
+          checked: false,
+          actionType: "system",
+        },
+        {
+          label: "Daftar Anggota (20–30 Pekebun)",
           checked: false,
           actionType: "system",
         },
@@ -154,8 +157,8 @@ export default function PantauISPO() {
     {
       kriteria: "3. Pembukaan Lahan (Kriteria 2.3.1)",
       items: [
-        { 
-          label: "SOP Pembukaan Lahan Tanpa Bakar", 
+        {
+          label: "SOP Pembukaan Lahan Tanpa Bakar",
           checked: false,
           actionType: "system",
         },
@@ -170,8 +173,8 @@ export default function PantauISPO() {
     {
       kriteria: "4. Perbenihan (Kriteria 2.3.2)",
       items: [
-        { 
-          label: "Rekaman Penggunaan Benih Bersertifikat", 
+        {
+          label: "Rekaman Penggunaan Benih Bersertifikat",
           checked: false,
           actionType: "system",
         },
@@ -196,8 +199,8 @@ export default function PantauISPO() {
     {
       kriteria: "5. Penanaman di Lahan Mineral (Kriteria 2.3.3)",
       items: [
-        { 
-          label: "SOP Penanaman sesuai GAP", 
+        {
+          label: "SOP Penanaman sesuai GAP",
           checked: false,
           actionType: "system",
         },
@@ -213,8 +216,8 @@ export default function PantauISPO() {
           checked: false,
           actionType: "system",
         },
-        { 
-          label: "Catatan Pembuatan Terasering", 
+        {
+          label: "Catatan Pembuatan Terasering",
           checked: false,
           actionType: "system",
         },
@@ -238,8 +241,8 @@ export default function PantauISPO() {
     {
       kriteria: "7. Pemeliharaan Tanaman (Kriteria 2.3.5)",
       items: [
-        { 
-          label: "SOP dan instruksi kerja pemeliharaan tanaman", 
+        {
+          label: "SOP dan instruksi kerja pemeliharaan tanaman",
           checked: false,
           actionType: "system",
         },
@@ -252,8 +255,8 @@ export default function PantauISPO() {
     {
       kriteria: "8. Pengendalian OPT (Kriteria 2.3.6)",
       items: [
-        { 
-          label: "SOP Pengendalian Hama Terpadu (PHT/IPM)", 
+        {
+          label: "SOP Pengendalian Hama Terpadu (PHT/IPM)",
           checked: false,
           actionType: "system",
         },
@@ -262,8 +265,8 @@ export default function PantauISPO() {
           checked: false,
         },
         { label: "Foto Ruang Penyimpanan Bahan Kimia", checked: false },
-        { 
-          label: "SOP Penanganan Limbah Pestisida", 
+        {
+          label: "SOP Penanganan Limbah Pestisida",
           checked: false,
           actionType: "system",
         },
@@ -272,8 +275,8 @@ export default function PantauISPO() {
     {
       kriteria: "9. Pemanenan (Kriteria 2.3.7)",
       items: [
-        { 
-          label: "SOP Penetapan Kriteria Buah Matang Panen", 
+        {
+          label: "SOP Penetapan Kriteria Buah Matang Panen",
           checked: false,
           actionType: "system",
         },
@@ -285,21 +288,20 @@ export default function PantauISPO() {
     {
       kriteria: "10. Pengangkutan Buah (Kriteria 2.3.8)",
       items: [
-        { 
-          label: "SOP Pengangkutan TBS", 
+        {
+          label: "SOP Pengangkutan TBS",
           checked: false,
           actionType: "system",
         },
         { label: "Rekaman Transportasi & Sarana Pendukung", checked: false },
-        { 
-          label: "Dokumen Kualitas TBS di Pengiriman", 
+        {
+          label: "Dokumen Kualitas TBS di Pengiriman",
           checked: false,
           actionType: "system",
         },
       ],
     },
   ];
-
 
   // DATA PRINSIP 3 (LINGKUNGAN)
   const prinsip3Data = [
@@ -344,8 +346,9 @@ export default function PantauISPO() {
         },
         {
           label: "Daftar Satwa & Tumbuhan yang Ditemukan",
-          checked: false, 
+          checked: false,
           actionType: "manual",
+          requirementCode: "P3_3_2_3_DOKUMEN_KEBERADAAN_SATWA",
         },
       ],
     },
@@ -357,8 +360,8 @@ export default function PantauISPO() {
     {
       kriteria: "1. Penjualan dan Kesepakatan Harga (Kriteria 4.1)",
       items: [
-        { 
-          label: "Dokumen Acuan Harga TBS dari Pemerintah", 
+        {
+          label: "Dokumen Acuan Harga TBS dari Pemerintah",
           checked: false,
           actionType: "system",
         },
@@ -402,8 +405,8 @@ export default function PantauISPO() {
       kriteria: "1. Meningkatkan Kinerja (Kriteria 5.1)",
       items: [
         { label: "Dokumen Identifikasi Potensi Perbaikan", checked: false },
-        { 
-          label: "Rekaman Tindakan Perbaikan & Inovasi Usaha", 
+        {
+          label: "Rekaman Tindakan Perbaikan & Inovasi Usaha",
           checked: false,
           actionType: "system",
         },
@@ -416,19 +419,108 @@ export default function PantauISPO() {
     },
   ];
 
+  // --- TAMBAHKAN FUNGSI INI DI SINI ---
+  const handleUploadDanAjukan = async (requirementCode, file) => {
+    if (!file) return;
+    if (!requirementCode) {
+      alert("Kode dokumen tidak ditemukan!");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      // --- TAHAP 1: UPLOAD FILE KE /submission ---
+      const formData = new FormData();
+      formData.append("requirement_code", requirementCode);
+      formData.append("file", file);
+
+      const uploadRes = await fetch(API_ENDPOINTS.ISPO.KEBUN.SUBMISSION, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!uploadRes.ok) throw new Error("Gagal mengunggah dokumen.");
+      const uploadData = await uploadRes.json();
+
+      // Ambil ID dari response BE
+      const submissionId = uploadData.id || uploadData.submission_id;
+
+      // --- TAHAP 2: AJUKAN DOKUMEN ---
+      if (submissionId) {
+        const ajukanUrl = API_ENDPOINTS.ISPO.PETANI.AJUKAN_DOKUMEN_ISPO.replace(
+          "{id}",
+          submissionId,
+        );
+
+        const ajukanRes = await fetch(ajukanUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!ajukanRes.ok)
+          throw new Error("Gagal mengajukan dokumen ke sistem.");
+      }
+
+      alert("Dokumen berhasil diunggah dan diajukan!");
+      // Catatan: Karena data statis menggunakan const, checklist tidak akan langsung
+      // berubah hijau otomatis kecuali halamannya di-refresh dan data diambil dari BE.
+      // Namun aksi upload ini sudah dipastikan terkirim ke Backend.
+    } catch (error) {
+      console.error("Proses upload error:", error);
+      alert(error.message);
+    }
+  };
+
+  // Fungsi untuk mengambil status satu dokumen spesifik (GET)
+  const fetchSingleDocStatus = async (requirementCode) => {
+    try {
+      const token = localStorage.getItem("token");
+      const url = `${API_BASE_URLS.ISPO}/ispo/submission/${requirementCode}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Simpan data ke state (misal: status dan file_url)
+        setManualDocsStatus((prev) => ({
+          ...prev,
+          [requirementCode]: data,
+        }));
+      }
+    } catch (error) {
+      console.error(
+        `Gagal mengambil status dokumen ${requirementCode}:`,
+        error,
+      );
+    }
+  };
+
   // ==========================================================================
   // HELPER FUNCTIONS & GET DATA PROGRES DINAMIS DARI BE
   // ==========================================================================
 
   // 1. State untuk nyimpan progres dinamis
   const [ispoProgress, setIspoProgress] = useState({
-    1: 0, 2: 0, 3: 0, 4: 0, 5: 0,
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
   });
 
   // 2. Fungsi Fetching dari Backend
   const fetchIspoProgress = useCallback(async () => {
     try {
-      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      const token =
+        localStorage.getItem("accessToken") || localStorage.getItem("token");
       if (!token) return;
 
       const response = await fetch(
@@ -439,7 +531,7 @@ export default function PantauISPO() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -462,6 +554,8 @@ export default function PantauISPO() {
   // 3. Panggil Fetch API ketika halaman dibuka
   useEffect(() => {
     fetchIspoProgress();
+    // Ambil status dokumen satwa saat komponen dimuat
+    fetchSingleDocStatus("P3_3_2_3_DOKUMEN_KEBERADAAN_SATWA");
   }, [fetchIspoProgress]);
 
   // 4. Update Tabs pakai data yang sudah dinamis (dari state ispoProgress)
@@ -574,17 +668,46 @@ export default function PantauISPO() {
                             ))}
 
                           {item.actionType === "manual" &&
-                            (item.checked ? (
-                              <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
-                                <Eye size={14} />
-                                Lihat/Ubah
-                              </button>
-                            ) : (
-                              <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-50 text-[#EF8523] hover:bg-orange-100 transition-colors shadow-sm">
-                                <Upload size={14} />
-                                Upload Dokumen
-                              </button>
-                            ))}
+                            (() => {
+                              // Cek apakah data dari server sudah ada untuk kode ini
+                              const serverData =
+                                manualDocsStatus[item.requirementCode];
+                              const isUploaded =
+                                (serverData &&
+                                  serverData.status === "APPROVED") ||
+                                serverData?.status === "PENDING";
+
+                              return isUploaded ? (
+                                <button
+                                  onClick={() =>
+                                    window.open(
+                                      getFileUrl(serverData.file_url, "ISPO"),
+                                      "_blank",
+                                    )
+                                  }
+                                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                >
+                                  <Eye size={14} />
+                                  Lihat Dokumen
+                                </button>
+                              ) : (
+                                <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-50 text-[#EF8523] hover:bg-orange-100 transition-colors shadow-sm">
+                                  <Upload size={14} />
+                                  <span>Upload Dokumen</span>
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={(e) =>
+                                      handleUploadDanAjukan(
+                                        item.requirementCode,
+                                        e.target.files[0],
+                                      )
+                                    }
+                                  />
+                                </label>
+                              );
+                            })()}
                         </div>
                       </li>
                     );
@@ -626,31 +749,31 @@ export default function PantauISPO() {
         return renderPrinsipView(
           "Prinsip 1 (Kepatuhan Terhadap Peraturan dan Perundangan)",
           prinsip1Data,
-          ispoProgress[1]
+          ispoProgress[1],
         );
       case 2:
         return renderPrinsipView(
           "Prinsip 2 (Penerapan Praktek Perkebunan yang Baik)",
           prinsip2Data,
-          ispoProgress[2]
+          ispoProgress[2],
         );
       case 3:
         return renderPrinsipView(
           "Prinsip 3 (Pengelolaan Lingkungan, SDA, & Keanekaragaman Hayati)",
           prinsip3Data,
-          ispoProgress[3]
+          ispoProgress[3],
         );
       case 4:
         return renderPrinsipView(
           "Prinsip 4 (Penerapan Transparansi)",
           prinsip4Data,
-          ispoProgress[4]
+          ispoProgress[4],
         );
       case 5:
         return renderPrinsipView(
           "Prinsip 5 (Peningkatan Usaha Secara Berkelanjutan)",
           prinsip5Data,
-          ispoProgress[5]
+          ispoProgress[5],
         );
       default:
         return null;
@@ -670,20 +793,24 @@ export default function PantauISPO() {
     { id: 3, title: "Dokumen Realisasi Penjualan Sawit" },
   ];
 
- // (SESUAI BE MAHAR) Fungsi Logic Generate Dokumen
+  // (SESUAI BE MAHAR) Fungsi Logic Generate Dokumen
   const handleGenerateDocument = async (docId, title) => {
-    if (docId === 1) { // Laporan Operasional Kebun
+    if (docId === 1) {
+      // Laporan Operasional Kebun
       setLoadingDoc(true);
       try {
         const token = localStorage.getItem("token");
 
-        const response = await fetch(API_ENDPOINTS.ISPO.PETANI.GENERATE_DOKUMEN_ISPO_OPERASIONAL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
+        const response = await fetch(
+          API_ENDPOINTS.ISPO.PETANI.GENERATE_DOKUMEN_ISPO_OPERASIONAL,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          },
+        );
 
         // Ambil data balasan dari Backend sebagai JSON
         const data = await response.json();
@@ -696,23 +823,20 @@ export default function PantauISPO() {
         }
 
         if (data.download_url) {
-
           const fullPdfUrl = `${API_BASE_URLS.ISPO}${data.download_url}`;
 
-          window.open(fullPdfUrl, '_blank');
+          window.open(fullPdfUrl, "_blank");
 
           // Tampilkan pesan sukses dari Backend ke pengguna
           // "Dokumen berhasil dibuat (Preview). Silakan 'Ajukan ke Kebun' jika sudah sesuai."
-          alert(data.message); 
+          alert(data.message);
 
           // (Opsional) Jika Anda butuh ID ini untuk tombol selanjutnya:
           console.log("Status Dokumen:", data.status);
           console.log("Submission ID:", data.submission_id);
-
         } else {
           alert("Gagal memuat dokumen: URL tidak ditemukan dari server.");
         }
-
       } catch (error) {
         console.error("Error generating document:", error);
         alert("Terjadi gangguan jaringan atau server tidak merespon.");
@@ -767,27 +891,27 @@ export default function PantauISPO() {
                   {doc.title}
                 </h3>
               </div>
-              
+
               {/* (SESUAI BE MAHAR) Tombol Generate Dokumen Dinamis */}
-              <button 
+              <button
                 onClick={() => handleGenerateDocument(doc.id, doc.title)}
                 disabled={loadingDoc && doc.id === 1} // Disable saat loading khusus doc ini
                 className={`mt-3 sm:mt-4 w-full flex items-center justify-center gap-2 text-white py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-colors ${
-                    loadingDoc && doc.id === 1 
-                    ? "bg-gray-400 cursor-not-allowed" 
+                  loadingDoc && doc.id === 1
+                    ? "bg-gray-400 cursor-not-allowed"
                     : "bg-[#EF8523] hover:bg-[#e5761c]"
                 }`}
               >
                 {loadingDoc && doc.id === 1 ? (
-                    <>
-                        <Loader className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
-                        Memproses...
-                    </>
+                  <>
+                    <Loader className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                    Memproses...
+                  </>
                 ) : (
-                    <>
-                        <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        Buat Dokumen
-                    </>
+                  <>
+                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    Buat Dokumen
+                  </>
                 )}
               </button>
             </div>

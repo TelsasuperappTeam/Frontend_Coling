@@ -14,7 +14,7 @@ import {
   ArrowLeft,
   FileText,
 } from "lucide-react";
-import { API_ENDPOINTS } from "../../../../config/constants";
+import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
 import MonitoringGAP from "./MonitoringGAP"; // halaman 2 untuk monitoring GAP
 
 // KOMPONEN UTAMA
@@ -43,6 +43,7 @@ export default function CatatAktivitas() {
     jumlahTanamanPerHa: "",
     jumlahTotalTanaman: "",
     jarakTanam: "",
+    jarakTanamLainnya: "", // Tambahan baru
   });
 
   const [catatanPerubahan, setCatatanPerubahan] = useState("");
@@ -107,6 +108,7 @@ export default function CatatAktivitas() {
           jumlahTanamanPerHa: dataBlok.jumlah_tanaman_per_ha,
           jumlahTotalTanaman: dataBlok.jumlah_total_tanaman,
           jarakTanam: dataBlok.jarak_tanam,
+          jarakTanamLainnya: dataBlok.jarak_tanam_lainnya || "", // Tangkap data "Lainnya" dari BE
         });
 
         setCurrentCycleInfo({
@@ -119,7 +121,7 @@ export default function CatatAktivitas() {
 
         // 2. [PERUBAHAN UTAMA] Fetch Data Monitoring Terpisah Sesuai Dokumen BE Poin 5
         // Gunakan Promise.all agar parallel dan cepat
-        const baseMonitoringUrl = `${API_ENDPOINTS.FARM}/farm/me/monitoring/${id}`;
+        const baseMonitoringUrl = `${API_BASE_URLS.FARM}/farm/me/monitoring/${id}`;
 
         const [sanitasiRes, pupukRes, optRes, coverCropRes] = await Promise.all(
           [
@@ -128,7 +130,7 @@ export default function CatatAktivitas() {
             fetch(`${baseMonitoringUrl}/pestisida`, { headers }), // Endpoint OPT/Pestisida
             fetch(`${baseMonitoringUrl}/cover-crop`, { headers }), // Endpoint Cover Crop
             // Tambahkan piringan/drainase jika ada endpointnya
-          ]
+          ],
         );
 
         const sanitasiData = sanitasiRes.ok ? await sanitasiRes.json() : [];
@@ -160,8 +162,8 @@ export default function CatatAktivitas() {
     setLoadingHistory(true);
     try {
       const token = localStorage.getItem("token");
-      const endpoint =
-        API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ARSIP_SIKLUS_LIST(id);
+      // Ganti penggunaan API_ENDPOINTS dengan template literal langsung
+      const endpoint = `${API_BASE_URLS.FARM}/farm/me/blok/${id}/list-arsip`;
 
       const response = await fetch(endpoint, {
         method: "GET",
@@ -192,11 +194,8 @@ export default function CatatAktivitas() {
     setLoadingHistory(true);
     try {
       const token = localStorage.getItem("token");
-      const endpoint =
-        API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ARSIP_SIKLUS_DETAIL(
-          id,
-          nomorSiklus
-        );
+      // Ganti penggunaan API_ENDPOINTS dengan template literal langsung
+      const endpoint = `${API_BASE_URLS.FARM}/farm/me/blok/${id}/arsip/${nomorSiklus}`;
 
       const response = await fetch(endpoint, {
         method: "GET",
@@ -246,18 +245,24 @@ export default function CatatAktivitas() {
       const token = localStorage.getItem("token");
       const payload = {
         realisasi_jumlah_total_tanaman: parseInt(
-          realisasiData.jumlahTotalTanaman
+          realisasiData.jumlahTotalTanaman,
         ),
         realisasi_jumlah_tanaman_per_ha: parseInt(
-          realisasiData.jumlahTanamanPerHa
+          realisasiData.jumlahTanamanPerHa,
         ),
         realisasi_jarak_tanam: realisasiData.jarakTanam,
-        realisasi_jarak_tanam_lainnya: null,
+        realisasi_jarak_tanam_lainnya:
+          realisasiData.jarakTanam === "Lainnya"
+            ? realisasiData.jarakTanamLainnya
+            : null,
         catatan_perubahan: catatanPerubahan,
+        // Tambahan wajib untuk Backend Pydantic:
+        created_at: new Date().toISOString(),
       };
+
       const baseUrl = API_ENDPOINTS?.FARM?.PETANI?.AMBIL_RENCANA_TANAM
         ? API_ENDPOINTS.FARM.PETANI.AMBIL_RENCANA_TANAM
-        : `${API_ENDPOINTS.FARM}/farm/me/blok`;
+        : `${API_BASE_URLS.FARM}/farm/me/blok`;
       const endpoint = `${baseUrl}/${id}/realisasi`;
 
       const response = await fetch(endpoint, {
@@ -292,7 +297,7 @@ export default function CatatAktivitas() {
     // Validasi berdasarkan field 'is_siklus_finished' dari header blok
     if (!currentCycleInfo.isFinished) {
       alert(
-        `Siklus ke-${currentCycleInfo.nomorSiklus} saat ini belum selesai (Panen belum difinalisasi). Tidak bisa memulai siklus baru.`
+        `Siklus ke-${currentCycleInfo.nomorSiklus} saat ini belum selesai (Panen belum difinalisasi). Tidak bisa memulai siklus baru.`,
       );
       return;
     }
@@ -318,7 +323,7 @@ export default function CatatAktivitas() {
 
   const handleHarvestAction = () => {
     navigate(
-      `/petani/manajemenkebun/budidayamonitoring/catataktivitas/panen/${id}`
+      `/petani/manajemenkebun/budidayamonitoring/catataktivitas/panen/${id}`,
     );
   };
 
@@ -551,7 +556,9 @@ export default function CatatAktivitas() {
                     <div className="flex items-start gap-2 bg-blue-50 text-blue-700 p-3 rounded-lg text-xs sm:text-sm border border-blue-100 w-full md:w-auto">
                       <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" />
                       <p className="leading-relaxed">
-                        Data berikut ini dari Rencana Tanam blok anda. Petani wajib mencatat realisasi rencana tanam berdasarkan  data lapangan dengan Klik{" "}
+                        Data berikut ini dari Rencana Tanam blok anda. Petani
+                        wajib mencatat realisasi rencana tanam berdasarkan data
+                        lapangan dengan Klik{" "}
                         <span className="font-bold">Catat Realisasi</span>
                       </p>
                     </div>
@@ -608,13 +615,32 @@ export default function CatatAktivitas() {
                         onChange={handleRealisasiChange}
                         disabled={!isEditingRealisasi}
                       />
-                      <EditableField
+                      <EditableSelectField
                         label="9. Jarak Tanam"
                         name="jarakTanam"
                         value={realisasiData.jarakTanam}
                         onChange={handleRealisasiChange}
                         disabled={!isEditingRealisasi}
+                        options={[
+                          { value: "8x9", label: "8 x 9 Meter" },
+                          { value: "9x9", label: "9 x 9 Meter" },
+                          { value: "7x9", label: "7 x 9 Meter" },
+                          { value: "Lainnya", label: "Lainnya" },
+                        ]}
                       />
+
+                      {/* Munculkan input ini hanya jika Jarak Tanam == "Lainnya" */}
+                      {realisasiData.jarakTanam === "Lainnya" && (
+                        <div className="mt-3">
+                          <EditableField
+                            label="Tuliskan Jarak Tanam"
+                            name="jarakTanamLainnya"
+                            value={realisasiData.jarakTanamLainnya}
+                            onChange={handleRealisasiChange}
+                            disabled={!isEditingRealisasi}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -760,6 +786,48 @@ function EditableField({ label, value, onChange, name, disabled }) {
         value={value}
         onChange={onChange}
       />
+    </div>
+  );
+}
+
+function EditableSelectField({
+  label,
+  value,
+  onChange,
+  name,
+  disabled,
+  options,
+}) {
+  return (
+    <div>
+      <p className="text-[#B5302D] font-bold text-[11px] sm:text-xs mb-1.5 flex justify-between items-center">
+        <span className="truncate">{label}</span>
+        {!disabled && (
+          <span className="text-[9px] text-red-600 font-medium bg-red-50 px-1.5 py-0.5 border border-red-100 rounded animate-pulse whitespace-nowrap">
+            Wajib
+          </span>
+        )}
+      </p>
+      <select
+        name={name}
+        disabled={disabled}
+        className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm outline-none transition-all duration-200 ${
+          disabled
+            ? "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed appearance-none"
+            : "bg-white border-gray-300 focus:ring-2 focus:ring-[#EF8523] text-black shadow-sm"
+        }`}
+        value={value || ""}
+        onChange={onChange}
+      >
+        <option value="" disabled>
+          -- Pilih {label.split(". ")[1]} --
+        </option>
+        {options.map((opt, idx) => (
+          <option key={idx} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

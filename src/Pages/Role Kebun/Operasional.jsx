@@ -13,7 +13,7 @@ import {
   Save,
   Loader2, // Icon loading tambahan
 } from "lucide-react";
-import { API_ENDPOINTS, API_BASE_URLS } from "../../config/constants.js";
+import { API_ENDPOINTS, API_BASE_URLS, getFileUrl } from "../../config/constants.js";
 
 // DATA KEGIATAN - TETAP STATIC
 const MOCK_KEGIATAN = [
@@ -265,37 +265,57 @@ const Operasional = () => {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch(API_ENDPOINTS.ISPO.KEBUN.SUBMISSION, {
-        method: "GET", // Mengambil data
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      // Karena BE menggunakan endpoint /submission/{requirement_code}
+      // Kita fetch data satu per satu untuk setiap config secara paralel
+      const fetchPromises = DOKUMEN_CONFIG.map(async (docConfig) => {
+        try {
+          // Gabungkan URL base dengan kode dokumen
+          // Contoh hasil: ".../ispo/submission/P2_2_1_BERITA_ACARA"
+          const url = `${API_ENDPOINTS.ISPO.KEBUN.SUBMISSION}/${docConfig.code}`;
+
+          const response = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const dataServer = await response.json();
+            // Jika dokumen ada (200 OK), masukkan data file_url dan status dari server
+            return {
+              ...docConfig,
+              file_url: dataServer.file_url,
+              status: dataServer.status,
+              isUploading: false,
+            };
+          } else if (response.status === 404) {
+            // Jika 404 (Sesuai logic BE: "Dokumen ini belum di-upload")
+            // Kembalikan state kosong agar UI menampilkan "Belum ada file"
+            return {
+              ...docConfig,
+              file_url: null,
+              status: null,
+              isUploading: false,
+            };
+          } else {
+            // Jika ada error lain dari server (misal 500)
+            return { ...docConfig, isUploading: false };
+          }
+        } catch (err) {
+          console.error(`Gagal fetch dokumen ${docConfig.code}:`, err);
+          return { ...docConfig, isUploading: false };
+        }
       });
 
-      if (response.ok) {
-        const dataServer = await response.json();
+      // Tunggu semua request paralel selesai
+      const results = await Promise.all(fetchPromises);
 
-        // KITA GABUNGKAN DATA SERVER DENGAN CONFIG LOKAL
-        setDokumenStatus((prevStatus) =>
-          prevStatus.map((docConfig) => {
-            const foundData = dataServer.find(
-              (serverItem) => serverItem.requirement_code === docConfig.code,
-            );
-
-            if (foundData) {
-              return {
-                ...docConfig,
-                file_url: foundData.file_url,
-                status: foundData.status,
-              };
-            }
-            return docConfig;
-          }),
-        );
-      }
+      // Update state sekaligus untuk mengubah tampilan Card Dokumen
+      setDokumenStatus(results);
     } catch (error) {
-      console.error("Error fetching documents:", error);
+      console.error("Error pada proses Promise.all documents:", error);
     }
   };
 
@@ -648,11 +668,15 @@ const Operasional = () => {
       setDokumenStatus(updatedDocs);
     }
   };
-
-  // Handler Lihat Dokumen
+  
+// Handler Lihat Dokumen
   const handleViewDocument = (url) => {
     if (url) {
-      window.open(url, "_blank");
+      // Gunakan getFileUrl dan secara eksplisit beri tahu ini adalah service "ISPO"
+      const fullUrl = getFileUrl(url, "ISPO"); 
+      
+      // Buka URL lengkap di tab baru
+      window.open(fullUrl, "_blank");
     }
   };
 

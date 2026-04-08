@@ -35,34 +35,43 @@ export default function Inventaris() {
   const fetchInventaris = async () => {
     setIsLoadingData(true);
     const headers = getAuthHeaders(false);
-    // 1. Dapatkan target_kebun_auth_id (Misalnya dari URL param, state, atau props jika ini akun EM)
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetKebunAuthId = urlParams.get("target_kebun_auth_id");
 
-    // 2. Buat fungsi helper untuk menambahkan query parameter
+    // Ambil ID dari localStorage jika tidak ada di URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let targetKebunAuthId = urlParams.get("target_kebun_auth_id");
+
+    if (!targetKebunAuthId) {
+      // Asumsi: Anda menyimpan data user saat login
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      targetKebunAuthId = userData.kebun_id;
+    }
+
     const buildUrl = (baseUrl) => {
-      return targetKebunAuthId
-        ? `${baseUrl}?target_kebun_auth_id=${targetKebunAuthId}`
-        : baseUrl;
+      if (!targetKebunAuthId) return baseUrl;
+
+      // Mengikuti cara aman dari file GM Distrik
+      return baseUrl.includes("?")
+        ? `${baseUrl}&target_kebun_auth_id=${targetKebunAuthId}`
+        : `${baseUrl}?target_kebun_auth_id=${targetKebunAuthId}`;
     };
 
     const fetchSafe = async (url) => {
       try {
         const res = await fetch(url, { headers });
         if (!res.ok) {
-          const errorDetail = await res.json();
-          console.warn(`Gagal fetch ${url}:`, errorDetail);
+          const errorText = await res.text();
+          console.error(`Error dari API (${res.status}):`, errorText); // Lihat pesan error di Console Chrome
           return [];
         }
         return await res.json();
       } catch (err) {
-        console.error(`Network error pada ${url}:`, err);
+        console.error("Network Error:", err);
         return [];
       }
     };
 
     try {
-      // 3. Terapkan buildUrl ke semua endpoint agar parameter terkirim
+      // Panggil API menggunakan buildUrl()
       const [dataAlat, dataBibit, dataPupuk, dataPestisida] = await Promise.all(
         [
           fetchSafe(
@@ -76,6 +85,10 @@ export default function Inventaris() {
         ],
       );
 
+      // Kalau mau pakai console.log, taruh di SINI (setelah Promise.all selesai)
+      console.log("Data Alat:", dataAlat);
+      console.log("Data Bibit:", dataBibit);
+
       setInventarisData({
         peralatan: dataAlat || [],
         bibit: dataBibit || [],
@@ -83,7 +96,7 @@ export default function Inventaris() {
         pestisida: dataPestisida || [],
       });
     } catch (error) {
-      console.error("Critical Error pada fetchInventaris:", error);
+      console.error("Error fetch:", error);
     } finally {
       setIsLoadingData(false);
     }

@@ -140,7 +140,7 @@ const MONITORING_CONFIG = {
         key: "jumlah_petugas",
         width: "80px",
         align: "left",
-        type: "number"
+        type: "number",
       },
       {
         header: "Kondisi Gulma",
@@ -247,7 +247,7 @@ const MONITORING_CONFIG = {
         key: "jumlah_petugas",
         width: "80px",
         align: "left",
-        type: "number"
+        type: "number",
       },
       {
         header: "Foto",
@@ -423,7 +423,7 @@ const MONITORING_CONFIG = {
         key: "jumlah_petugas",
         width: "80px",
         align: "left",
-        type: "number"
+        type: "number",
       },
       {
         header: "Foto",
@@ -436,10 +436,10 @@ const MONITORING_CONFIG = {
     fields: [
       {
         key: "monitoring_piringan_id",
-        label: "ID Monitoring Piringan (Parent ID)",
-        type: "number",
+        label: "Pilih Hasil Sensus Kondisi (Tautan)",
+        type: "select_parent_piringan", // Kita gunakan tipe kustom
       },
-      { key: "tanggal_monitoring", label: "Tanggal", type: "date" },
+      { key: "tanggal_monitoring", label: "Tanggal Aktivitas", type: "date" },
       {
         key: "aktivitas_kegiatan",
         label: "Aktivitas",
@@ -476,7 +476,7 @@ const MONITORING_CONFIG = {
         key: "jumlah_total_pupuk_digunakan_kg",
         width: "120px",
         align: "left",
-        type: "number"
+        type: "number",
       },
       {
         header: "Cuaca Pemupukan",
@@ -490,7 +490,7 @@ const MONITORING_CONFIG = {
         key: "jumlah_petugas",
         width: "80px",
         align: "left",
-        type: "number"
+        type: "number",
       },
       {
         header: "Foto",
@@ -556,9 +556,14 @@ const MONITORING_CONFIG = {
         key: "jumlah_total_digunakan",
         width: "130px",
         align: "left",
-        type: "number"
+        type: "number",
       },
-      { header: "Sasaran OPT", key: "opt_sasaran", width: "150px", align: "left" },
+      {
+        header: "Sasaran OPT",
+        key: "opt_sasaran",
+        width: "150px",
+        align: "left",
+      },
       {
         header: "Luas Area Terkendali (ha)",
         key: "luas_area_terkendali_ha",
@@ -570,7 +575,7 @@ const MONITORING_CONFIG = {
         key: "jumlah_petugas",
         width: "80px",
         align: "left",
-        type: "number"
+        type: "number",
       },
       {
         header: "Foto",
@@ -605,7 +610,11 @@ const MONITORING_CONFIG = {
         label: "Sasaran (Hama)",
         placeholder: "Contoh: Ulat Api",
       },
-      { key: "luas_area_terkendali_ha", label: "Luas Area Terkendali (ha)", type: "number" },
+      {
+        key: "luas_area_terkendali_ha",
+        label: "Luas Area Terkendali (ha)",
+        type: "number",
+      },
       { key: "jumlah_petugas", label: " Jumlah Petugas", type: "number" },
       { key: "f", label: "Foto Bukti", type: "file" },
     ],
@@ -655,19 +664,19 @@ function renderCell(col, row) {
 
     if (
       ["bersih", "baik", "lancar", "lembab", "cerah"].some((k) =>
-        valLower.includes(k)
+        valLower.includes(k),
       )
     )
       colorClass = "bg-green-50 text-green-700 border-green-200";
     else if (
       ["ringan", "sedikit", "kering", "mendung"].some((k) =>
-        valLower.includes(k)
+        valLower.includes(k),
       )
     )
       colorClass = "bg-yellow-50 text-yellow-700 border-yellow-200";
     else if (
       ["berat", "rusak", "mati", "banyak", "menggenang", "hujan"].some((k) =>
-        valLower.includes(k)
+        valLower.includes(k),
       )
     )
       colorClass = "bg-red-50 text-red-700 border-red-200";
@@ -747,7 +756,7 @@ export default function MonitoringGAP({
         else if (sectionKey === "coverCrop")
           url =
             API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_COVER_CROP(
-              blokId
+              blokId,
             );
         else if (sectionKey === "pupuk")
           url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_PUPUK(blokId);
@@ -759,7 +768,7 @@ export default function MonitoringGAP({
           sectionKey === "piringan_aktivitas"
         ) {
           url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_PIRINGAN_KONDISI(
-            blokId
+            blokId,
           ).replace("-kondisi", "");
         }
 
@@ -773,7 +782,7 @@ export default function MonitoringGAP({
             sectionKey === "piringan_aktivitas"
           ) {
             const aktivitasFlat = result.flatMap(
-              (item) => item.aktivitas || []
+              (item) => item.aktivitas || [],
             );
             setMonitoringData((prev) => ({
               ...prev,
@@ -790,7 +799,7 @@ export default function MonitoringGAP({
         setIsLoading(false);
       }
     },
-    [blokId, setMonitoringData]
+    [blokId, setMonitoringData],
   );
 
   useEffect(() => {
@@ -955,8 +964,8 @@ export default function MonitoringGAP({
                               col.align === "center"
                                 ? "justify-center"
                                 : col.align === "right"
-                                ? "justify-end"
-                                : "justify-start"
+                                  ? "justify-end"
+                                  : "justify-start"
                             }`}
                           >
                             {renderCell(col, row)}
@@ -1035,6 +1044,38 @@ export default function MonitoringGAP({
                         })
                       }
                       className="text-[10px] sm:text-xs w-full cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] sm:file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                    />
+                  </div>
+                ) : field.type === "select_parent_piringan" ? (
+                  <div className="relative">
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] focus:border-[#EF8523] outline-none appearance-none bg-white transition"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [field.key]: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">-- Pilih Sensus Kondisi --</option>
+                      {monitoringData.piringan_kondisi &&
+                      monitoringData.piringan_kondisi.length > 0 ? (
+                        monitoringData.piringan_kondisi.map((parent) => (
+                          <option key={parent.id} value={parent.id}>
+                            Sensus Tgl:{" "}
+                            {String(parent.tanggal_monitoring).split("T")[0]}{" "}
+                            (Bersih: {parent.kondpi_bersih} Pkk)
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>
+                          Belum ada data Sensus Kondisi!
+                        </option>
+                      )}
+                    </select>
+                    <ChevronDown
+                      className="absolute right-3 top-3 text-gray-400 pointer-events-none"
+                      size={14}
                     />
                   </div>
                 ) : (
