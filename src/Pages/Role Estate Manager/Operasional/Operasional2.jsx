@@ -67,35 +67,58 @@ const Operasional2 = () => {
   const fetchDokumenExisting = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(API_ENDPOINTS.ISPO.KEBUN.SUBMISSION, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+
+      // Karena BE menggunakan endpoint /submission/{requirement_code}
+      // Kita fetch data satu per satu untuk setiap config secara paralel
+      const fetchPromises = DOKUMEN_CONFIG.map(async (docConfig) => {
+        try {
+          // Gabungkan URL base dengan kode dokumen spesifik
+          const url = `${API_ENDPOINTS.ISPO.KEBUN.SUBMISSION}/${docConfig.code}`;
+
+          const response = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const dataServer = await response.json();
+            // Jika dokumen ada (200 OK), masukkan data file_url dan status
+            return {
+              ...docConfig,
+              file_url: dataServer.file_url,
+              status: dataServer.status,
+              isUploading: false,
+            };
+          } else if (response.status === 404) {
+            // Jika 404 (Dokumen belum di-upload)
+            return {
+              ...docConfig,
+              file_url: null,
+              status: null,
+              isUploading: false,
+            };
+          } else {
+            return { ...docConfig, isUploading: false };
+          }
+        } catch (err) {
+          console.error(`Gagal fetch dokumen ${docConfig.code}:`, err);
+          return { ...docConfig, isUploading: false };
+        }
       });
 
-      if (response.ok) {
-        const dataServer = await response.json();
-        setDokumenStatus((prevStatus) =>
-          prevStatus.map((docConfig) => {
-            const foundData = dataServer.find(
-              (serverItem) => serverItem.requirement_code === docConfig.code,
-            );
-            if (foundData)
-              return {
-                ...docConfig,
-                file_url: foundData.file_url,
-                status: foundData.status,
-              };
-            return docConfig;
-          }),
-        );
-      }
+      // Tunggu semua request paralel selesai
+      const results = await Promise.all(fetchPromises);
+
+      // Update state sekaligus untuk mengubah tampilan Card Dokumen
+      setDokumenStatus(results);
     } catch (error) {
-      console.error("Error fetching documents:", error);
+      console.error("Error pada proses Promise.all documents:", error);
     }
   };
+  
   const handleUploadDokumen = async (index, event) => {
     const file = event.target.files[0];
     if (!file) return;

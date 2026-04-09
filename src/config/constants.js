@@ -82,7 +82,7 @@ export const API_ENDPOINTS = {
       },
     },
 
-        // ROLE GM DISTRIK
+    // ROLE GM DISTRIK
     GMDistrik: {
       // Ambil daftar kebun di bawah GM Distrik
       GET_KEBUN_LIST: `${API_BASE_URLS.USER}/users/gm/me/kebun-list`,
@@ -294,6 +294,30 @@ export const API_ENDPOINTS = {
         JUAL: `${API_BASE_URLS.FARM}/farm/kebun/transaksi/jual`,
         PINJAMKAN: `${API_BASE_URLS.FARM}/farm/kebun/transaksi/pinjamkan`,
       },
+
+      MARKETPLACE: {
+        // --- TAHAP 1: KEBUTUHAN PABRIK ---
+        // [POST] Pabrik membuat pengumuman kebutuhan bahan baku
+        CREATE_KEBUTUHAN: `${API_BASE_URLS.FARM}/farm/marketplace/kebutuhan`,
+
+        // [GET] Kebun & Pabrik melihat daftar kebutuhan yang sedang aktif (H s/d H+3)
+        GET_KEBUTUHAN_AKTIF: `${API_BASE_URLS.FARM}/farm/marketplace/kebutuhan/aktif`,
+
+        // --- TAHAP 2: MATCHING & PENGAJUAN (KEBUN) ---
+        // [GET] Kebun mencari rencana panen petani yang cocok dengan spesifikasi/tanggal (Filter pintar)
+        GET_MATCHING_PANEN: `${API_BASE_URLS.FARM}/farm/marketplace/matching`,
+
+        // [POST] Kebun menggabungkan rencana panen & mengirim ke Pabrik
+        CREATE_GRUP_PENJUALAN: `${API_BASE_URLS.FARM}/farm/marketplace/grup-penjualan`,
+
+        // --- TAHAP 3: REVIEW PABRIK ---
+        // [GET] Pabrik melihat daftar pengajuan/tawaran masuk dari Kebun
+        GET_PENGAJUAN_MASUK: `${API_BASE_URLS.FARM}/farm/marketplace/pengajuan-masuk`,
+
+        // [PATCH] Pabrik menyetujui/menolak pengajuan grup penjualan (Dynamic ID)
+        ACTION_PENGAJUAN: (grupId) =>
+          `${API_BASE_URLS.FARM}/farm/marketplace/pengajuan-masuk/${grupId}/action`,
+      },
     },
   },
 
@@ -313,7 +337,7 @@ export const API_ENDPOINTS = {
       // Endpoint POST ajukan submission dokumen ISPO dari petani ke kebun
       AJUKAN_DOKUMEN_ISPO: `${API_BASE_URLS.ISPO}/ispo/submission/{id}/submit`,
     },
-    
+
     KEBUN: {
       // Melihat progress ISPO seluruh petani relasi kebun halaman kemitraan petani
       GET_PROGRES_ISPO_PETANI_NAUNGAN: `${API_BASE_URLS.ISPO}/ispo/kebun/petani/{petani_id}/progress`,
