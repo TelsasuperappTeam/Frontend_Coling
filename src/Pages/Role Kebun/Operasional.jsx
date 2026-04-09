@@ -13,7 +13,11 @@ import {
   Save,
   Loader2, // Icon loading tambahan
 } from "lucide-react";
-import { API_ENDPOINTS, API_BASE_URLS, getFileUrl } from "../../config/constants.js";
+import {
+  API_ENDPOINTS,
+  API_BASE_URLS,
+  getFileUrl,
+} from "../../config/constants.js";
 
 // DATA KEGIATAN - TETAP STATIC
 const MOCK_KEGIATAN = [
@@ -668,13 +672,13 @@ const Operasional = () => {
       setDokumenStatus(updatedDocs);
     }
   };
-  
-// Handler Lihat Dokumen
+
+  // Handler Lihat Dokumen
   const handleViewDocument = (url) => {
     if (url) {
       // Gunakan getFileUrl dan secara eksplisit beri tahu ini adalah service "ISPO"
-      const fullUrl = getFileUrl(url, "ISPO"); 
-      
+      const fullUrl = getFileUrl(url, "ISPO");
+
       // Buka URL lengkap di tab baru
       window.open(fullUrl, "_blank");
     }
@@ -1411,11 +1415,15 @@ const Operasional = () => {
                   {opsiBarang.map((b, index) => {
                     let itemId = "";
                     if (jualFormData.jenis_barang === "Bibit") {
-                      itemId = b.dinamis_varietas_id;
+                      itemId =
+                        b.dinamis_varietas_id ??
+                        b.dinamis_varietas_bibit?.id ??
+                        b.id;
                     } else if (jualFormData.jenis_barang === "Pupuk") {
-                      itemId = b.dinamis_pupuk_id;
+                      itemId = b.dinamis_pupuk_id ?? b.pupuk?.id ?? b.id;
                     } else if (jualFormData.jenis_barang === "Pestisida") {
-                      itemId = b.dinamis_pestisida_id;
+                      itemId =
+                        b.dinamis_pestisida_id ?? b.pestisida?.id ?? b.id;
                     } else {
                       itemId = b.id;
                     }
@@ -1430,6 +1438,7 @@ const Operasional = () => {
                       "Item Tidak Bernama";
 
                     const sisa =
+                      b.jumlah_tersisa_kg ??
                       b.jumlah_tersisa ??
                       b.jumlah_per_buah ??
                       b.jumlah ??

@@ -82,25 +82,12 @@ const ENUM_OPTIONS = {
   ],
 
   // --- PUPUK ---
-  master_pupuk: [
-    { value: 1, label: "Urea" },
-    { value: 2, label: "NPK" },
-    { value: 3, label: "Kieserite" },
-    { value: 4, label: "Dolomite" },
-    { value: 5, label: "Borate" },
-  ],
   cuaca_pemupukan: [
     { value: "Cerah", label: "Cerah" },
     { value: "Hujan", label: "Hujan" },
   ],
 
   // --- PESTISIDA ---
-  master_pestisida: [
-    { value: 1, label: "Glifosat (RoundUp)" },
-    { value: 2, label: "Parakuat (Gramoxone)" },
-    { value: 3, label: "Metil Metsulfuron" },
-    { value: 4, label: "Insektisida Ulat" },
-  ],
   satuan_dosis_opt: [
     { value: "ml", label: "Mililiter (ml)" },
     { value: "gr", label: "Gram (gr)" },
@@ -502,12 +489,14 @@ const MONITORING_CONFIG = {
     ],
     fields: [
       { key: "tanggal_pemupukan", label: "Tanggal", type: "date" },
+      // --- INI YANG BENAR UNTUK PUPUK ---
       {
         key: "dinamis_pupuk_id",
-        label: "Jenis Pupuk",
+        label: "PILIH PUPUK DARI INVENTARIS",
         type: "select",
-        options: ENUM_OPTIONS.master_pupuk,
+        options: [], // Dikosongkan, akan diisi dinamis dari state
       },
+      // -----------------------------------
       {
         key: "dosis_diberikan_per_gram",
         label: "Dosis per Pokok (gr)",
@@ -587,12 +576,14 @@ const MONITORING_CONFIG = {
     ],
     fields: [
       { key: "tanggal_pemakaian", label: "Tanggal Aplikasi", type: "date" },
+      // --- INI YANG BENAR UNTUK PESTISIDA ---
       {
         key: "dinamis_pestisida_id",
-        label: "Pestisida",
+        label: "PILIH PESTISIDA DARI INVENTARIS",
         type: "select",
-        options: ENUM_OPTIONS.master_pestisida,
+        options: [], // Dikosongkan, akan diisi dinamis dari state
       },
+      // ---------------------------------------
       { key: "dosis_diberikan", label: "Jumlah Dosis", type: "number" },
       {
         key: "satuan_dosis",
@@ -737,6 +728,49 @@ export default function MonitoringGAP({
   const [formData, setFormData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // --- KODE BARU: STATE UNTUK OPSI DROPDOWN DINAMIS ---
+  const [pupukOptions, setPupukOptions] = useState([]);
+  const [pestisidaOptions, setPestisidaOptions] = useState([]);
+
+  // --- KODE BARU: FUNGSI FETCH DATA INVENTARIS ---
+  const fetchInventarisOptions = async (type) => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      let url = "";
+      if (type === "pupuk") {
+        url = API_ENDPOINTS.FARM.PETANI.INVENTARIS.GET_PUPUK;
+      } else if (type === "opt") {
+        url = API_ENDPOINTS.FARM.PETANI.INVENTARIS.GET_PESTISIDA;
+      }
+
+      if (!url) return;
+
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const data = await res.json();
+
+        if (type === "pupuk") {
+          const options = data.map((item) => ({
+            // Ambil ID dari object 'pupuk' sesuai skema backend
+            value: item.pupuk.id,
+            label: `${item.nama_pupuk} (Sisa ${item.jumlah_tersisa_kg} Kg)`,
+          }));
+          setPupukOptions(options);
+        } else if (type === "opt") {
+          const options = data.map((item) => ({
+            // Ambil ID dari object 'pestisida' sesuai skema backend
+            value: item.pestisida.id,
+            label: `${item.nama_pestisida} (Sisa ${item.jumlah_tersisa} ${item.satuan})`,
+          }));
+          setPestisidaOptions(options);
+        }
+      }
+    } catch (error) {
+      console.error("Gagal mengambil data inventaris:", error);
+    }
+  };
+
   // --- FETCHING DATA ---
   // Dokumentasi: Mengambil data dari Backend berdasarkan endpoint yang sesuai.
   // URL diambil dari constants API_ENDPOINTS.
@@ -814,30 +848,23 @@ export default function MonitoringGAP({
   // Dokumentasi: Menyimpan data baru via POST request. Payload menggunakan FormData.
   // (SESUAI BE MAHAR)
   const handleSave = async () => {
-    if (!popupType || !blokId) return;
+    // 1. CEK BLOK ID (Biar tidak silent error jika props lupa dilempar dari parent)
+    if (!blokId) {
+      alert(
+        "Gagal: blokId tidak ditemukan. Pastikan Anda sudah memilih blok/lahan terlebih dahulu.",
+      );
+      return;
+    }
+    if (!popupType) return;
+
     try {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
-      const payload = new FormData();
-
-      Object.keys(formData).forEach((key) => {
-        let value = formData[key];
-
-        // LOGIKA KHUSUS: Ubah Date menjadi Datetime untuk field tertentu
-        // Backend minta format: "YYYY-MM-DDTHH:mm:ss"
-        if (
-          (key === "tanggal_pemupukan" || key === "tanggal_pemakaian") &&
-          value
-        ) {
-          // Jika value cuma "2023-10-25", kita tambah jam default "T00:00:00"
-          // Hasil akhir: "2023-10-25T00:00:00" (Valid Datetime)
-          value = `${value}T00:00:00`;
-        }
-
-        if (value) payload.append(key, value);
-      });
 
       let url = "";
+      let finalBody;
+
+      // 2. Tentukan URL Endpoint
       if (popupType === "sanitasi")
         url =
           API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_SANITASI(blokId);
@@ -854,14 +881,105 @@ export default function MonitoringGAP({
       else if (popupType === "piringan_aktivitas")
         url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_PIRINGAN_AKTIVITAS();
 
-      const res = await fetch(url, { method: "POST", headers, body: payload });
-      if (!res.ok) throw new Error("Gagal simpan data");
+      // 3. Forking Logika Payload (JSON vs FormData)
+      if (popupType === "piringan_kondisi") {
+        // VALIDASI FE: Pastikan tanggal tidak kosong sebelum merakit JSON
+        if (!formData.tanggal_monitoring) {
+          alert("Harap isi Tanggal Sensus terlebih dahulu!");
+          return;
+        }
+        headers["Content-Type"] = "application/json";
+
+        finalBody = JSON.stringify({
+          tanggal_monitoring: formData.tanggal_monitoring,
+          // Kita gunakan Number() agar lebih aman dari NaN dibanding parseInt
+          kondpi_bersih: Number(formData.kondpi_bersih) || 0,
+          kondpi_bergulma_ringan: Number(formData.kondpi_bergulma_ringan) || 0,
+          kondpi_bergulma_lebat: Number(formData.kondpi_bergulma_lebat) || 0,
+          kondper_kering: Number(formData.kondper_kering) || 0,
+          kondper_lembab: Number(formData.kondper_lembab) || 0,
+          kondper_menggenang: Number(formData.kondper_menggenang) || 0,
+          catatan_tindakan: formData.catatan_tindakan || null,
+        });
+      } else {
+        // SELAIN Piringan Kondisi: BE minta FormData (karena ada File Upload)
+        const payload = new FormData();
+        Object.keys(formData).forEach((key) => {
+          let value = formData[key];
+
+          // Skip jika tidak ada isinya
+          if (value === undefined || value === null || value === "") return;
+
+          // Format datetime khusus BE
+          if (
+            (key === "tanggal_pemupukan" || key === "tanggal_pemakaian") &&
+            value
+          ) {
+            value = `${value}T00:00:00`;
+          }
+
+          // --- KODE BARU: PARSING TIPE DATA UNTUK PYDANTIC BE ---
+          // Pastikan ID Dropdown dikirim sebagai Integer
+          if (
+            key === "dinamis_pupuk_id" ||
+            key === "dinamis_pestisida_id" ||
+            key === "monitoring_piringan_id"
+          ) {
+            value = parseInt(value);
+          }
+          // Pastikan field-field angka (jumlah/dosis/luas) dikirim sebagai Float/Number
+          else if (
+            [
+              "dosis_diberikan",
+              "jumlah_total_digunakan",
+              "luas_area_terkendali_ha",
+              "dosis_diberikan_per_gram",
+              "jumlah_total_pupuk_digunakan_kg",
+              "jumlah_pohon_dipupuk",
+              "jumlah_petugas",
+            ].includes(key)
+          ) {
+            value = parseFloat(value);
+          }
+
+          payload.append(key, value);
+        });
+        finalBody = payload;
+      }
+
+      // 4. Eksekusi Request
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: finalBody,
+      });
+
+      if (!res.ok) {
+        // --- PERBAIKAN HANDLING ERROR (Biar detail Pydantic kebaca, bukan [object Object]) ---
+        let errorMsg = "Gagal simpan data";
+        try {
+          const errResponse = await res.json();
+          if (Array.isArray(errResponse.detail)) {
+            errorMsg = errResponse.detail
+              .map((e) => `${e.loc.join(".")} : ${e.msg}`)
+              .join("\n");
+          } else {
+            errorMsg = errResponse.detail || errorMsg;
+          }
+        } catch {
+          errorMsg = res.statusText;
+        }
+        throw new Error(errorMsg);
+      }
 
       alert("Berhasil disimpan!");
       setShowPopup(false);
+
       if (popupType.includes("piringan")) fetchSectionData("piringan_kondisi");
       else fetchSectionData(popupType);
     } catch (e) {
+      console.error("Error Detail:", e);
+      // alert() sekarang akan menampilkan detail spesifik field mana yang ditolak BE
       alert(e.message);
     }
   };
@@ -888,6 +1006,13 @@ export default function MonitoringGAP({
             onClick={() => {
               setPopupType(configKey);
               setFormData({});
+
+              // --- KODE BARU: HIT API JIKA POPUP PUPUK/PESTISIDA ---
+              if (configKey === "pupuk" || configKey === "opt") {
+                fetchInventarisOptions(configKey);
+              }
+              // -----------------------------------------------------
+
               setShowPopup(true);
             }}
             className="flex items-center gap-1.5 sm:gap-2 bg-[#EF8523] text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-[10px] sm:text-xs font-bold hover:bg-[#d9751d] transition shadow-sm active:scale-95"
@@ -1022,11 +1147,22 @@ export default function MonitoringGAP({
                       }
                     >
                       <option value="">-- Pilih --</option>
-                      {field.options.map((opt, i) => (
-                        <option key={i} value={opt.value}>
-                          {opt.label || opt.value}
-                        </option>
-                      ))}
+
+                      {/* --- INJEKSI STATE DINAMIS DI SINI --- */}
+                      {(() => {
+                        let optionsToRender = field.options;
+                        if (field.key === "dinamis_pupuk_id")
+                          optionsToRender = pupukOptions;
+                        if (field.key === "dinamis_pestisida_id")
+                          optionsToRender = pestisidaOptions;
+
+                        return optionsToRender?.map((opt, i) => (
+                          <option key={i} value={opt.value}>
+                            {opt.label || opt.value}
+                          </option>
+                        ));
+                      })()}
+                      {/* ------------------------------------------------ */}
                     </select>
                     <ChevronDown
                       className="absolute right-3 top-3 text-gray-400 pointer-events-none"
@@ -1057,21 +1193,13 @@ export default function MonitoringGAP({
                         })
                       }
                     >
-                      <option value="">-- Pilih Sensus Kondisi --</option>
-                      {monitoringData.piringan_kondisi &&
-                      monitoringData.piringan_kondisi.length > 0 ? (
-                        monitoringData.piringan_kondisi.map((parent) => (
-                          <option key={parent.id} value={parent.id}>
-                            Sensus Tgl:{" "}
-                            {String(parent.tanggal_monitoring).split("T")[0]}{" "}
-                            (Bersih: {parent.kondpi_bersih} Pkk)
-                          </option>
-                        ))
-                      ) : (
-                        <option value="" disabled>
-                          Belum ada data Sensus Kondisi!
+                      <option value="">-- Pilih --</option>
+                      {monitoringData?.piringan_kondisi?.map((opt, i) => (
+                        <option key={i} value={opt.id}>
+                          Sensus: {opt.tanggal_monitoring} (Bersih:{" "}
+                          {opt.kondpi_bersih})
                         </option>
-                      )}
+                      ))}
                     </select>
                     <ChevronDown
                       className="absolute right-3 top-3 text-gray-400 pointer-events-none"

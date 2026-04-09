@@ -16,7 +16,11 @@ import {
   Loader,
 } from "lucide-react";
 
-import { API_ENDPOINTS, API_BASE_URLS, getFileUrl } from "./../../config/constants";
+import {
+  API_ENDPOINTS,
+  API_BASE_URLS,
+  getFileUrl,
+} from "./../../config/constants";
 
 export default function PantauISPO() {
   // State untuk Tab Prinsip (1-5)
@@ -57,7 +61,12 @@ export default function PantauISPO() {
       items: [
         { label: "Dokumen Izin Lokasi dari Pemerintah Daerah", checked: false },
         { label: "Surat Pernyataan Lokasi sesuai RTRW", checked: false },
-        { label: "Peta Lokasi Kebun sesuai RTRW", checked: false },
+        {
+          label: "Peta Lokasi Kebun sesuai RTRW",
+          checked: false,
+          actionType: "system", // Tambahkan ini
+          requirementCode: "P1_RTRW", // Tambahkan ini
+        },
       ],
     },
     {
@@ -111,34 +120,39 @@ export default function PantauISPO() {
       kriteria: "1. Organisasi Kelembagaan Pekebun (Kriteria 2.1)",
       items: [
         {
-          label: "Surat Bukti Keanggotaan Kelompok Tani/Koperasi",
+          label: "Daftar Anggota Kelompok Tani/Koperasi",
           checked: false,
           actionType: "system",
+          requirementCode: "P2_2_1_ANGGOTA",
         },
         {
           label: "Berita Acara Pembentukan Kelompok Tani/Koperasi",
           checked: false,
-          actionType: "system",
+          actionType: "system", // UBAH ke system
+          requirementCode: "P2_2_1_BERITA_ACARA", // TAMBAHKAN ini
         },
         {
-          label: "Daftar Susunan Pengurus & Uraian Tugas",
+          label: "SK Pengurus dan Uraian Tugas",
           checked: false,
           actionType: "system",
+          requirementCode: "P2_2_1_SK_PENGURUS",
         },
         {
           label: "Akta Pendirian dan AD/ART Koperasi",
           checked: false,
-          actionType: "system",
+          actionType: "system", // UBAH ke system
+          requirementCode: "P2_2_1_ADART", // TAMBAHKAN ini
         },
         {
           label: "Dokumen Badan Hukum Koperasi",
           checked: false,
-          actionType: "system",
+          actionType: "system", // UBAH ke system
+          requirementCode: "P2_2_1_BADAN_HUKUM", // TAMBAHKAN ini
         },
         {
           label: "Daftar Anggota (20–30 Pekebun)",
           checked: false,
-          actionType: "system",
+          actionType: "system", // Ini biarkan system kalau tidak ada di requirements.py
         },
       ],
     },
@@ -160,7 +174,8 @@ export default function PantauISPO() {
         {
           label: "SOP Pembukaan Lahan Tanpa Bakar",
           checked: false,
-          actionType: "system",
+          actionType: "system", // UBAH ke system
+          requirementCode: "P2_2_3_1_SOP_LAHAN", // TAMBAHKAN ini
         },
         { label: "Dokumentasi Kegiatan Pembukaan Lahan", checked: false },
         {
@@ -476,11 +491,14 @@ export default function PantauISPO() {
     }
   };
 
-  // Fungsi untuk mengambil status satu dokumen spesifik (GET)
   const fetchSingleDocStatus = async (requirementCode) => {
+    if (!requirementCode) return;
+
     try {
       const token = localStorage.getItem("token");
-      const url = `${API_BASE_URLS.ISPO}/ispo/submission/${requirementCode}`;
+      // Gunakan encodeURIComponent untuk memastikan string URL valid
+      const cleanCode = encodeURIComponent(requirementCode.trim());
+      const url = `${API_BASE_URLS.ISPO}/ispo/submission/${cleanCode}`;
 
       const response = await fetch(url, {
         method: "GET",
@@ -489,7 +507,6 @@ export default function PantauISPO() {
 
       if (response.ok) {
         const data = await response.json();
-        // Simpan data ke state (misal: status dan file_url)
         setManualDocsStatus((prev) => ({
           ...prev,
           [requirementCode]: data,
@@ -554,8 +571,22 @@ export default function PantauISPO() {
   // 3. Panggil Fetch API ketika halaman dibuka
   useEffect(() => {
     fetchIspoProgress();
-    // Ambil status dokumen satwa saat komponen dimuat
-    fetchSingleDocStatus("P3_3_2_3_DOKUMEN_KEBERADAAN_SATWA");
+
+    const allRequirementCodes = [
+      "P1_RTRW",
+      "P2_2_1_ANGGOTA",
+      "P2_2_1_SK_PENGURUS",
+      "P2_2_1_ADART",
+      "P2_2_1_BADAN_HUKUM",
+      "P2_2_1_BERITA_ACARA",
+      "P2_2_3_1_SOP_LAHAN",
+      "P3_3_2_3_DOKUMEN_KEBERADAAN_SATWA",
+    ];
+
+    allRequirementCodes.forEach((code) => {
+      // HAPUS encodeURIComponent di sini, cukup kirim 'code' mentahnya
+      fetchSingleDocStatus(code);
+    });
   }, [fetchIspoProgress]);
 
   // 4. Update Tabs pakai data yang sudah dinamis (dari state ispoProgress)
@@ -639,20 +670,45 @@ export default function PantauISPO() {
 
                         <div className="shrink-0 flex justify-end">
                           {item.actionType === "system" &&
-                            (item.checked ? (
-                              <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
-                                <Eye size={14} />
-                                Lihat File
-                              </button>
-                            ) : (
-                              <button
-                                disabled
-                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-                              >
-                                <Clock size={14} />
-                                Menunggu Kebun
-                              </button>
-                            ))}
+                            (() => {
+                              // 1. Cek apakah ada data dari server berdasarkan requirementCode
+                              const serverData = item.requirementCode
+                                ? manualDocsStatus[item.requirementCode]
+                                : null;
+
+                              // 2. Tentukan status apakah sudah diupload (Prioritaskan data server, kalau tidak ada pakai item.checked bawaan)
+                              const isUploaded = serverData
+                                ? serverData.status === "APPROVED" ||
+                                  serverData.status === "PENDING"
+                                : item.checked;
+
+                              // 3. Ambil URL file jika ada
+                              const fileUrl = serverData
+                                ? getFileUrl(serverData.file_url, "ISPO")
+                                : null;
+
+                              return isUploaded ? (
+                                <button
+                                  onClick={() =>
+                                    fileUrl
+                                      ? window.open(fileUrl, "_blank")
+                                      : alert("URL file tidak tersedia")
+                                  }
+                                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                >
+                                  <Eye size={14} />
+                                  Lihat File
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                                >
+                                  <Clock size={14} />
+                                  Menunggu Kebun
+                                </button>
+                              );
+                            })()}
 
                           {item.actionType === "info" &&
                             (item.checked ? (

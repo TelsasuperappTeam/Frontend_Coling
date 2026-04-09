@@ -100,6 +100,10 @@ export default function DashboardMandor() {
     lahan_mineral: null,
     lahan_gambut: [],
   });
+  // --- STATE GRAFIK HARGA TBS (Dinamis) ---
+  const [hargaTbsData, setHargaTbsData] = useState([]);
+  const [isLoadingHargaTbs, setIsLoadingHargaTbs] = useState(false);
+  const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear());
 
   // --- State Widget Lain (Dummy: Penjualan) ---
   const [riwayatPenjualan, setRiwayatPenjualan] = useState([]);
@@ -258,6 +262,61 @@ export default function DashboardMandor() {
     ]);
   }, [fetchRencanaKerja, fetchIspoProgress]);
 
+  /**
+   * --- FETCH GRAFIK HARGA TBS (Dinamis u/ Mandor) ---
+   * Bergantung pada profile.kebun_id dan tahunTbs
+   */
+  useEffect(() => {
+    const fetchGrafikHarga = async () => {
+      // Tunggu sampai ID Kebun dari profil sudah didapatkan
+      if (!profile.kebun_id || profile.kebun_id === "-") return;
+
+      setIsLoadingHargaTbs(true);
+      try {
+        // PERBAIKAN: Ambil token langsung dari localStorage seperti fungsi lainnya di file ini
+        const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+        
+        if (!token) return;
+
+        // Gunakan .replace untuk memasukkan ID ke parameter {kebun_id}
+        const baseUrl =
+          API_ENDPOINTS.FARM?.KEBUN?.TRANSAKSI?.GET_HARGA_TBS_GRAPH.replace(
+            "{kebun_id}",
+            profile.kebun_id,
+          );
+
+        const url = `${baseUrl}?tahun=${tahunTbs}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) throw new Error("Gagal mengambil data grafik TBS");
+
+        const resData = await response.json();
+
+        // Mapping Objek BE ke format Array untuk SVG
+        let chartData = [];
+        if (resData && resData.labels && resData.data_harga) {
+          chartData = resData.labels.map((namaBulan, index) => ({
+            bulan: namaBulan,
+            harga: Number(resData.data_harga[index]) || 0,
+          }));
+        }
+        setHargaTbsData(chartData);
+      } catch (error) {
+        console.error("Error fetching grafik harga:", error);
+      } finally {
+        setIsLoadingHargaTbs(false);
+      }
+    };
+
+    fetchGrafikHarga();
+  }, [profile.kebun_id, tahunTbs]); // <-- Dependency Logic untuk Mandor
+
   // -----------------------------------------------------------------------------
   // FUNGSI: Menambah Rencana Kerja Manual (POST)
   // (SESUAI BE MAHAR) - Mengirim payload kegiatan baru ke server
@@ -409,6 +468,7 @@ export default function DashboardMandor() {
         nomor_hp: userData.no_hp || "-",
         alamat_kebun: userData.alamat || "",
         foto: getFileUrl(userData.foto_profil_url) || "",
+        kebun_id: userData.kebun_ref_id || userData.kebun_id || "-",
         nama_kebun_naungan: userData.nama_kebun_naungan || "Belum Terhubung",
         koordinat_lahan: finalKoordinat,
       });
@@ -896,186 +956,191 @@ export default function DashboardMandor() {
         {/* FITUR 5: Harga TBS - SCROLLABLE VERSION */}
         <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}>
           <div className="relative h-full flex flex-col pt-2 w-full">
-            {/* Badge Tahun & Indikator Scroll */}
             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
-                {/* Petunjuk Scroll (Hanya muncul jika layar kecil/data banyak) */}
                 <span className="text-[9px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md flex items-center gap-1 animate-pulse">
                   <span className="text-xs">↔</span> Geser grafik
                 </span>
               </div>
-              <div className="bg-orange-50 border border-orange-200 text-orange-600 px-3 py-0.5 rounded-lg text-[10px] font-black shadow-sm">
-                2025
-              </div>
+
+              {/* Dropdown Filter Tahun Dinamis */}
+              <select
+                value={tahunTbs}
+                onChange={(e) => setTahunTbs(parseInt(e.target.value))}
+                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer"
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
-            {(() => {
-              // --- DATA DUMMY (Bisa Ditambah Sepuasnya) ---
-              const dataBE = [
-                { bulan: "JANUARI", harga: 1100 },
-                { bulan: "FEBRUARI", harga: 1350 },
-                { bulan: "MARET", harga: 2100 },
-                { bulan: "APRIL", harga: 1800 },
-                { bulan: "MEI", harga: 2000 },
-                { bulan: "JUNI", harga: 2500 },
-                { bulan: "JULI", harga: 2200 },
-                { bulan: "AGUSTUS", harga: 2400 },
-                { bulan: "SEPTEMBER", harga: 2150 },
-                { bulan: "OKTOBER", harga: 2600 }, // Data banyak tetap aman
-              ];
+            {/* State Handling: Loading, Empty, atau Tampilkan SVG */}
+            {isLoadingHargaTbs ? (
+              <div className="flex-1 min-h-[180px] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              </div>
+            ) : hargaTbsData.length === 0 ? (
+              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium italic">
+                Belum ada riwayat harga TBS untuk tahun ini.
+              </div>
+            ) : (
+              (() => {
+                const dataBE = hargaTbsData;
+                const hargaTertinggi = Math.max(
+                  ...dataBE.map((d) => d.harga || 0),
+                );
+                const maxHarga = Math.max(4000, hargaTertinggi + 500);
+                const svgHeight = 140;
 
-              // KONFIGURASI
-              const maxHarga = 4000;
-              const svgHeight = 140;
+                const yLabels = [
+                  `${(maxHarga / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.75) / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.5) / 1000).toFixed(1)}k`,
+                  `${((maxHarga * 0.25) / 1000).toFixed(1)}k`,
+                  "0",
+                ];
 
-              // LOGIKA LEBAR DINAMIS (SCROLLABLE)
-              // Setiap data poin kita beri jatah lebar minimal 70px
-              // Jika datanya sedikit, dia akan memenuhi lebar container (100%)
-              // Jika datanya banyak, dia akan melebar melebihi container sehingga bisa di-scroll
-              const minWidthPerPoint = 70;
-              const calculatedWidth = Math.max(
-                dataBE.length * minWidthPerPoint,
-                500,
-              ); // Minimal lebar 500px agar tidak gepeng
-              const svgWidth = calculatedWidth;
+                const minWidthPerPoint = 70;
+                const svgWidth = Math.max(
+                  dataBE.length * minWidthPerPoint,
+                  500,
+                );
+                const paddingX = 40;
+                const effectiveWidth = svgWidth - paddingX * 2;
 
-              // PADDING AGAR TIDAK KEPOTONG
-              const paddingX = 40;
-              const effectiveWidth = svgWidth - paddingX * 2;
+                const points = dataBE.map((d, i) => {
+                  const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
+                  const x = paddingX + (i / divider) * effectiveWidth;
+                  const y = svgHeight - (d.harga / maxHarga) * svgHeight;
+                  return { x, y, harga: d.harga, bulan: d.bulan };
+                });
 
-              const points = dataBE.map((d, i) => {
-                const x = paddingX + (i / (dataBE.length - 1)) * effectiveWidth;
-                const y = svgHeight - (d.harga / maxHarga) * svgHeight;
-                return { x, y, harga: d.harga, bulan: d.bulan };
-              });
+                const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
+                const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
 
-              const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
-              const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
+                return (
+                  <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
+                    {/* SUMBU Y FIXED */}
+                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-sm">
+                      {yLabels.map((l, idx) => (
+                        <span key={idx} className="text-right pr-2">
+                          {l.replace(".0k", "k")}
+                        </span>
+                      ))}
+                    </div>
 
-              return (
-                <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
-                  {/* BAGIAN 1: SUMBU Y (FIXED / DIAM) */}
-                  {/* Kita taruh di layer paling atas (z-10) dan background putih agar menutupi grafik saat discroll */}
-                  <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 backdrop-blur-[1px] flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
-                    {["4k", "3k", "2k", "1k", "0"].map((l) => (
-                      <span key={l} className="text-right pr-2">
-                        {l}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* BAGIAN 2: AREA GRAFIK (SCROLLABLE) */}
-                  {/* Margin-left disesuaikan dengan lebar Sumbu Y (w-10) */}
-                  <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-                    <div
-                      style={{ width: `${svgWidth}px`, height: "100%" }}
-                      className="relative"
-                    >
-                      <svg
-                        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                        preserveAspectRatio="none"
-                        className="block w-full h-full overflow-visible"
+                    {/* AREA GRAFIK SCROLLABLE */}
+                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin">
+                      <div
+                        style={{ width: `${svgWidth}px`, height: "100%" }}
+                        className="relative"
                       >
-                        <defs>
-                          <linearGradient
-                            id="scrollGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="#EF8523"
-                              stopOpacity="0.2"
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="#EF8523"
-                              stopOpacity="0"
-                            />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Grid Lines Horizontal */}
-                        {[0, 35, 70, 105, 140].map((y) => (
-                          <line
-                            key={y}
-                            x1="0"
-                            y1={y}
-                            x2={svgWidth}
-                            y2={y}
-                            stroke="#f8f9fa"
-                            strokeWidth="1"
-                          />
-                        ))}
-
-                        {/* Area & Line */}
-                        <path d={areaPath} fill="url(#scrollGradient)" />
-                        <polyline
-                          fill="none"
-                          stroke="#EF8523"
-                          strokeWidth="3"
-                          strokeLinejoin="round"
-                          points={linePath}
-                        />
-
-                        {/* Data Points */}
-                        {points.map((pt, i) => (
-                          <g key={i}>
-                            <circle
-                              cx={pt.x}
-                              cy={pt.y}
-                              r="4"
-                              fill="white"
-                              stroke="#EF8523"
-                              strokeWidth="2.5"
-                            />
-                            <g
-                              transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
+                        <svg
+                          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                          preserveAspectRatio="none"
+                          className="block w-full h-full overflow-visible"
+                        >
+                          <defs>
+                            <linearGradient
+                              id="mandorGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
                             >
-                              <rect
-                                width="44"
-                                height="16"
-                                rx="4"
-                                fill="black"
+                              <stop
+                                offset="0%"
+                                stopColor="#EF8523"
+                                stopOpacity="0.2"
                               />
-                              <text
-                                x="22"
-                                y="11"
-                                textAnchor="middle"
-                                className="text-[9px] font-black fill-white"
+                              <stop
+                                offset="100%"
+                                stopColor="#EF8523"
+                                stopOpacity="0"
+                              />
+                            </linearGradient>
+                          </defs>
+                          {/* Garis Grid */}
+                          {[0, 35, 70, 105, 140].map((y) => (
+                            <line
+                              key={y}
+                              x1="0"
+                              y1={y}
+                              x2={svgWidth}
+                              y2={y}
+                              stroke="#f8f9fa"
+                              strokeWidth="1"
+                            />
+                          ))}
+                          <path d={areaPath} fill="url(#mandorGradient)" />
+                          <polyline
+                            fill="none"
+                            stroke="#EF8523"
+                            strokeWidth="3"
+                            points={linePath}
+                            strokeLinejoin="round"
+                          />
+                          {points.map((pt, i) => (
+                            <g key={i}>
+                              <circle
+                                cx={pt.x}
+                                cy={pt.y}
+                                r="4"
+                                fill="white"
+                                stroke="#EF8523"
+                                strokeWidth="2.5"
+                              />
+                              <g
+                                transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
                               >
-                                {pt.harga.toLocaleString()}
-                              </text>
+                                <rect
+                                  width="44"
+                                  height="16"
+                                  rx="4"
+                                  fill="black"
+                                />
+                                <text
+                                  x="22"
+                                  y="11"
+                                  textAnchor="middle"
+                                  className="text-[9px] font-black fill-white"
+                                >
+                                  {pt.harga.toLocaleString()}
+                                </text>
+                              </g>
                             </g>
-                          </g>
-                        ))}
-                      </svg>
-
-                      {/* Label Bulan (Ikut Scroll) */}
-                      <div className="absolute bottom-0 left-0 w-full h-6">
-                        {points.map((pt, i) => (
-                          <div
-                            key={i}
-                            className="absolute flex flex-col items-center top-0"
-                            style={{
-                              left: `${pt.x}px`,
-                              transform: "translateX(-50%)",
-                            }}
-                          >
-                            <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
-                            <span className="text-[9px] font-bold text-gray-500 uppercase whitespace-nowrap">
-                              {pt.bulan.substring(0, 3)}
-                            </span>
-                          </div>
-                        ))}
+                          ))}
+                        </svg>
+                        {/* Label Bulan */}
+                        <div className="absolute bottom-0 left-0 w-full h-6">
+                          {points.map((pt, i) => (
+                            <div
+                              key={i}
+                              className="absolute flex flex-col items-center"
+                              style={{
+                                left: `${pt.x}px`,
+                                transform: "translateX(-50%)",
+                              }}
+                            >
+                              <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
+                              <span className="text-[9px] font-bold text-gray-500 uppercase">
+                                {pt.bulan.substring(0, 3)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()
+            )}
 
             {/* Footer Info */}
             <div className="mt-2 border-t border-gray-50 pt-2 flex justify-between items-center">
