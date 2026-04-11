@@ -40,10 +40,10 @@ export const menuConfig = {
     { label: "Inventaris", path: "/general_manager_distrik/inventaris" },
   ],
   [ROLES.TRANSPORT]: [
-    { label: "Dashboard", path: "/transport/dashboard" },
-    { label: "Manajemen Pesanan", path: "/transport/manajemenpesanan" },
-    { label: "Pengiriman", path: "/transport/pengiriman" },
-    { label: "Armada", path: "/transport/armada" },
+    { label: "Dashboard", path: "/logistik/dashboard" },
+    { label: "Manajemen Pesanan", path: "/logistik/manajemenpesanan" },
+    { label: "Pengiriman", path: "/logistik/pengiriman" },
+    { label: "Armada", path: "/logistik/armada" },
   ],
   [ROLES.PABRIK]: [
     { label: "Dashboard", path: "/pabrik/dashboard" },

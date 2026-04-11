@@ -15,7 +15,7 @@ import {
   FileText,
 } from "lucide-react";
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
-import MonitoringGAP from "./MonitoringGAP"; // halaman 2 untuk monitoring GAP
+import MonitoringGAP from "./MonitoringGAP";
 
 // KOMPONEN UTAMA
 export default function CatatAktivitas() {
@@ -354,7 +354,7 @@ export default function CatatAktivitas() {
               {selectedCycleDetail && (
                 <button
                   onClick={() => setSelectedCycleDetail(null)}
-                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
+                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded text-black"
                 >
                   Kembali ke List
                 </button>
@@ -386,25 +386,25 @@ export default function CatatAktivitas() {
                   <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
                       <p className="text-gray-500">Nomor Siklus</p>
-                      <p className="font-bold text-gray-800 text-sm">
+                      <p className="font-bold text-black text-sm">
                         {selectedCycleDetail.info_siklus?.nomor_siklus}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Status</p>
-                      <p className="font-bold text-gray-800 text-sm">
+                      <p className="font-bold text-black text-sm">
                         {selectedCycleDetail.info_siklus?.status}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Tanggal Mulai</p>
-                      <p className="font-bold text-gray-800">
+                      <p className="font-bold text-black">
                         {selectedCycleDetail.info_siklus?.tanggal_mulai || "-"}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Total TBS Siklus</p>
-                      <p className="font-bold text-gray-800">
+                      <p className="font-bold text-black">
                         {selectedCycleDetail.info_siklus?.total_tbs_siklus || 0}{" "}
                         Kg
                       </p>
@@ -442,7 +442,7 @@ export default function CatatAktivitas() {
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-gray-800 text-xs sm:text-base">
+                        <p className="font-bold text-black text-xs sm:text-base">
                           Siklus Ke-{item.nomor_siklus}
                         </p>
                         {item.status === "AKTIF" && (
@@ -470,7 +470,7 @@ export default function CatatAktivitas() {
 
   return (
     // Container utama: Padding lebih nyaman di mobile
-    <div className="p-3 sm:p-6 min-h-screen font-sans text-gray-800 pb-24">
+    <div className="p-3 sm:p-6 min-h-screen font-sans text-black pb-24">
       {/* HEADER NAVIGASI */}
       <div className="flex justify-between items-center mb-4">
         <button
@@ -500,7 +500,7 @@ export default function CatatAktivitas() {
             </h1>
             <p className="text-xs text-gray-500 mt-1">
               Siklus Saat Ini:{" "}
-              <span className="font-bold text-gray-800">
+              <span className="font-bold text-black">
                 #{currentCycleInfo.nomorSiklus}
               </span>{" "}
               • Status:{" "}
@@ -528,10 +528,10 @@ export default function CatatAktivitas() {
           >
             <div className="flex-1 pr-2">
               <h2 className="font-bold text-white text-sm sm:text-lg">
-                Realisasi Rencana Tanam
+                Realisasi Rencana Tanam (Opsional)
               </h2>
               <p className="text-white text-[10px] sm:text-xs mt-0.5 font-light opacity-90 leading-tight">
-                Data realisasi tanam di lapangan
+                Catat data realisasi tanam di lapangan jika ada perubahan dari rencana awal.
               </p>
             </div>
             <ChevronDown
@@ -556,16 +556,16 @@ export default function CatatAktivitas() {
                     <div className="flex items-start gap-2 bg-blue-50 text-blue-700 p-3 rounded-lg text-xs sm:text-sm border border-blue-100 w-full md:w-auto">
                       <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" />
                       <p className="leading-relaxed">
-                        Data berikut ini dari Rencana Tanam blok anda. Petani
-                        wajib mencatat realisasi rencana tanam berdasarkan data
+                        Berikut ini data dari Input Data Blok/Rencana Tanam anda. Mandor
+                        wajib mencatat realisasi rencana jika terjadi perubahan tanam berdasarkan data
                         lapangan dengan Klik{" "}
-                        <span className="font-bold">Catat Realisasi</span>
+                        <span className="font-bold">Catat Realisasi</span>.
                       </p>
                     </div>
                     {!isEditingRealisasi && (
                       <button
                         onClick={() => setIsEditingRealisasi(true)}
-                        className="w-full md:w-auto bg-yellow-500 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 hover:bg-yellow-600 transition shadow-sm active:scale-95"
+                        className="w-full md:w-auto bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition shadow-sm active:scale-95"
                       >
                         <Edit className="w-4 h-4" /> Catat Realisasi
                       </button>
@@ -672,7 +672,7 @@ export default function CatatAktivitas() {
                         </button>
                         <button
                           onClick={handleSaveRealisasi}
-                          className="w-full sm:w-auto bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 hover:bg-green-700 transition shadow-md active:scale-95"
+                          className="w-full sm:w-auto bg-[#B5302D] text-white px-6 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 hover:bg-[#B5302D]/80 transition shadow-md active:scale-95"
                         >
                           <Save className="w-4 h-4" /> Simpan Realisasi
                         </button>
@@ -699,7 +699,7 @@ export default function CatatAktivitas() {
 
         {/* FOOTER ACTIONS */}
         <div className="mt-8 pt-4 border-t border-gray-200">
-          <h3 className="text-xs sm:text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">
+          <h3 className="text-xs sm:text-sm font-bold text-black mb-3 uppercase tracking-wide">
             Aksi Penyelesaian & Siklus
           </h3>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -753,7 +753,7 @@ export default function CatatAktivitas() {
 function ReadOnlyField({ label, value }) {
   return (
     <div>
-      <p className="text-[#B5302D] font-bold text-[11px] sm:text-xs mb-1.5 truncate">
+      <p className="text-black font-bold text-[11px] sm:text-xs mb-1.5 truncate">
         {label}
       </p>
       <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-gray-600 cursor-not-allowed">
@@ -766,7 +766,7 @@ function ReadOnlyField({ label, value }) {
 function EditableField({ label, value, onChange, name, disabled }) {
   return (
     <div>
-      <p className="text-[#B5302D] font-bold text-[11px] sm:text-xs mb-1.5 flex justify-between items-center">
+      <p className="text-black font-bold text-[11px] sm:text-xs mb-1.5 flex justify-between items-center">
         <span className="truncate">{label}</span>
         {!disabled && (
           <span className="text-[9px] text-red-600 font-medium bg-red-50 px-1.5 py-0.5 border border-red-100 rounded animate-pulse whitespace-nowrap">
@@ -800,7 +800,7 @@ function EditableSelectField({
 }) {
   return (
     <div>
-      <p className="text-[#B5302D] font-bold text-[11px] sm:text-xs mb-1.5 flex justify-between items-center">
+      <p className="text-black font-bold text-[11px] sm:text-xs mb-1.5 flex justify-between items-center">
         <span className="truncate">{label}</span>
         {!disabled && (
           <span className="text-[9px] text-red-600 font-medium bg-red-50 px-1.5 py-0.5 border border-red-100 rounded animate-pulse whitespace-nowrap">

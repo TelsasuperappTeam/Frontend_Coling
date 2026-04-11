@@ -986,22 +986,32 @@ export default function MonitoringGAP({
 
   // --- RENDER TABLE SECTION ---
   // Dokumentasi: Merender tabel monitoring.
-  const renderTable = (configKey, customTitle = null) => {
+  const renderTable = (configKey) => {
     const config = MONITORING_CONFIG[configKey];
     const data = Array.isArray(monitoringData[configKey])
       ? monitoringData[configKey]
       : [];
-    const title = customTitle || config.title;
-
     return (
       <div className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex justify-between items-center bg-gray-50 p-2.5 sm:p-3 rounded-lg border border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-4 sm:h-5 bg-[#EF8523] rounded-full"></div>
-            <h4 className="text-xs sm:text-sm font-bold text-gray-800 tracking-wide">
-              {title}
-            </h4>
+        {/* UI/UX UPDATE: Header tabel diganti jadi instruksi yang ramah lansia */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-orange-50/40 p-3 sm:p-4 rounded-lg border border-orange-100/50">
+          <div className="flex items-start gap-2.5">
+            {/* Garis indikator */}
+            <div className="w-1.5 h-full min-h-[28px] bg-[#EF8523] rounded-full mt-0.5"></div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-gray-800">
+                Daftar Riwayat Data Tersimpan
+              </p>
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-1 leading-relaxed">
+                Tabel di bawah berisi riwayat aktivitas Anda. Klik tombol{" "}
+                <span className="font-semibold text-green-600">
+                  + Tambah Data
+                </span>{" "}
+                untuk mencatat yang baru.
+              </p>
+            </div>
           </div>
+
           <button
             onClick={() => {
               setPopupType(configKey);
@@ -1015,9 +1025,9 @@ export default function MonitoringGAP({
 
               setShowPopup(true);
             }}
-            className="flex items-center gap-1.5 sm:gap-2 bg-[#EF8523] text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-[10px] sm:text-xs font-bold hover:bg-[#d9751d] transition shadow-sm active:scale-95"
+            className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-md shadow-green-100 transition-all"
           >
-            <Plus size={14} className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> TAMBAH DATA
+            <Plus size={14} className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Tambah Data
           </button>
         </div>
 
@@ -1115,7 +1125,7 @@ export default function MonitoringGAP({
     const config = MONITORING_CONFIG[popupType];
 
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
         <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh]">
           <div className="flex justify-between items-center px-4 py-3 sm:p-5 border-b border-gray-100 bg-gray-50 rounded-t-xl">
             <h3 className="font-bold text-gray-800 text-sm sm:text-base">

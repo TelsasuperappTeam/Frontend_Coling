@@ -77,7 +77,6 @@ export default function DashboardGMDistrik() {
   const [isLoadingHargaTbs, setIsLoadingHargaTbs] = useState(false);
   const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear());
 
-
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
     nama_kebun: "",
@@ -215,7 +214,7 @@ export default function DashboardGMDistrik() {
         const mappedKebun = data.map((k) => ({
           id: k.auth_id || k.id, // Sesuaikan field auth_id dari respon BE
           nama: k.nama_kebun || k.nama_lengkap || k.nama, // Sesuaikan field nama dari respon BE
-          kebun_ref_id: k.id || k.profile_id // Simpan juga database ID lokalnya untuk URL grafik
+          kebun_ref_id: k.id || k.profile_id, // Simpan juga database ID lokalnya untuk URL grafik
         }));
 
         setDaftarKebun(mappedKebun);
@@ -304,10 +303,15 @@ export default function DashboardGMDistrik() {
       }
 
       // --- PERBAIKAN: Ekstrak Profile ID Lokal ---
-      const selectedKebunObj = daftarKebun.find(k => String(k.id) === String(selectedKebunId));
-      
-      // Ambil Profile ID. 
-      const targetProfileId = selectedKebunObj?.kebun_ref_id || selectedKebunObj?.profile_id || selectedKebunId;
+      const selectedKebunObj = daftarKebun.find(
+        (k) => String(k.id) === String(selectedKebunId),
+      );
+
+      // Ambil Profile ID.
+      const targetProfileId =
+        selectedKebunObj?.kebun_ref_id ||
+        selectedKebunObj?.profile_id ||
+        selectedKebunId;
 
       setIsLoadingHargaTbs(true);
       try {
@@ -318,7 +322,7 @@ export default function DashboardGMDistrik() {
         const baseUrl =
           API_ENDPOINTS.FARM?.KEBUN?.TRANSAKSI?.GET_HARGA_TBS_GRAPH.replace(
             "{kebun_id}",
-            targetProfileId, 
+            targetProfileId,
           );
 
         const url = `${baseUrl}?tahun=${tahunTbs}`;
@@ -352,7 +356,6 @@ export default function DashboardGMDistrik() {
 
     fetchGrafikHarga();
   }, [selectedKebunId, tahunTbs, daftarKebun]); // <--- Dependency sudah benar menggunakan daftarKebun
-
 
   const handleProfileSaved = (dataSaved) => {
     if (dataSaved) {
@@ -476,7 +479,9 @@ export default function DashboardGMDistrik() {
         <div className="flex items-center gap-3 bg-red-50 px-4 py-2 rounded-xl border border-red-100 shadow-sm w-full sm:w-auto">
           <MapPin className="w-5 h-5 text-[#B5302D]" />
           <div className="flex flex-col w-full">
-            <span className="text-[10px] font-bold text-[#B5302D] uppercase tracking-wider">Pilih Kebun:</span>
+            <span className="text-[10px] font-bold text-[#B5302D] uppercase tracking-wider">
+              Pilih Kebun:
+            </span>
             <select
               value={selectedKebunId}
               onChange={(e) => setSelectedKebunId(e.target.value)}
@@ -484,7 +489,9 @@ export default function DashboardGMDistrik() {
               disabled={daftarKebun.length === 0}
             >
               <option value="" className="text-gray-500">
-                {daftarKebun.length === 0 ? "Memuat data kebun..." : "-- Silakan Pilih Kebun --"}
+                {daftarKebun.length === 0
+                  ? "Memuat data kebun..."
+                  : "-- Silakan Pilih Kebun --"}
               </option>
               {daftarKebun.map((k) => (
                 <option key={k.id} value={k.id} className="text-black">
@@ -501,312 +508,398 @@ export default function DashboardGMDistrik() {
          ========================================= */}
       {/* Tampilkan konten hanya jika kebun sudah dipilih */}
       {!selectedKebunId ? (
-         <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-10 flex flex-col items-center justify-center text-center">
-            <MapPin className="w-12 h-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-bold text-gray-600 mb-1">Silakan Pilih Kebun Terlebih Dahulu</h3>
-            <p className="text-sm text-gray-400">Gunakan dropdown di atas untuk memilih kebun dan melihat data dashboard terkait.</p>
-         </div>
+        <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-10 flex flex-col items-center justify-center text-center">
+          <MapPin className="w-12 h-12 text-gray-300 mb-4" />
+          <h3 className="text-lg font-bold text-gray-600 mb-1">
+            Silakan Pilih Kebun Terlebih Dahulu
+          </h3>
+          <p className="text-sm text-gray-400">
+            Gunakan dropdown di atas untuk memilih kebun dan melihat data
+            dashboard terkait.
+          </p>
+        </div>
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        
-        {/* CARD 2: PERMINTAAN VALIDASI */}
-        <Card
-          title="Permintaan Validasi Operasional Perkebunan"
-          icon={FileText}
-          footer={
-            <button
-              onClick={() => navigate("/kebun/kemitraanpetani")}
-              className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
-            >
-              Detail Validasi
-            </button>
-          }
-        >
-          {isValidasiLoading ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Loop Validasi Data (Tanam, Panen, Dokumen) */}
-              {Object.entries({
-                "Rencana Tanam": validasiData.rencanaTanam,
-                "Rencana Panen": validasiData.rencanaPanen,
-                "Dokumen ISPO": validasiData.dokumenISPO, // Static
-              }).map(([title, items], idx) => (
-                <div
-                  key={idx}
-                  className="bg-gray-50/80 rounded-xl p-4 border border-gray-100"
-                >
-                  <h4 className="text-[#B5302D] text-[11px] uppercase font-bold tracking-wider mb-3 border-b border-gray-200 pb-1">
-                    Validasi {title}
-                  </h4>
-                  {items.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">
-                      Tidak ada data pending.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {items.map((item, i) => (
-                        <li
-                          key={item.id || i}
-                          className="flex items-center justify-between text-xs group cursor-pointer"
-                        >
-                          <span className="font-medium text-gray-700 group-hover:text-black transition-colors flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-[#EF8523]"></span>
-                            {/* LOGIC DISPLAY NAMA (Sesuai Data Source) */}
-                            {title === "Dokumen ISPO" ? (
-                              item.nama
-                            ) : (
-                              <span>
-                                {item.nama_petani}
-                                <span className="text-[10px] text-gray-400 ml-1 font-normal">
-                                  -{" "}
-                                  {title === "Rencana Tanam"
-                                    ? item.nama_unit || `Blok #${item.id}`
-                                    : item.nama_blok || `Unit ${item.id}`}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* CARD 2: PERMINTAAN VALIDASI */}
+          <Card
+            title="Permintaan Validasi Operasional Perkebunan"
+            icon={FileText}
+            footer={
+              <button
+                onClick={() =>
+                  navigate("/general_manager_distrik/kemitraanpetani")
+                }
+                className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
+              >
+                Detail Validasi
+              </button>
+            }
+          >
+            {isValidasiLoading ? (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Loop Validasi Data (Tanam, Panen, Dokumen) */}
+                {Object.entries({
+                  "Rencana Tanam": validasiData.rencanaTanam,
+                  "Rencana Panen": validasiData.rencanaPanen,
+                  "Dokumen ISPO": validasiData.dokumenISPO, // Static
+                }).map(([title, items], idx) => (
+                  <div
+                    key={idx}
+                    className="bg-gray-50/80 rounded-xl p-4 border border-gray-100"
+                  >
+                    <h4 className="text-[#B5302D] text-[11px] uppercase font-bold tracking-wider mb-3 border-b border-gray-200 pb-1">
+                      Validasi {title}
+                    </h4>
+                    {items.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">
+                        Tidak ada data pending.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {items.map((item, i) => (
+                          <li
+                            key={item.id || i}
+                            className="flex items-center justify-between text-xs group cursor-pointer"
+                          >
+                            <span className="font-medium text-gray-700 group-hover:text-black transition-colors flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-[#EF8523]"></span>
+                              {/* LOGIC DISPLAY NAMA (Sesuai Data Source) */}
+                              {title === "Dokumen ISPO" ? (
+                                item.nama
+                              ) : (
+                                <span>
+                                  {item.nama_petani}
+                                  <span className="text-[10px] text-gray-400 ml-1 font-normal">
+                                    -{" "}
+                                    {title === "Rencana Tanam"
+                                      ? item.nama_unit || `Blok #${item.id}`
+                                      : item.nama_blok || `Unit ${item.id}`}
+                                  </span>
                                 </span>
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded border border-gray-200">
-                            Pending
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                              )}
+                            </span>
+                            <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded border border-gray-200">
+                              Pending
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* CARD 3: PROGRES PENJUALAN TBS */}
+          <Card title="Progres Penjualan TBS Relasi" icon={Calendar}>
+            <div className="space-y-0">
+              {progresPenjualan.map((item, index) => (
+                <div key={item.id} className="relative pl-6 py-3 group">
+                  {index !== progresPenjualan.length - 1 && (
+                    <div className="absolute left-[9px] top-6 bottom-[-12px] w-0.5 bg-gray-200 group-hover:bg-green-200 transition-colors"></div>
                   )}
+                  <div
+                    className={`absolute left-0 top-4 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 ${
+                      item.status === "Diterima" ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  ></div>
+
+                  <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h4 className="text-sm font-bold text-gray-800 leading-tight">
+                          {item.pabrik}
+                        </h4>
+
+                        <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
+                          {item.kebun}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                        <Calendar size={10} /> Tanggal Pengajuan: {item.tanggal}
+                      </p>
+                    </div>
+
+                    {/* BAGIAN KANAN: Status */}
+                    <div
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+                        item.status === "Diterima"
+                          ? "bg-green-50 border-green-200 text-green-700"
+                          : "bg-red-50 border-red-200 text-red-700"
+                      }`}
+                    >
+                      {item.status}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-          )}
-        </Card>
+          </Card>
 
-        {/* CARD 3: PROGRES PENJUALAN TBS */}
-        <Card title="Progres Penjualan TBS Relasi" icon={Calendar}>
-          <div className="space-y-0">
-            {progresPenjualan.map((item, index) => (
-              <div key={item.id} className="relative pl-6 py-3 group">
-                {index !== progresPenjualan.length - 1 && (
-                  <div className="absolute left-[9px] top-6 bottom-[-12px] w-0.5 bg-gray-200 group-hover:bg-green-200 transition-colors"></div>
-                )}
+          {/* CARD 4: PENGIRIMAN TBS RELASI */}
+          <Card title="Pengiriman TBS Relasi" icon={Truck}>
+            <div className="space-y-6">
+              {pengirimanTBS.map((item) => (
                 <div
-                  className={`absolute left-0 top-4 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 ${
-                    item.status === "Diterima" ? "bg-green-500" : "bg-red-500"
-                  }`}
-                ></div>
+                  key={item.id}
+                  className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    {/* Icon Truck */}
+                    <div className="p-1.5 bg-white rounded-lg shadow-sm text-[#EF8523]">
+                      <Truck size={16} />
+                    </div>
 
-                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-sm font-bold text-gray-800 leading-tight">
                         {item.pabrik}
                       </h4>
-
                       <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
                         {item.kebun}
                       </span>
                     </div>
-
-                    <p className="text-[11px] text-gray-500 flex items-center gap-1">
-                      <Calendar size={10} /> Tanggal Pengajuan: {item.tanggal}
-                    </p>
                   </div>
+                  <div className="flex items-center justify-between relative px-2">
+                    <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 -z-0 rounded-full"></div>
 
-                  {/* BAGIAN KANAN: Status */}
-                  <div
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                      item.status === "Diterima"
-                        ? "bg-green-50 border-green-200 text-green-700"
-                        : "bg-red-50 border-red-200 text-red-700"
-                    }`}
-                  >
-                    {item.status}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* CARD 4: PENGIRIMAN TBS RELASI */}
-        <Card title="Pengiriman TBS Relasi" icon={Truck}>
-          <div className="space-y-6">
-            {pengirimanTBS.map((item) => (
-              <div
-                key={item.id}
-                className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  {/* Icon Truck */}
-                  <div className="p-1.5 bg-white rounded-lg shadow-sm text-[#EF8523]">
-                    <Truck size={16} />
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm font-bold text-gray-800 leading-tight">
-                      {item.pabrik}
-                    </h4>
-                    <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
-                      {item.kebun}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between relative px-2">
-                  <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 -z-0 rounded-full"></div>
-
-                  {item.steps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="relative z-10 flex flex-col items-center"
-                    >
+                    {item.steps.map((step, idx) => (
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm transition-all ${
-                          idx === 1
-                            ? "bg-white border-[#EF8523] text-[#EF8523]"
-                            : "bg-white border-gray-300 text-gray-400"
-                        }`}
+                        key={idx}
+                        className="relative z-10 flex flex-col items-center"
                       >
-                        <span className="text-[10px] font-bold">{idx + 1}</span>
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm transition-all ${
+                            idx === 1
+                              ? "bg-white border-[#EF8523] text-[#EF8523]"
+                              : "bg-white border-gray-300 text-gray-400"
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold">
+                            {idx + 1}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold mt-2 px-2 py-0.5 rounded-full ${
+                            idx === 1
+                              ? "text-[#EF8523] bg-orange-50"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {step}
+                        </span>
                       </div>
-                      <span
-                        className={`text-[10px] font-bold mt-2 px-2 py-0.5 rounded-full ${
-                          idx === 1
-                            ? "text-[#EF8523] bg-orange-50"
-                            : "text-gray-400"
-                        }`}
-                      >
-                        {step}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* FITUR 5: Harga TBS - SCROLLABLE VERSION */}
-        <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}>
-          <div className="relative h-full flex flex-col pt-2 w-full">
-            {/* Badge Tahun & Indikator Scroll */}
-            <div className="flex justify-between items-center mb-4 px-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md flex items-center gap-1 animate-pulse">
-                  <span className="text-xs">↔</span> Geser grafik
-                </span>
-              </div>
-              
-              {/* Dropdown Filter Tahun Dinamis */}
-              <select
-                value={tahunTbs}
-                onChange={(e) => setTahunTbs(parseInt(e.target.value))}
-                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer"
-              >
-                {[...Array(5)].map((_, i) => {
-                  const year = new Date().getFullYear() - i;
-                  return <option key={year} value={year}>{year}</option>;
-                })}
-              </select>
+              ))}
             </div>
+          </Card>
 
-            {/* State Handling: Loading, Empty, atau Tampilkan SVG */}
-            {isLoadingHargaTbs ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+          {/* FITUR 5: Harga TBS - SCROLLABLE VERSION */}
+          <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}>
+            <div className="relative h-full flex flex-col pt-2 w-full">
+              {/* Badge Tahun & Indikator Scroll */}
+              <div className="flex justify-between items-center mb-4 px-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md flex items-center gap-1 animate-pulse">
+                    <span className="text-xs">↔</span> Geser grafik
+                  </span>
+                </div>
+
+                {/* Dropdown Filter Tahun Dinamis */}
+                <select
+                  value={tahunTbs}
+                  onChange={(e) => setTahunTbs(parseInt(e.target.value))}
+                  className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer"
+                >
+                  {[...Array(5)].map((_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
-            ) : hargaTbsData.length === 0 ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium italic">
-                Belum ada riwayat harga TBS untuk tahun ini.
-              </div>
-            ) : (() => {
-                const dataBE = hargaTbsData;
-                const hargaTertinggi = Math.max(...dataBE.map((d) => d.harga || 0));
-                const maxHarga = Math.max(4000, hargaTertinggi + 500); 
-                const svgHeight = 140;
 
-                const yLabels = [
-                  `${(maxHarga / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.75) / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.5) / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.25) / 1000).toFixed(1)}k`,
-                  "0"
-                ];
+              {/* State Handling: Loading, Empty, atau Tampilkan SVG */}
+              {isLoadingHargaTbs ? (
+                <div className="flex-1 min-h-[180px] flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+                </div>
+              ) : hargaTbsData.length === 0 ? (
+                <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium italic">
+                  Belum ada riwayat harga TBS untuk tahun ini.
+                </div>
+              ) : (
+                (() => {
+                  const dataBE = hargaTbsData;
+                  const hargaTertinggi = Math.max(
+                    ...dataBE.map((d) => d.harga || 0),
+                  );
+                  const maxHarga = Math.max(4000, hargaTertinggi + 500);
+                  const svgHeight = 140;
 
-                const minWidthPerPoint = 70;
-                const svgWidth = Math.max(dataBE.length * minWidthPerPoint, 500);
-                const paddingX = 40;
-                const effectiveWidth = svgWidth - paddingX * 2;
+                  const yLabels = [
+                    `${(maxHarga / 1000).toFixed(1)}k`,
+                    `${((maxHarga * 0.75) / 1000).toFixed(1)}k`,
+                    `${((maxHarga * 0.5) / 1000).toFixed(1)}k`,
+                    `${((maxHarga * 0.25) / 1000).toFixed(1)}k`,
+                    "0",
+                  ];
 
-                const points = dataBE.map((d, i) => {
-                  const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
-                  const x = paddingX + (i / divider) * effectiveWidth;
-                  const y = svgHeight - (d.harga / maxHarga) * svgHeight;
-                  return { x, y, harga: d.harga, bulan: d.bulan };
-                });
+                  const minWidthPerPoint = 70;
+                  const svgWidth = Math.max(
+                    dataBE.length * minWidthPerPoint,
+                    500,
+                  );
+                  const paddingX = 40;
+                  const effectiveWidth = svgWidth - paddingX * 2;
 
-                const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
-                const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
+                  const points = dataBE.map((d, i) => {
+                    const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
+                    const x = paddingX + (i / divider) * effectiveWidth;
+                    const y = svgHeight - (d.harga / maxHarga) * svgHeight;
+                    return { x, y, harga: d.harga, bulan: d.bulan };
+                  });
 
-                return (
-                  <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
-                    {/* SUMBU Y FIXED */}
-                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-sm">
-                      {yLabels.map((l, idx) => (
-                        <span key={idx} className="text-right pr-2">{l.replace(".0k", "k")}</span>
-                      ))}
-                    </div>
+                  const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
+                  const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
 
-                    {/* AREA GRAFIK SCROLLABLE */}
-                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin">
-                      <div style={{ width: `${svgWidth}px`, height: "100%" }} className="relative">
-                        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none" className="block w-full h-full overflow-visible">
-                          <defs>
-                            <linearGradient id="gmGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#EF8523" stopOpacity="0.2" />
-                              <stop offset="100%" stopColor="#EF8523" stopOpacity="0" />
-                            </linearGradient>
-                          </defs>
-                          {/* Garis Grid */}
-                          {[0, 35, 70, 105, 140].map((y) => (
-                            <line key={y} x1="0" y1={y} x2={svgWidth} y2={y} stroke="#f8f9fa" strokeWidth="1" />
-                          ))}
-                          <path d={areaPath} fill="url(#gmGradient)" />
-                          <polyline fill="none" stroke="#EF8523" strokeWidth="3" points={linePath} strokeLinejoin="round" />
-                          {points.map((pt, i) => (
-                            <g key={i}>
-                              <circle cx={pt.x} cy={pt.y} r="4" fill="white" stroke="#EF8523" strokeWidth="2.5" />
-                              <g transform={`translate(${pt.x - 22}, ${pt.y - 28})`}>
-                                <rect width="44" height="16" rx="4" fill="black" />
-                                <text x="22" y="11" textAnchor="middle" className="text-[9px] font-black fill-white">{pt.harga.toLocaleString()}</text>
+                  return (
+                    <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
+                      {/* SUMBU Y FIXED */}
+                      <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-sm">
+                        {yLabels.map((l, idx) => (
+                          <span key={idx} className="text-right pr-2">
+                            {l.replace(".0k", "k")}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* AREA GRAFIK SCROLLABLE */}
+                      <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin">
+                        <div
+                          style={{ width: `${svgWidth}px`, height: "100%" }}
+                          className="relative"
+                        >
+                          <svg
+                            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                            preserveAspectRatio="none"
+                            className="block w-full h-full overflow-visible"
+                          >
+                            <defs>
+                              <linearGradient
+                                id="gmGradient"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                              >
+                                <stop
+                                  offset="0%"
+                                  stopColor="#EF8523"
+                                  stopOpacity="0.2"
+                                />
+                                <stop
+                                  offset="100%"
+                                  stopColor="#EF8523"
+                                  stopOpacity="0"
+                                />
+                              </linearGradient>
+                            </defs>
+                            {/* Garis Grid */}
+                            {[0, 35, 70, 105, 140].map((y) => (
+                              <line
+                                key={y}
+                                x1="0"
+                                y1={y}
+                                x2={svgWidth}
+                                y2={y}
+                                stroke="#f8f9fa"
+                                strokeWidth="1"
+                              />
+                            ))}
+                            <path d={areaPath} fill="url(#gmGradient)" />
+                            <polyline
+                              fill="none"
+                              stroke="#EF8523"
+                              strokeWidth="3"
+                              points={linePath}
+                              strokeLinejoin="round"
+                            />
+                            {points.map((pt, i) => (
+                              <g key={i}>
+                                <circle
+                                  cx={pt.x}
+                                  cy={pt.y}
+                                  r="4"
+                                  fill="white"
+                                  stroke="#EF8523"
+                                  strokeWidth="2.5"
+                                />
+                                <g
+                                  transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
+                                >
+                                  <rect
+                                    width="44"
+                                    height="16"
+                                    rx="4"
+                                    fill="black"
+                                  />
+                                  <text
+                                    x="22"
+                                    y="11"
+                                    textAnchor="middle"
+                                    className="text-[9px] font-black fill-white"
+                                  >
+                                    {pt.harga.toLocaleString()}
+                                  </text>
+                                </g>
                               </g>
-                            </g>
-                          ))}
-                        </svg>
-                        {/* Label Bulan */}
-                        <div className="absolute bottom-0 left-0 w-full h-6">
-                          {points.map((pt, i) => (
-                            <div key={i} className="absolute flex flex-col items-center" style={{ left: `${pt.x}px`, transform: "translateX(-50%)" }}>
-                              <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
-                              <span className="text-[9px] font-bold text-gray-500 uppercase">{pt.bulan.substring(0, 3)}</span>
-                            </div>
-                          ))}
+                            ))}
+                          </svg>
+                          {/* Label Bulan */}
+                          <div className="absolute bottom-0 left-0 w-full h-6">
+                            {points.map((pt, i) => (
+                              <div
+                                key={i}
+                                className="absolute flex flex-col items-center"
+                                style={{
+                                  left: `${pt.x}px`,
+                                  transform: "translateX(-50%)",
+                                }}
+                              >
+                                <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
+                                <span className="text-[9px] font-bold text-gray-500 uppercase">
+                                  {pt.bulan.substring(0, 3)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()
+              )}
 
-            {/* Footer Info */}
-            <div className="mt-2 border-t border-gray-50 pt-2 flex justify-between items-center">
-              <p className="text-[8px] text-gray-400 italic font-medium">
-                * Geser untuk melihat riwayat harga
-              </p>
+              {/* Footer Info */}
+              <div className="mt-2 border-t border-gray-50 pt-2 flex justify-between items-center">
+                <p className="text-[8px] text-gray-400 italic font-medium">
+                  * Geser untuk melihat riwayat harga
+                </p>
+              </div>
             </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
       )}
 
       {/* --- POPUP DATA DIRI --- */}

@@ -147,7 +147,7 @@ export default function Masuk() {
           <div className="text-right">
             <Link
               to="/lupakatasandi"
-              className="text-[#EF8523] text-xs sm:text-sm font-semibold hover:underline"
+              className="text-[#B5302D] text-xs sm:text-sm font-semibold hover:underline"
             >
               Lupa kata sandi?
             </Link>
@@ -202,7 +202,7 @@ export default function Masuk() {
           Belum punya akun?{" "}
           <Link
             to="/daftar"
-            className="text-[#EF8523] font-semibold underline-offset-4 hover:underline focus:outline-none focus:ring-1 focus:ring-[#EF8523]/50"
+            className="text-[#B5302D] font-semibold underline-offset-4 hover:underline focus:outline-none focus:ring-1 focus:ring-[#EF8523]/50"
           >
             Daftarkan akun sekarang!
           </Link>

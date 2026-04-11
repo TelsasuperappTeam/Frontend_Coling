@@ -524,7 +524,7 @@ export default function DashboardEM() {
           footer={
             <button
               // TAMBAHKAN ONCLICK DI SINI:
-              onClick={() => navigate("/kebun/kemitraanpetani")}
+              onClick={() => navigate("/estate_manager/kemitraanpetani")}
               className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
             >
               Detail Validasi

@@ -55,7 +55,7 @@ const Footer = () => {
             <i className="ri-mail-line text-sm md:text-base"></i>
             {/* Alamat email ditampilkan di samping ikon */}
             <span className="text-xs md:text-sm">
-              @gmail.com
+              hi.telsasuperapp@gmail.com
             </span>
           </a>
 
