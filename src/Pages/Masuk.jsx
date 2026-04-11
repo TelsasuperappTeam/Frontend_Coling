@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { getRoleRedirectPath } from "../utils/roleRedirect";
-import { API_ENDPOINTS, ROLES } from "../config/constants";
+import { API_ENDPOINTS, ROLES, NOTIF_MESSAGES } from "../config/constants";
 import { jwtDecode } from "jwt-decode";
 
 // ===================== KOMPONEN LOGIN =====================
@@ -9,15 +10,20 @@ export default function Masuk() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
 
   // ===================== HANDLE LOGIN =====================
   const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMessage(""); // Tambahan: Reset error setiap kali tombol masuk ditekan
 
     if (!email || !password) {
-      alert("Email dan kata sandi wajib diisi!");
+      // Menggunakan NOTIF_MESSAGES atau teks default
+      setErrorMessage(
+        NOTIF_MESSAGES?.REQUIRED_FIELDS || "Email dan kata sandi wajib diisi!",
+      );
       return;
     }
 
@@ -32,11 +38,14 @@ export default function Masuk() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.detail || "Email atau password salah!");
+        throw new Error(
+          data?.detail ||
+            NOTIF_MESSAGES?.LOGIN_FAILED ||
+            "Email atau password salah!",
+        );
       }
 
       // 1. AMBIL TOKEN
-      // Catatan: Log token dihapus untuk keamanan
       const token = data.access_token || data.token || data.data?.access_token;
 
       if (!token) {
@@ -71,14 +80,17 @@ export default function Masuk() {
       if (targetPath && targetPath !== "/") {
         navigate(targetPath, { replace: true });
       } else {
-        console.error(
-          `❌ Role '${normalizedRole}' tidak terdaftar!`,
+        console.error(`❌ Role '${normalizedRole}' tidak terdaftar!`);
+        // Ganti alert dengan setErrorMessage
+        setErrorMessage(
+          NOTIF_MESSAGES?.INVALID_ROLE ||
+            `Role '${normalizedRole}' tidak valid, silahkan hubungi admin.`,
         );
-        alert(`Role '${normalizedRole}' tidak valid silahkan hubungi admin.`);
       }
     } catch (err) {
-      console.error("Login error:", err); // Log error tetap aman
-      alert(err.message);
+      console.error("Login error:", err);
+      // Ganti alert dengan setErrorMessage
+      setErrorMessage(err.message);
     } finally {
       setLoading(false);
     }
@@ -94,11 +106,6 @@ export default function Masuk() {
           <span className="block text-[#B5302D]">Selamat Datang di</span>
           <span className="block">Platform ISPO PalmaOne-08!</span>
         </h1>
-
-        {/* ====== SUBTEKS ====== */}
-        <p className="text-center text-gray-600 mt-2 sm:mt-3 text-xs sm:text-sm md:text-base">
-          Silahkan masuk dengan akun anda
-        </p>
 
         {/* ====== FORM LOGIN ====== */}
         <form
@@ -153,6 +160,18 @@ export default function Masuk() {
             </Link>
           </div>
 
+          {/* ====== PINDAH KE SINI: NOTIFIKASI ERROR PROFESIONAL ====== */}
+          {errorMessage && (
+            <div className="mb-2 p-3 sm:p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 animate-fade-in">
+              {/* === GANTI SVG DENGAN ICON LUCIDE === */}
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+
+              <p className="text-red-700 text-xs sm:text-sm font-medium leading-relaxed">
+                {errorMessage}
+              </p>
+            </div>
+          )}
+
           {/* Tombol Masuk dengan LOADING SPINNER */}
           <button
             type="submit"
@@ -167,28 +186,9 @@ export default function Masuk() {
               active:scale-95 transform transition-all duration-150 shadow-[0_6px_18px_rgba(181,46,45,0.18)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#B5302D] flex items-center justify-center`}
           >
             {loading ? (
-              // Tampilan Loading Memutar
+              // Tampilan Loading Memutar menggunakan Lucide-React
               <div className="flex items-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
+                <Loader2 className="animate-spin h-5 w-5 text-white" />
                 <span>Memproses...</span>
               </div>
             ) : (

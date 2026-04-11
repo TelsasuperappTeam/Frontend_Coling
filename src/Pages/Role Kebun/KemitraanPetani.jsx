@@ -248,25 +248,25 @@ const KemitraanPetani = () => {
         <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab("validasi")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`w-1/2 sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
               activeTab === "validasi"
                 ? "bg-white text-[#B5302D] shadow-sm"
                 : "text-gray-500"
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">Validasi Pengajuan</span>
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">Pengajuan (Read Only)</span>
           </button>
           <button
             onClick={() => setActiveTab("manajemen")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`w-1/2 sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
               activeTab === "manajemen"
                 ? "bg-white text-[#B5302D] shadow-sm"
                 : "text-gray-500"
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Manajemen Petani</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">Manajemen Mandor</span>
           </button>
         </div>
       </div>

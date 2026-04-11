@@ -118,59 +118,6 @@ const Operasional2 = () => {
       console.error("Error pada proses Promise.all documents:", error);
     }
   };
-  
-  const handleUploadDokumen = async (index, event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const targetDoc = dokumenStatus[index];
-    const requirementCode = targetDoc.code;
-
-    const newDocs = [...dokumenStatus];
-    newDocs[index].isUploading = true;
-    setDokumenStatus(newDocs);
-
-    try {
-      const token = localStorage.getItem("token");
-      const formDataUpload = new FormData();
-      formDataUpload.append("requirement_code", requirementCode);
-      formDataUpload.append("file", file);
-
-      const response = await fetch(API_ENDPOINTS.ISPO.KEBUN.SUBMISSION, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formDataUpload,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const updatedDocs = [...dokumenStatus];
-        updatedDocs[index].file_url = result.url;
-        updatedDocs[index].status = result.status;
-        updatedDocs[index].isUploading = false;
-        setDokumenStatus(updatedDocs);
-
-        alert("Berhasil upload dokumen!");
-        fetchDokumenExisting();
-      } else {
-        const errorData = await response.json();
-        alert(`Gagal upload: ${errorData.detail || "Terjadi kesalahan"}`);
-
-        const updatedDocs = [...dokumenStatus];
-        updatedDocs[index].isUploading = false;
-        setDokumenStatus(updatedDocs);
-      }
-    } catch (error) {
-      console.error("Error upload:", error);
-      alert("Terjadi kesalahan jaringan saat upload.");
-
-      const updatedDocs = [...dokumenStatus];
-      updatedDocs[index].isUploading = false;
-      setDokumenStatus(updatedDocs);
-    }
-  };
 
   const handleViewDocument = (url) => {
     if (url) {
@@ -204,15 +151,17 @@ const Operasional2 = () => {
 
         <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
           <button
-            onClick={() => navigate("../manajemenoperasional")} // Berpindah ke route awal
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
+            onClick={() => navigate("../manajemenoperasional")}
+            className="flex-1 flex justify-center items-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
-            <ShoppingCart className="w-4 h-4" />
-            <span className="hidden sm:inline">Penjualan/Peminjaman</span>
+            <ShoppingCart className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">
+              Penjualan/Peminjaman
+            </span>
           </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Organisasi</span>
+          <button className="flex-1 flex justify-center items-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">Organisasi</span>
           </button>
         </div>
       </div>
@@ -326,25 +275,6 @@ const Operasional2 = () => {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label
-                      className={`cursor-pointer p-2 rounded-lg transition-colors border ${
-                        doc.isUploading
-                          ? "bg-gray-100 border-gray-200 text-gray-400"
-                          : "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"
-                      }`}
-                    >
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => handleUploadDokumen(idx, e)}
-                        disabled={doc.isUploading}
-                      />
-                      {doc.isUploading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Upload className="w-4 h-4" />
-                      )}
-                    </label>
                     {isUploaded && (
                       <button
                         onClick={() => handleViewDocument(doc.file_url)}

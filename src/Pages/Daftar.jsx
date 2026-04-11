@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
-import { API_ENDPOINTS } from "../config/constants";
+import {
+  User,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
+import { API_ENDPOINTS, NOTIF_MESSAGES } from "../config/constants"; // Pastikan NOTIF_MESSAGES sudah ada di constants.js Anda
 
 // ======================= ROLE PENGGUNA =======================
 const ROLES = {
@@ -11,12 +17,6 @@ const ROLES = {
   GENERAL_MANAGER_DISTRIK: "general_manager_distrik",
   TRANSPORT: "logistik",
   PABRIK: "pabrik",
-};
-
-const NOTIF_MESSAGES = {
-  PASSWORD_NOT_MATCH: "Password dan konfirmasi password tidak cocok.",
-  REGISTER_SUCCESS:
-    "Pendaftaran berhasil! Mengalihkan ke halaman Verifikasi OTP",
 };
 
 export default function Daftar() {
@@ -252,7 +252,7 @@ export default function Daftar() {
               <option value={ROLES.PABRIK}>Pabrik</option>
             </select>
 
-            <i className="ri-arrow-down-s-line absolute right-4 top-1/2 translate-y-0.5 text-gray-500 text-lg pointer-events-none"></i>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5 pointer-events-none" />
           </div>
 
           {/* Nama & Email */}
@@ -434,6 +434,32 @@ export default function Daftar() {
             </div>
           )}
 
+{/* ====== NOTIFIKASI PROFESIONAL (Pindah ke atas tombol) ====== */}
+          {notif && (
+            <div
+              className={`mt-4 p-3 sm:p-4 rounded-xl border flex items-start gap-3 animate-fade-in ${
+                notif.toLowerCase().includes("berhasil")
+                  ? "bg-green-50 border-green-200"
+                  : "bg-red-50 border-red-200"
+              }`}
+            >
+              {notif.toLowerCase().includes("berhasil") ? (
+                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              )}
+              <p
+                className={`text-xs sm:text-sm font-medium leading-relaxed ${
+                  notif.toLowerCase().includes("berhasil")
+                    ? "text-green-700"
+                    : "text-red-700"
+                }`}
+              >
+                {notif}
+              </p>
+            </div>
+          )}
+
           {/* Tombol Daftar dengan LOADING SPINNER */}
           <button
             type="submit"
@@ -445,27 +471,9 @@ export default function Daftar() {
             }`}
           >
             {isSubmitting ? (
+              // Tampilan Loading menggunakan Lucide-React
               <div className="flex items-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
+                <Loader2 className="animate-spin h-5 w-5 text-white" />
                 <span>Memproses...</span>
               </div>
             ) : (
@@ -474,20 +482,7 @@ export default function Daftar() {
           </button>
         </form>
 
-        {/* Notifikasi */}
-        {notif && (
-          <p
-            className={`text-center mt-5 sm:mt-6 text-xs sm:text-sm rounded-lg py-2 px-3 sm:py-2.5 sm:px-4 border ${
-              notif.toLowerCase().includes("berhasil")
-                ? "text-green-700 bg-green-50 border-green-300"
-                : "text-red-700 bg-red-50 border-red-300"
-            }`}
-          >
-            {notif}
-          </p>
-        )}
-
-        {/* Footer */}
+        {/* Footer (Bagian <p> notif lama dihapus, langsung ke footer) */}
         <p className="text-center mt-5 sm:mt-6 text-xs sm:text-sm text-gray-800">
           Sudah punya akun?{" "}
           <Link

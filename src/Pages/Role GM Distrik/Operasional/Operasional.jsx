@@ -375,17 +375,17 @@ const Operasional = () => {
           </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
-            <ShoppingCart className="w-4 h-4" />
-            <span className="hidden sm:inline">Penjualan/Peminjaman</span>
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto overflow-hidden">
+          <button className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">Penjualan/Peminjaman</span>
           </button>
           <button
             onClick={() => navigate("../manajemenoperasional/organisasi")}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
+            className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Organisasi</span>
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">Organisasi</span>
           </button>
         </div>
       </div>

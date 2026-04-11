@@ -104,14 +104,16 @@ export default function NavbarRole({ role, children }) {
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {open && (
           <div className="md:hidden bg-white border-t border-[#EF8523]/20 shadow-lg animate-slideDown">
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-4 py-3 flex flex-col gap-1">
               {menus.map((menu, i) => (
                 <Link
                   key={i}
                   to={menu.path}
-                  className={`px-4 py-2 rounded-xl text-sm transition-all duration-200 ${
+                  onClick={() => setOpen(false)} // Otomatis menutup navbar saat diklik
+                  className={`block w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                     location.pathname.startsWith(menu.path)
                       ? "bg-[#B5302D] text-white shadow-md font-semibold"
                       : "text-gray-600 hover:bg-[#EF8523]/10 hover:text-[#B5302D]"
@@ -121,10 +123,13 @@ export default function NavbarRole({ role, children }) {
                 </Link>
               ))}
 
-              <div className="border-t border-gray-200 pt-2 mt-2">
+              <div className="border-t border-gray-100 pt-2 mt-1 flex flex-col gap-1">
                 <button
-                  onClick={handleLogout}
-                  className="block w-full text-left text-gray-600 hover:text-red-500 transition-colors duration-200 font-medium"
+                  onClick={() => {
+                    handleLogout();
+                    setOpen(false); // Otomatis tutup juga kalau klik logout
+                  }}
+                  className="block w-full px-4 py-2.5 text-left text-sm text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors duration-200 font-medium"
                 >
                   Keluar
                 </button>

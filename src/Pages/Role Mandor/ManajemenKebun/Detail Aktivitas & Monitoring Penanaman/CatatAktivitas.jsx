@@ -17,6 +17,7 @@ import {
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
 import MonitoringGAP from "./MonitoringGAP";
 
+
 // KOMPONEN UTAMA
 export default function CatatAktivitas() {
   const { id } = useParams();
@@ -236,8 +237,8 @@ export default function CatatAktivitas() {
   };
 
   const handleSaveRealisasi = async () => {
-    if (!catatanPerubahan || catatanPerubahan.length < 10) {
-      alert("Catatan perubahan wajib diisi minimal 10 karakter!");
+    if (!catatanPerubahan || catatanPerubahan.trim() === "") {
+      alert("Catatan perubahan belum diisi. Mohon tuliskan alasannya.");
       return;
     }
     setLoadingRealisasi(true);
@@ -528,10 +529,11 @@ export default function CatatAktivitas() {
           >
             <div className="flex-1 pr-2">
               <h2 className="font-bold text-white text-sm sm:text-lg">
-                Realisasi Rencana Tanam (Opsional)
+                Catat Data Tanam Sebenarnya
               </h2>
               <p className="text-white text-[10px] sm:text-xs mt-0.5 font-light opacity-90 leading-tight">
-                Catat data realisasi tanam di lapangan jika ada perubahan dari rencana awal.
+                (OPSIONAL) Catat data realisasi tanam di lapangan jika ada
+                perubahan dari rencana awal.
               </p>
             </div>
             <ChevronDown
@@ -556,10 +558,10 @@ export default function CatatAktivitas() {
                     <div className="flex items-start gap-2 bg-blue-50 text-blue-700 p-3 rounded-lg text-xs sm:text-sm border border-blue-100 w-full md:w-auto">
                       <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" />
                       <p className="leading-relaxed">
-                        Berikut ini data dari Input Data Blok/Rencana Tanam anda. Mandor
-                        wajib mencatat realisasi rencana jika terjadi perubahan tanam berdasarkan data
-                        lapangan dengan Klik{" "}
-                        <span className="font-bold">Catat Realisasi</span>.
+                        Berikut ini data dari Input Data Blok/Rencana Tanam
+                        anda. Mandor wajib mencatat realisasi rencana jika
+                        terjadi perubahan tanam berdasarkan data lapangan dengan
+                        Klik <span className="font-bold">Catat Realisasi</span>.
                       </p>
                     </div>
                     {!isEditingRealisasi && (

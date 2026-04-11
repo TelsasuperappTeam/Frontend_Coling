@@ -588,7 +588,7 @@ export default function BudidayaMonitoring() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="w-full">
                 <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                  Nama Unit
+                  1. Nama Unit
                 </label>
                 <input
                   name="nama_unit"
@@ -602,7 +602,7 @@ export default function BudidayaMonitoring() {
 
               <div className="w-full">
                 <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                  Tanggal Tanam
+                  2. Tanggal Tanam
                 </label>
                 <input
                   name="tanggal_tanam_blok"
@@ -615,7 +615,7 @@ export default function BudidayaMonitoring() {
 
               <div className="w-full">
                 <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                  Luas Unit (ha)
+                  3. Luas Unit (ha)
                 </label>
                 <input
                   name="luas_unit"
@@ -629,7 +629,7 @@ export default function BudidayaMonitoring() {
 
               <div className="w-full">
                 <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                  Jumlah Bibit
+                  4. Jumlah Bibit
                 </label>
                 <input
                   name="jumlah_total_tanaman"
@@ -643,7 +643,7 @@ export default function BudidayaMonitoring() {
 
               <div className="w-full">
                 <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                  Jumlah Tanam/ha
+                  5. Jumlah Tanam/ha
                 </label>
                 <input
                   name="jumlah_tanaman_per_ha"
@@ -658,7 +658,7 @@ export default function BudidayaMonitoring() {
               {/* --- Jenis Tanah (Mineral / Gambut) --- */}
               <div className="w-full">
                 <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                  Jenis Tanah
+                  6. Jenis Tanah
                 </label>
                 <select
                   name="jenis_tanah"
@@ -676,7 +676,7 @@ export default function BudidayaMonitoring() {
               {formData.jenis_tanah !== "Gambut" && (
                 <div className="w-full">
                   <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                    Jenis Lahan
+                    7. Jenis Lahan
                   </label>
                   <select
                     name="jenis_lahan"
@@ -699,7 +699,7 @@ export default function BudidayaMonitoring() {
 
               <div className="w-full">
                 <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
-                  Jarak Tanam
+                  8. Jarak Tanam
                 </label>
                 <select
                   name="jarak_tanam"
@@ -728,7 +728,7 @@ export default function BudidayaMonitoring() {
               {/* Dropdown 1: Jenis Bibit */}
               <div className="flex flex-col">
                 <label className="text-sm font-semibold text-gray-700 mb-1">
-                  Jenis Bibit <span className="text-red-500">*</span>
+                  9. Jenis Bibit <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="jenis_bibit"

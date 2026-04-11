@@ -10,7 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 
-import { API_ENDPOINTS } from "../../config/constants";
+import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
 
 const getAuthHeaders = (isJson = false) => {
   const token = localStorage.getItem("token");
@@ -154,18 +154,48 @@ export default function Inventaris() {
         </span>,
         item.tanggal_pembelian,
         <div className="flex gap-2">
-          {item.sertifikat_bibit_url || item.nota_pembelian_url ? (
-            <FileText className="w-4 h-4 text-blue-500" />
-          ) : (
-            "-"
+          {item.sertifikat_bibit_url && (
+            <a
+              href={getFileUrl(item.sertifikat_bibit_url, "FARM")}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Sertifikat Bibit"
+              className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+            </a>
+          )}
+          {item.nota_pembelian_url && (
+            <a
+              href={getFileUrl(item.nota_pembelian_url, "FARM")}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Nota Pembelian"
+              className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+            </a>
+          )}
+          {!item.sertifikat_bibit_url && !item.nota_pembelian_url && (
+            <span className="text-gray-400">-</span>
           )}
         </div>,
       ],
     },
+
     pupuk: {
       title: "Stok Pupuk",
       icon: <Wheat className="w-5 h-5" />,
-      columns: ["Nama Pupuk", "Jenis", "Asal", "Sisa (Kg)", "Tgl Beli"],
+      columns: [
+        "Nama Pupuk",
+        "Jenis",
+        "Asal",
+        "Sisa (Kg)",
+        "Tgl Beli",
+        "Dokumen",
+      ],
       renderRow: (item) => [
         item.nama_pupuk,
         item.jenis_pupuk,
@@ -174,12 +204,53 @@ export default function Inventaris() {
           {item.jumlah_tersisa_kg} Kg
         </span>,
         item.tanggal_pembelian,
+        <div className="flex gap-2">
+          {(item.sertifikat_pupuk_url || item.sertifikat_url) && (
+            <a
+              href={getFileUrl(
+                item.sertifikat_pupuk_url || item.sertifikat_url,
+                "FARM",
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Sertifikat"
+              className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+            </a>
+          )}
+          {item.nota_pembelian_url && (
+            <a
+              href={getFileUrl(item.nota_pembelian_url, "FARM")}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Nota Pembelian"
+              className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+            </a>
+          )}
+          {!(item.sertifikat_pupuk_url || item.sertifikat_url) &&
+            !item.nota_pembelian_url && (
+              <span className="text-gray-400">-</span>
+            )}
+        </div>,
       ],
     },
+
     pestisida: {
       title: "Stok Pestisida",
       icon: <SprayCan className="w-5 h-5" />,
-      columns: ["Nama Pestisida", "Jenis", "Sisa Stok", "Bentuk", "Expired"],
+      columns: [
+        "Nama Pestisida",
+        "Jenis",
+        "Sisa Stok",
+        "Bentuk",
+        "Expired",
+        "Dokumen",
+      ],
       renderRow: (item) => [
         item.nama_pestisida,
         item.jenis_pestisida,
@@ -188,6 +259,26 @@ export default function Inventaris() {
         <span className="text-red-500 font-medium">
           {item.tanggal_expired}
         </span>,
+        <div className="flex gap-2">
+          {(item.sertifikat_pestisida_url || item.sertifikat_url) && (
+            <a
+              href={getFileUrl(
+                item.sertifikat_pestisida_url || item.sertifikat_url,
+                "FARM",
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Sertifikat"
+              className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+            </a>
+          )}
+          {!(item.sertifikat_pestisida_url || item.sertifikat_url) && (
+            <span className="text-gray-400">-</span>
+          )}
+        </div>,
       ],
     },
   };

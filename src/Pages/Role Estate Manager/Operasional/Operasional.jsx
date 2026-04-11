@@ -68,16 +68,18 @@ const Operasional = () => {
         </div>
 
         <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
-            <ShoppingCart className="w-4 h-4" />
-            <span className="hidden sm:inline">Penjualan/Peminjaman</span>
+          <button className="flex-1 flex justify-center items-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
+            <ShoppingCart className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">
+              Penjualan/Peminjaman
+            </span>
           </button>
           <button
             onClick={() => navigate("../manajemenoperasional/organisasi")}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
+            className="flex-1 flex justify-center items-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Organisasi</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">Organisasi</span>
           </button>
         </div>
       </div>
@@ -102,7 +104,6 @@ const Operasional = () => {
                   <th className="p-4 font-bold">Nama Barang</th>
                   <th className="p-4 font-bold">Jumlah</th>
                   <th className="p-4 font-bold">Total Harga</th>
-                  <th className="p-4 font-bold rounded-tr-xl">ID/Nota</th>
                 </tr>
               </thead>
               <tbody className="text-xs text-gray-700 bg-white">
@@ -139,12 +140,11 @@ const Operasional = () => {
                           ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
                           : "-"}
                       </td>
-                      <td className="p-4 text-gray-400 italic">#{item.id}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="p-4 text-center">
+                    <td colSpan="7" className="p-4 text-center">
                       Belum ada riwayat penjualan.
                     </td>
                   </tr>
@@ -178,11 +178,11 @@ const Operasional = () => {
               <tbody className="text-xs text-gray-700 bg-white">
                 {isLoadingTransaksi ? (
                   <tr>
-                    <td colSpan="6" className="p-4 text-center">
+                    <td colSpan="7" className="p-4 text-center">
                       Memuat data...
                     </td>
                   </tr>
-                ) : riwayatPinjam.length > 0 ? (
+                ) : riwayatJual.length > 0 ? (
                   riwayatPinjam.map((item, index) => (
                     <tr
                       key={item.id}

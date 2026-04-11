@@ -14,15 +14,35 @@ import {
   Clock,
   Printer,
   Loader,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
   API_ENDPOINTS,
   API_BASE_URLS,
   getFileUrl,
+  NOTIF_MESSAGES,
 } from "./../../config/constants";
 
 export default function PantauISPO() {
+  // ==========================================
+  // STATE & FUNGSI NOTIFIKASI PROFESIONAL
+  // ==========================================
+  const [notif, setNotif] = useState({
+    show: false,
+    message: "",
+    type: "info",
+  });
+
+  const showNotif = (message, type = "error") => {
+    setNotif({ show: true, message, type });
+    // Notif otomatis hilang setelah 4 detik
+    setTimeout(() => {
+      setNotif((prev) => ({ ...prev, show: false }));
+    }, 4000);
+  };
+
   // State untuk Tab Prinsip (1-5)
   const [activeSubTab, setActiveSubTab] = useState(1);
 
@@ -438,7 +458,7 @@ export default function PantauISPO() {
   const handleUploadDanAjukan = async (requirementCode, file) => {
     if (!file) return;
     if (!requirementCode) {
-      alert("Kode dokumen tidak ditemukan!");
+      showNotif("Kode dokumen tidak ditemukan!", "error");
       return;
     }
 
@@ -481,13 +501,14 @@ export default function PantauISPO() {
           throw new Error("Gagal mengajukan dokumen ke sistem.");
       }
 
-      alert("Dokumen berhasil diunggah dan diajukan!");
-      // Catatan: Karena data statis menggunakan const, checklist tidak akan langsung
-      // berubah hijau otomatis kecuali halamannya di-refresh dan data diambil dari BE.
-      // Namun aksi upload ini sudah dipastikan terkirim ke Backend.
+      showNotif(
+        NOTIF_MESSAGES?.UPLOAD_SUCCESS ||
+          "Dokumen berhasil diunggah dan diajukan!",
+        "success",
+      );
     } catch (error) {
       console.error("Proses upload error:", error);
-      alert(error.message);
+      showNotif(error.message, "error");
     }
   };
 
@@ -689,10 +710,14 @@ export default function PantauISPO() {
 
                               return isUploaded ? (
                                 <button
-                                  onClick={() =>
-                                    fileUrl
-                                      ? window.open(fileUrl, "_blank")
-                                      : alert("URL file tidak tersedia")
+                                  onClick={
+                                    () =>
+                                      fileUrl
+                                        ? window.open(fileUrl, "_blank")
+                                        : showNotif(
+                                            "URL file tidak tersedia",
+                                            "error",
+                                          )
                                   }
                                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                                 >
@@ -873,7 +898,10 @@ export default function PantauISPO() {
 
         // Tangani jika status HTTP Error (misal 403 / 500)
         if (!response.ok) {
-          alert(`Gagal: ${data.detail || data.message || "Terjadi kesalahan"}`);
+          showNotif(
+            `Gagal: ${data.detail || data.message || "Terjadi kesalahan"}`,
+            "error",
+          );
           setLoadingDoc(false);
           return;
         }
@@ -885,27 +913,70 @@ export default function PantauISPO() {
 
           // Tampilkan pesan sukses dari Backend ke pengguna
           // "Dokumen berhasil dibuat (Preview). Silakan 'Ajukan ke Kebun' jika sudah sesuai."
-          alert(data.message);
+          showNotif(data.message, "success");
 
           // (Opsional) Jika Anda butuh ID ini untuk tombol selanjutnya:
           console.log("Status Dokumen:", data.status);
           console.log("Submission ID:", data.submission_id);
         } else {
-          alert("Gagal memuat dokumen: URL tidak ditemukan dari server.");
+          showNotif(
+            "Gagal memuat dokumen: URL tidak ditemukan dari server.",
+            "error",
+          );
         }
       } catch (error) {
         console.error("Error generating document:", error);
-        alert("Terjadi gangguan jaringan atau server tidak merespon.");
+        showNotif(
+          "Terjadi gangguan jaringan atau server tidak merespon.",
+          "error",
+        );
       } finally {
         setLoadingDoc(false);
       }
     } else {
-      alert(`Fitur generate untuk "${title}" belum tersedia.`);
+      showNotif(`Fitur generate untuk "${title}" belum tersedia.`, "info");
     }
   };
 
-  return (
-    <div className="p-4 sm:p-10 min-h-screen font-sans">
+ return (
+    <div className="p-4 sm:p-10 min-h-screen font-sans relative">
+      
+      {/* ======================== FLOATING NOTIFICATION ============================ */}
+      {notif.show && (
+        <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4 animate-fade-in">
+          <div className={`flex items-start gap-3 p-4 rounded-xl shadow-lg border max-w-sm w-full sm:max-w-md ${
+            notif.type === 'success' ? 'bg-green-50 border-green-200' :
+            notif.type === 'error' ? 'bg-red-50 border-red-200' :
+            'bg-blue-50 border-blue-200'
+          }`}>
+            {/* Ikon Dinamis */}
+            {notif.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+            ) : notif.type === 'error' ? (
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            ) : (
+              <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            )}
+            
+            <p className={`flex-1 text-xs sm:text-sm font-medium leading-relaxed ${
+              notif.type === 'success' ? 'text-green-800' :
+              notif.type === 'error' ? 'text-red-800' :
+              'text-blue-800'
+            }`}>
+              {notif.message}
+            </p>
+            
+            <button onClick={() => setNotif((prev) => ({ ...prev, show: false }))} className="shrink-0 p-1 rounded-md hover:bg-black/5 transition-colors">
+              <X className={`w-4 h-4 ${
+                notif.type === 'success' ? 'text-green-600' :
+                notif.type === 'error' ? 'text-red-600' :
+                'text-blue-600'
+              }`} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ======================== HEADER HALAMAN UTAMA ============================ */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4">

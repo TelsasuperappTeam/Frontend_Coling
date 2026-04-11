@@ -224,33 +224,32 @@ const Operasional2 = () => {
 
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
-            <Users className="w-8 h-8 text-[#B5302D]" />
+            <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#B5302D]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
               Manajemen Operasional
             </h1>
-            <p className="text-gray-500 text-sm">
-              Kelola struktur organisasi dan dokumen legalitas.
+            <p className="text-gray-500 text-xs sm:text-sm">
+              Kelola penjualan barang dan peminjaman inventaris.
             </p>
           </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200">
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto overflow-hidden">
           <button
             onClick={() => navigate("../manajemenoperasional")}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
+            className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
-            <ShoppingCart className="w-4 h-4" />
-            <span className="hidden sm:inline">Penjualan/Peminjaman</span>
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">Penjualan/Peminjaman</span>
           </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Organisasi & Dokumen</span>
+          <button className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">Organisasi</span>
           </button>
         </div>
       </div>

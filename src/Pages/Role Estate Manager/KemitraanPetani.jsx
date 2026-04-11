@@ -205,28 +205,28 @@ const KemitraanPetani = () => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto overflow-hidden">
           <button
             onClick={() => setActiveTab("validasi")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
               activeTab === "validasi"
                 ? "bg-white text-[#B5302D] shadow-sm"
-                : "text-gray-500"
+                : "text-gray-500 hover:bg-gray-200"
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">Pengajuan (Read Only)</span>
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span className="whitespace-nowrap">Pengajuan (Read Only)</span>
           </button>
           <button
             onClick={() => setActiveTab("manajemen")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
               activeTab === "manajemen"
                 ? "bg-white text-[#B5302D] shadow-sm"
-                : "text-gray-500"
+                : "text-gray-500 hover:bg-gray-200"
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Manajemen Mandor</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="whitespace-nowrap">Manajemen Mandor</span>
           </button>
         </div>
       </div>

@@ -709,28 +709,28 @@ const Operasional = () => {
         </div>
 
         {/* Custom Tab Switcher */}
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
+        <div className="grid grid-cols-2 bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab("transaksi")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === "transaksi"
                 ? "bg-white text-[#B5302D] shadow-sm"
                 : "text-gray-500"
             }`}
           >
             <ShoppingCart className="w-4 h-4" />
-            <span className="hidden sm:inline">Penjualan/Peminjaman</span>
+            <span className="sm:inline">Transaksi</span>
           </button>
           <button
             onClick={() => setActiveTab("organisasi")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === "organisasi"
                 ? "bg-white text-[#B5302D] shadow-sm"
                 : "text-gray-500"
             }`}
           >
             <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Organisasi</span>
+            <span className="sm:inline">Organisasi</span>
           </button>
         </div>
       </div>
@@ -765,13 +765,12 @@ const Operasional = () => {
                       <th className="p-4 font-bold">Nama Barang</th>
                       <th className="p-4 font-bold">Jumlah</th>
                       <th className="p-4 font-bold">Total Harga</th>
-                      <th className="p-4 font-bold rounded-tr-xl">ID/Nota</th>
                     </tr>
                   </thead>
                   <tbody className="text-xs text-gray-700 bg-white">
                     {isLoadingTransaksi ? (
                       <tr>
-                        <td colSpan="8" className="p-4 text-center">
+                        <td colSpan="7" className="p-4 text-center">
                           Memuat data...
                         </td>
                       </tr>
@@ -803,9 +802,6 @@ const Operasional = () => {
                             {item.total_harga
                               ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
                               : "-"}
-                          </td>
-                          <td className="p-4 text-gray-400 italic">
-                            #{item.id}
                           </td>
                         </tr>
                       ))
@@ -1107,7 +1103,7 @@ const Operasional = () => {
             onClick={() => setShowModalPengurus(false)}
           />
           <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#B5302D] p-5 text-white flex justify-between items-center">
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
               <h3 className="font-bold text-lg">
                 {isEditMode ? "Edit Pengurus" : "Tambah Pengurus Baru"}
               </h3>
@@ -1189,7 +1185,7 @@ const Operasional = () => {
               <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
                 <button
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90 transition-colors"
                 >
                   <Save className="w-4 h-4" /> Simpan
                 </button>
@@ -1214,13 +1210,13 @@ const Operasional = () => {
             onClick={() => setShowModalTBS(false)}
           />
           <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#D1F7C4] p-5 text-green-900 border-b border-green-300 flex justify-between items-center">
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <FileText className="w-5 h-5" /> Input SK TBS
               </h3>
               <button
                 onClick={() => setShowModalTBS(false)}
-                className="p-1 hover:bg-green-200 rounded-full transition-colors"
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1304,7 +1300,7 @@ const Operasional = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingTBS}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90 disabled:bg-gray-400"
                 >
                   {isSubmittingTBS ? "Mengupload..." : "Simpan Harga"}
                 </button>
@@ -1495,7 +1491,7 @@ const Operasional = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingJual}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90"
                 >
                   {isSubmittingJual ? "Memproses..." : "Catat Penjualan"}
                 </button>
@@ -1651,7 +1647,7 @@ const Operasional = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingPinjam}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90"
                 >
                   {isSubmittingPinjam ? "Memproses..." : "Catat Peminjaman"}
                 </button>

@@ -6,6 +6,7 @@ import {
   FileText,
   Save,
   ClipboardList,
+  RefreshCw,
 } from "lucide-react";
 import { API_ENDPOINTS, getFileUrl } from "../../../../config/constants";
 
@@ -100,7 +101,7 @@ const ENUM_OPTIONS = {
 
 const MONITORING_CONFIG = {
   sanitasi: {
-    title: "Monitoring Kebersihan & Sanitasi Kebun",
+    title: "Kegiatan Kebersihan & Rawat Kebun",
     columns: [
       {
         header: "Tanggal",
@@ -194,7 +195,7 @@ const MONITORING_CONFIG = {
     ],
   },
   coverCrop: {
-    title: "Monitoring Tanaman Penutup Tanah (LCC)",
+    title: "Kegiatan Tanaman Penutup Tanah (Kacangan)",
     columns: [
       {
         header: "Tanggal",
@@ -285,7 +286,7 @@ const MONITORING_CONFIG = {
     ],
   },
   piringan_kondisi: {
-    title: "Monitoring Kondisi Pemeliharaan Piringan",
+    title: "Kegiatan Kondisi Pemeliharaan Piringan",
     columns: [
       {
         header: "Tanggal",
@@ -339,7 +340,7 @@ const MONITORING_CONFIG = {
       },
     ],
     fields: [
-      { key: "tanggal_monitoring", label: "Tanggal Sensus", type: "date" },
+      { key: "tanggal_monitoring", label: "Tanggal Cek Kondisi", type: "date" },
       {
         key: "kondpi_bersih",
         label: "Jumlah Piringan Bersih (Pokok)",
@@ -378,14 +379,8 @@ const MONITORING_CONFIG = {
     ],
   },
   piringan_aktivitas: {
-    title: "Monitoring Aktivitas Pemeliharaan Piringan",
+    title: "Catat Aktivitas Pemeliharaan Piringan",
     columns: [
-      {
-        header: "ID Parent",
-        key: "monitoring_piringan_id",
-        width: "100px",
-        align: "left",
-      },
       {
         header: "Tanggal",
         key: "tanggal_monitoring",
@@ -423,8 +418,8 @@ const MONITORING_CONFIG = {
     fields: [
       {
         key: "monitoring_piringan_id",
-        label: "Pilih Hasil Sensus Kondisi (Tautan)",
-        type: "select_parent_piringan", // Kita gunakan tipe kustom
+        label: "Berdasarkan Pengecekan Tanggal Berapa?",
+        type: "select_parent_piringan",
       },
       { key: "tanggal_monitoring", label: "Tanggal Aktivitas", type: "date" },
       {
@@ -443,7 +438,7 @@ const MONITORING_CONFIG = {
     ],
   },
   pupuk: {
-    title: "Monitoring Penggunaan Pupuk",
+    title: "Kegiatan Penggunaan Pupuk",
     columns: [
       {
         header: "Tanggal",
@@ -519,7 +514,7 @@ const MONITORING_CONFIG = {
     ],
   },
   opt: {
-    title: "Monitoring Penggunaan Pestisida dan Pengendalian OPT",
+    title: "Kegiatan Penggunaan Racun / Obat Hama (Pestisida)",
     columns: [
       {
         header: "Tanggal",
@@ -727,6 +722,7 @@ export default function MonitoringGAP({
   const [popupType, setPopupType] = useState(null);
   const [formData, setFormData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // --- KODE BARU: STATE UNTUK OPSI DROPDOWN DINAMIS ---
   const [pupukOptions, setPupukOptions] = useState([]);
@@ -848,7 +844,10 @@ export default function MonitoringGAP({
   // Dokumentasi: Menyimpan data baru via POST request. Payload menggunakan FormData.
   // (SESUAI BE MAHAR)
   const handleSave = async () => {
-    // 1. CEK BLOK ID (Biar tidak silent error jika props lupa dilempar dari parent)
+    // 1. KODE TAMBAHAN: Cegah fungsi berjalan lagi jika sedang proses simpan
+    if (isSaving) return;
+
+    // 2. CEK BLOK ID (Biar tidak silent error jika props lupa dilempar dari parent)
     if (!blokId) {
       alert(
         "Gagal: blokId tidak ditemukan. Pastikan Anda sudah memilih blok/lahan terlebih dahulu.",
@@ -856,6 +855,9 @@ export default function MonitoringGAP({
       return;
     }
     if (!popupType) return;
+
+    // 3. KODE TAMBAHAN: Nyalakan status loading SEBELUM proses dimulai!
+    setIsSaving(true);
 
     try {
       const token = localStorage.getItem("token");
@@ -960,9 +962,8 @@ export default function MonitoringGAP({
         try {
           const errResponse = await res.json();
           if (Array.isArray(errResponse.detail)) {
-            errorMsg = errResponse.detail
-              .map((e) => `${e.loc.join(".")} : ${e.msg}`)
-              .join("\n");
+            errorMsg =
+              "Mohon maaf, sepertinya ada isian form yang masih kosong atau salah ketik angka. Silakan periksa kembali.";
           } else {
             errorMsg = errResponse.detail || errorMsg;
           }
@@ -979,8 +980,10 @@ export default function MonitoringGAP({
       else fetchSectionData(popupType);
     } catch (e) {
       console.error("Error Detail:", e);
-      // alert() sekarang akan menampilkan detail spesifik field mana yang ditolak BE
       alert(e.message);
+    } finally {
+      // KODE BARU: Matikan loading simpan apapun yang terjadi (sukses/gagal/error)
+      setIsSaving(false);
     }
   };
 
@@ -1183,6 +1186,8 @@ export default function MonitoringGAP({
                   <div className="border border-dashed border-gray-300 rounded-lg p-3 sm:p-4 bg-gray-50 text-center hover:bg-gray-100 transition cursor-pointer">
                     <input
                       type="file"
+                      accept="image/*"
+                      capture="environment" // <-- Trik rahasia buka kamera langsung
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -1193,27 +1198,12 @@ export default function MonitoringGAP({
                     />
                   </div>
                 ) : field.type === "select_parent_piringan" ? (
-                  <div className="relative">
-                    <select
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] focus:border-[#EF8523] outline-none appearance-none bg-white transition"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [field.key]: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">-- Pilih --</option>
-                      {monitoringData?.piringan_kondisi?.map((opt, i) => (
-                        <option key={i} value={opt.id}>
-                          Sensus: {opt.tanggal_monitoring} (Bersih:{" "}
-                          {opt.kondpi_bersih})
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="absolute right-3 top-3 text-gray-400 pointer-events-none"
-                      size={14}
+                  // UX SUPER UPDATE: Disembunyikan total! Sistem otomatis mengisi ID-nya saat tombol di tabel diklik. Petani lansia tidak perlu pusing.
+                  <div className="hidden">
+                    <input
+                      type="hidden"
+                      value={formData[field.key] || ""}
+                      readOnly
                     />
                   </div>
                 ) : (
@@ -1239,9 +1229,24 @@ export default function MonitoringGAP({
             </button>
             <button
               onClick={handleSave}
-              className="px-5 py-2 text-xs sm:text-sm bg-[#EF8523] text-white font-bold rounded-lg hover:bg-[#d9751d] shadow-md hover:shadow-lg transition flex items-center gap-2 active:scale-95"
+              disabled={isSaving}
+              className={`px-5 py-2 text-xs sm:text-sm text-white font-bold rounded-lg shadow-md transition flex items-center gap-2 ${
+                isSaving
+                  ? "bg-gray-400 cursor-not-allowed" // Warna mati saat loading
+                  : "bg-[#EF8523] hover:bg-[#d9751d] hover:shadow-lg active:scale-95"
+              }`}
             >
-              <Save size={14} className="sm:w-4 sm:h-4" /> Simpan
+              {isSaving ? (
+                <>
+                  <RefreshCw size={14} className="sm:w-4 sm:h-4 animate-spin" />
+                  Menyimpan...
+                </>
+              ) : (
+                <>
+                  <Save size={14} className="sm:w-4 sm:h-4" />
+                  Simpan
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1304,16 +1309,230 @@ export default function MonitoringGAP({
 
       <AccordionItem
         id="piringan_aktivitas"
-        title="Monitoring Piringan (Kondisi & Aktivitas)"
+        title="Kegiatan Piringan (Pengecekan & Perawatan)"
       >
-        <div className="space-y-6 sm:space-y-8">
-          {renderTable("piringan_aktivitas")}
-          <div className="border-t border-dashed border-gray-300 relative">
-            <span className="absolute left-1/2 -top-2.5 sm:-top-3 -translate-x-1/2 bg-white px-2 sm:px-3 text-[10px] sm:text-xs text-gray-400 font-medium">
-              Data Sensus
-            </span>
+        <div className="flex flex-col gap-4 pt-2">
+          {/* Header & Tombol Utama */}
+          <div className="flex justify-between items-center bg-blue-50/50 p-3 sm:p-4 rounded-lg border border-blue-100">
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-blue-900">
+                Data Pengecekan Piringan
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setPopupType("piringan_kondisi");
+                setFormData({});
+                setShowPopup(true);
+              }}
+              className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-md shadow-green-100 transition-all"
+            >
+              <Plus size={14} /> Tambah Cek Kondisi
+            </button>
           </div>
-          {renderTable("piringan_kondisi")}
+
+          {/* TABEL TERPADU (KONDISI + AKTIVITAS DALAM 1 BARIS) */}
+          <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white pb-2 custom-scrollbar">
+            <table
+              className="min-w-full text-left"
+              style={{ tableLayout: "auto" }}
+            >
+              <thead className="bg-[#EF8523] text-white text-[10px] sm:text-xs uppercase font-bold">
+                <tr>
+                  <th className="px-3 py-3 text-center w-[50px] border-r border-orange-400/50">
+                    No
+                  </th>
+                  <th className="px-3 py-3 border-r border-orange-400/50">
+                    Tanggal Cek
+                  </th>
+                  <th className="px-3 py-3 border-r border-orange-400/50 min-w-[180px]">
+                    Hasil Kondisi
+                  </th>
+                  <th className="px-3 py-3 min-w-[200px]">
+                    Tindakan Perawatan
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-[10px] sm:text-sm">
+                {!monitoringData.piringan_kondisi ||
+                monitoringData.piringan_kondisi.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-12 text-center bg-gray-50">
+                      <div className="flex flex-col items-center justify-center opacity-60">
+                        <ClipboardList
+                          size={28}
+                          className="mb-2 text-gray-400"
+                        />
+                        <span className="text-[10px] sm:text-xs font-medium text-gray-500">
+                          Belum ada data pengecekan
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  monitoringData.piringan_kondisi.map((kondisi, idx) => {
+                    // Cek secara otomatis apakah kondisi ini sudah ada aktivitasnya
+                    const aktivitasList =
+                      monitoringData.piringan_aktivitas?.filter(
+                        (a) => a.monitoring_piringan_id === kondisi.id,
+                      ) || [];
+
+                    return (
+                      <tr
+                        key={idx}
+                        className="hover:bg-orange-50/30 transition-colors"
+                      >
+                        <td className="px-3 py-3 text-center border-r border-gray-100 font-medium text-gray-500 align-top">
+                          {idx + 1}
+                        </td>
+                        <td className="px-3 py-3 border-r border-gray-100 font-bold text-gray-700 align-top">
+                          {String(kondisi.tanggal_monitoring).split("T")[0]}
+                        </td>
+
+                        {/* TAMPILAN DATA KONDISI (SUDAH LENGKAP SEMUA) */}
+                        <td className="px-3 py-3 border-r border-gray-100 align-top">
+                          <div className="text-[10px] sm:text-xs text-gray-600 space-y-1.5">
+                            {/* Gulma */}
+                            <div>
+                              <p>
+                                <span className="font-semibold text-green-600">
+                                  Bersih:
+                                </span>{" "}
+                                {kondisi.kondpi_bersih} Pkk
+                              </p>
+                              <p>
+                                <span className="font-semibold text-yellow-600">
+                                  Gulma Ringan:
+                                </span>{" "}
+                                {kondisi.kondpi_bergulma_ringan} Pkk
+                              </p>
+                              <p>
+                                <span className="font-semibold text-red-600">
+                                  Gulma Berat:
+                                </span>{" "}
+                                {kondisi.kondpi_bergulma_lebat} Pkk
+                              </p>
+                            </div>
+
+                            {/* Kondisi Tanah */}
+                            <div className="pt-1.5 border-t border-gray-100/80">
+                              <p>
+                                <span className="font-medium text-gray-500">
+                                  Tanah Kering:
+                                </span>{" "}
+                                {kondisi.kondper_kering} Pkk
+                              </p>
+                              <p>
+                                <span className="font-medium text-gray-500">
+                                  Tanah Lembab:
+                                </span>{" "}
+                                {kondisi.kondper_lembab} Pkk
+                              </p>
+                              <p>
+                                <span className="font-medium text-gray-500">
+                                  Tanah Genang:
+                                </span>{" "}
+                                {kondisi.kondper_menggenang} Pkk
+                              </p>
+                            </div>
+
+                            {/* Catatan Tindakan */}
+                            {kondisi.catatan_tindakan && (
+                              <div className="pt-1">
+                                <p className="italic text-gray-500 bg-gray-50 p-1 rounded">
+                                  " {kondisi.catatan_tindakan} "
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* TAMPILAN DATA AKTIVITAS (SUDAH LENGKAP DENGAN DESKRIPSI & FOTO) */}
+                        <td className="px-3 py-3 bg-gray-50/50 align-top">
+                          {aktivitasList.length > 0 ? (
+                            <div className="space-y-2">
+                              {aktivitasList.map((akt, i) => (
+                                <div
+                                  key={i}
+                                  className="bg-white border border-green-200 p-2.5 rounded-md shadow-sm"
+                                >
+                                  <p className="font-bold text-green-700 text-xs">
+                                    {akt.aktivitas_kegiatan}
+                                  </p>
+
+                                  {/* Deskripsi Kegiatan (Aman: Hanya render jika BE mengirim datanya) */}
+                                  {akt.deskripsi_kegiatan ? (
+                                    <p className="text-[10px] sm:text-xs text-gray-600 mt-1 mb-1.5">
+                                      {akt.deskripsi_kegiatan}
+                                    </p>
+                                  ) : null}
+
+                                  <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-green-50">
+                                    <div className="text-[10px] text-gray-500 leading-tight">
+                                      <p>
+                                        Tgl Tindakan:{" "}
+                                        <span className="font-medium text-gray-700">
+                                          {/* UX FIX: Ambil dari parent (kondisi) jika dari BE (akt) tidak mengembalikan tanggal */}
+                                          {akt.tanggal_monitoring
+                                            ? String(
+                                                akt.tanggal_monitoring,
+                                              ).split("T")[0]
+                                            : String(
+                                                kondisi.tanggal_monitoring,
+                                              ).split("T")[0]}
+                                        </span>
+                                      </p>
+                                      <p>
+                                        Petugas:{" "}
+                                        <span className="font-medium text-gray-700">
+                                          {/* UX FIX: Tampilkan strip jika BE tidak mereturn jumlah petugas */}
+                                          {akt.jumlah_petugas
+                                            ? `${akt.jumlah_petugas} Orang`
+                                            : "-"}
+                                        </span>
+                                      </p>
+                                    </div>
+
+                                    {/* Tombol Lihat Foto */}
+                                    {akt.dokumentasi_aktivitas_url && (
+                                      <a
+                                        href={getFileUrl(
+                                          akt.dokumentasi_aktivitas_url,
+                                          "FARM",
+                                        )}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[#EF8523] hover:underline flex items-center gap-1 text-[10px] font-bold bg-orange-50 px-1.5 py-0.5 rounded"
+                                      >
+                                        <FileText size={12} /> Foto
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setPopupType("piringan_aktivitas");
+                                setFormData({
+                                  monitoring_piringan_id: kondisi.id,
+                                });
+                                setShowPopup(true);
+                              }}
+                              className="w-full bg-green-100 text-green-700 hover:bg-green-500 hover:text-white px-3 py-2.5 rounded-lg text-xs font-bold transition-all border border-green-200 hover:border-green-500 flex items-center justify-center gap-1.5 shadow-sm mt-1"
+                            >
+                              <Plus size={14} /> Catat Tindakan Perawatan
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </AccordionItem>
 
