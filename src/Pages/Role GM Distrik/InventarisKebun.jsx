@@ -10,6 +10,7 @@ import {
   Box,
   Warehouse,
   FileText,
+  MapPin,
 } from "lucide-react";
 
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
@@ -34,19 +35,27 @@ export default function Inventaris() {
   const [inventarisData, setInventarisData] = useState(INITIAL_DATA);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [kebunList, setKebunList] = useState([]);
-  const [activeKebunId, setActiveKebunId] = useState(null);
+
+  const [selectedKebunId, setSelectedKebunId] = useState(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchDaftarKebun = async () => {
       try {
-        // Menggunakan endpoint yang sudah ada di constants.js Anda
         const url = API_ENDPOINTS.USER.GMDistrik.GET_KEBUN_LIST;
-
         const res = await fetch(url, { headers: getAuthHeaders() });
 
         if (res.ok) {
           const data = await res.json();
           setKebunList(data);
+
+          // --- OTOMATIS PILIH KEBUN PERTAMA ---
+          if (data && data.length > 0) {
+            const firstKebunId = data[0].auth_id || data[0].id;
+            setSelectedKebunId(firstKebunId);
+          }
+          // --------------------------------------------------
+
         } else {
           console.error("Gagal mendapatkan daftar kebun, status:", res.status);
           setKebunList([]);
@@ -60,15 +69,13 @@ export default function Inventaris() {
     fetchDaftarKebun();
   }, []);
 
-  const handleToggleKebun = (kebunId) => {
-    if (activeKebunId === kebunId) {
-      setActiveKebunId(null);
-    } else {
-      setActiveKebunId(kebunId);
+  // TAMBAHKAN EFEK INI SEBAGAI PENGGANTI TOGGLE
+  useEffect(() => {
+    if (selectedKebunId) {
       setInventarisData(INITIAL_DATA);
-      fetchInventaris(kebunId); // kebunId ini sudah menggunakan auth_id dari BE
+      fetchInventaris(selectedKebunId);
     }
-  };
+  }, [selectedKebunId]);
 
   const fetchInventaris = async (kebunId) => {
     if (!kebunId) return;
@@ -298,9 +305,12 @@ export default function Inventaris() {
     },
   };
 
-  return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+return (
+    // Tambahkan class 'relative' pada div paling luar
+    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
+      
+      {/* 1. HEADER (Margin bawah disamakan jadi mb-6 agar gap konsisten) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <Warehouse className="w-8 h-8 text-[#B5302D]" />
@@ -317,78 +327,128 @@ export default function Inventaris() {
         </div>
       </div>
 
-      <div className="space-y-6">
-        {kebunList.map((kebun) => (
-          <div
-            key={kebun.id}
-            className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm"
-          >
-            <div
-              className="bg-[#B5302D] px-5 py-4 cursor-pointer flex justify-between items-center transition-colors hover:bg-[#a72a28]"
-              onClick={() => handleToggleKebun(kebun.id)}
-            >
-              {/* PENYESUAIAN: Karena model BE "UserProfilRespon" kemungkinan menggunakan nama_lengkap */}
-              <h2 className="text-white font-bold text-lg">
-                {kebun.nama_lengkap ||
-                  kebun.nama_kebun ||
-                  "Kebun Belum Diberi Nama"}
-              </h2>
-              {activeKebunId === kebun.id ? (
-                <ChevronUp className="text-white" />
-              ) : (
-                <ChevronDown className="text-white" />
-              )}
+      {/* 2. UI DROPDOWN PILIH KEBUN (Memanjang Penuh) */}
+      <div className="mb-8 relative z-30">
+        {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+        {isDropdownOpen && (
+          <div 
+            className="fixed inset-0 z-20" 
+            onClick={() => setIsDropdownOpen(false)}
+          />
+        )}
+
+        {/* Tombol Utama (Bentuk Bar Memanjang) */}
+        <div
+          onClick={() => kebunList.length > 0 && setIsDropdownOpen(!isDropdownOpen)}
+          className={`flex items-center justify-between w-full px-5 py-3 rounded-xl border cursor-pointer transition-all relative z-30 ${
+            isDropdownOpen 
+              ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md" 
+              : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <MapPin className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`} />
+            <div className="flex flex-col text-left">
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}>
+                Pilih Kebun:
+              </span>
+              <span className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}>
+                {kebunList.length === 0 
+                  ? "Memuat data..." 
+                  : kebunList.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_lengkap || 
+                    kebunList.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_kebun || 
+                    "-- Silakan Pilih --"}
+              </span>
             </div>
-
-            {activeKebunId === kebun.id && (
-              <div className="p-4 sm:p-6 space-y-8 bg-gray-50/50 animate-in fade-in slide-in-from-top-2">
-                <SectionCard title="Inventaris Alat">
-                  {isLoadingData ? (
-                    <div className="flex justify-center py-10">
-                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
-                    </div>
-                  ) : (
-                    <Section
-                      config={tableConfig.peralatan}
-                      data={inventarisData.peralatan}
-                    />
-                  )}
-                </SectionCard>
-
-                <SectionCard title="Inventaris Barang">
-                  {isLoadingData ? (
-                    <div className="flex justify-center py-10">
-                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-8">
-                      <Section
-                        config={tableConfig.bibit}
-                        data={inventarisData.bibit}
-                      />
-                      <Section
-                        config={tableConfig.pupuk}
-                        data={inventarisData.pupuk}
-                      />
-                      <Section
-                        config={tableConfig.pestisida}
-                        data={inventarisData.pestisida}
-                      />
-                    </div>
-                  )}
-                </SectionCard>
-              </div>
-            )}
           </div>
-        ))}
+          <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`} />
+        </div>
 
-        {kebunList.length === 0 && (
+        {/* Menu Pilihan (Dropdown Menjuntai Lebar Penuh) */}
+        <div 
+          className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+            isDropdownOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"
+          }`}
+        >
+          <div className="max-h-60 overflow-y-auto py-1">
+            {kebunList.map((kb) => {
+              const idKebun = kb.auth_id || kb.id;
+              const namaKebun = kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
+              const isSelected = idKebun === selectedKebunId;
+
+              return (
+                <div
+                  key={idKebun}
+                  onClick={() => {
+                    setSelectedKebunId(idKebun);
+                    setIsDropdownOpen(false);
+                  }}
+                  className={`px-5 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                    isSelected 
+                      ? "bg-red-50 text-[#B5302D] font-bold" 
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {namaKebun}
+                  {isSelected && <div className="w-2 h-2 rounded-full bg-[#B5302D]" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. KONTEN TABEL INVENTARIS */}
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 z-10 relative">
+        {kebunList.length === 0 && !isLoadingData ? (
           <div className="text-center py-10 text-gray-500 italic bg-white rounded-xl border border-gray-200">
-            {/* Pesan lebih informatif jika kosong */}
             Belum ada data kebun yang terdaftar di distrik ini.
+          </div>
+        ) : !selectedKebunId ? (
+          <div className="text-center py-10 text-gray-500 italic bg-white/50 rounded-xl border border-gray-200 border-dashed">
+            Silakan pilih kebun terlebih dahulu untuk melihat inventaris.
+          </div>
+        ) : (
+          <div className="space-y-8 bg-transparent">
+            <SectionCard title="Inventaris Alat">
+              {isLoadingData ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+                </div>
+              ) : (
+                <Section
+                  config={tableConfig.peralatan}
+                  data={inventarisData.peralatan}
+                />
+              )}
+            </SectionCard>
+
+            <SectionCard title="Inventaris Barang">
+              {isLoadingData ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-8">
+                  <Section
+                    config={tableConfig.bibit}
+                    data={inventarisData.bibit}
+                  />
+                  <Section
+                    config={tableConfig.pupuk}
+                    data={inventarisData.pupuk}
+                  />
+                  <Section
+                    config={tableConfig.pestisida}
+                    data={inventarisData.pestisida}
+                  />
+                </div>
+              )}
+            </SectionCard>
           </div>
         )}
       </div>
+
     </div>
   );
 }
@@ -418,7 +478,7 @@ const Section = ({ config, data }) => (
     </div>
     <div className="overflow-x-auto">
       <table className="w-full text-xs sm:text-sm min-w-[600px] sm:min-w-0">
-        <thead className="bg-[#B5302D] text-white">
+        <thead className="bg-[#EF8523] text-white">
           <tr>
             <th className="px-2 sm:px-4 py-3 text-left font-semibold pl-3 sm:pl-5 w-10">
               No

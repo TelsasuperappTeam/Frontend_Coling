@@ -6,6 +6,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  MapPin,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 // Sesuaikan import config dengan struktur folder Anda
@@ -16,7 +17,8 @@ const Operasional = () => {
 
   // -- STATE UNTUK GM DISTRIK / KEBUN --
   const [daftarKebun, setDaftarKebun] = useState([]);
-  const [expandedKebun, setExpandedKebun] = useState(null);
+  const [selectedKebunId, setSelectedKebunId] = useState(null); // <--- GANTI expandedKebun
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // <--- TAMBAH INI
 
   // -- STATE UNTUK TRANSAKSI (JUAL & PINJAM) --
   // Menyimpan data per kebun_id: { [kebun_id]: arrayData }
@@ -91,7 +93,7 @@ const Operasional = () => {
           }));
           setDaftarKebun(formattedData);
           if (formattedData.length > 0) {
-            setExpandedKebun(formattedData[0].id);
+            setSelectedKebunId(formattedData[0].id); // <--- GANTI INI
             fetchDataPerKebun(formattedData[0].id);
           }
         }
@@ -110,7 +112,7 @@ const Operasional = () => {
             },
           ];
           setDaftarKebun(singleKebun);
-          setExpandedKebun(singleKebun[0].id);
+          setSelectedKebunId(singleKebun[0].id);
           fetchDataPerKebun(singleKebun[0].id);
         }
       }
@@ -221,17 +223,16 @@ const Operasional = () => {
   }, []);
 
   // 5. Handle Toggle Bungkusan / Accordion
-  const toggleKebun = (id) => {
-    if (expandedKebun !== id) {
-      setExpandedKebun(id);
-      // Jika data kebun belum diload, load sekalian
-      if (!riwayatJual[id] && !riwayatPinjam[id]) {
-        fetchDataPerKebun(id);
-      }
-    } else {
-      setExpandedKebun(null); // Tutup accordion
+  useEffect(() => {
+    if (
+      selectedKebunId &&
+      !riwayatJual[selectedKebunId] &&
+      !riwayatPinjam[selectedKebunId]
+    ) {
+      fetchDataPerKebun(selectedKebunId);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKebunId]);
 
   // 6. Handle POST Form
   const handleSubmitJual = async (e) => {
@@ -283,7 +284,7 @@ const Operasional = () => {
           total_harga: "",
         });
         // Refresh tabel hanya untuk kebun dia sendiri (karena POST cuma kebun yang bisa)
-        fetchDataPerKebun(expandedKebun);
+        fetchDataPerKebun(selectedKebunId);
       } else {
         const errorData = await response.json();
         alert(
@@ -342,7 +343,7 @@ const Operasional = () => {
           jumlah_dipinjam: "",
           tanggal_peminjaman: "",
         });
-        fetchDataPerKebun(expandedKebun);
+        fetchDataPerKebun(selectedKebunId);
       } else {
         const errorData = await response.json();
         alert(
@@ -360,7 +361,7 @@ const Operasional = () => {
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
       {/* HEADER & TAB SWITCHER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
@@ -390,221 +391,284 @@ const Operasional = () => {
         </div>
       </div>
 
+      {/* 2. UI DROPDOWN PILIH KEBUN (Memanjang Penuh di Bawah Header) */}
+      {isGM && (
+        <div className="mb-8 relative z-30">
+          {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+          {isDropdownOpen && (
+            <div
+              className="fixed inset-0 z-20"
+              onClick={() => setIsDropdownOpen(false)}
+            />
+          )}
+
+          {/* Tombol Utama (Bentuk Bar Memanjang) */}
+          <div
+            onClick={() =>
+              daftarKebun.length > 0 && setIsDropdownOpen(!isDropdownOpen)
+            }
+            className={`flex items-center justify-between w-full px-5 py-3 rounded-xl border cursor-pointer transition-all relative z-30 ${
+              isDropdownOpen
+                ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md"
+                : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <MapPin
+                className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
+              />
+              <div className="flex flex-col text-left">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
+                >
+                  Pilih Kebun:
+                </span>
+                <span
+                  className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}
+                >
+                  {daftarKebun.length === 0
+                    ? "Memuat data..."
+                    : daftarKebun.find(
+                        (k) => (k.auth_id || k.id) === selectedKebunId,
+                      )?.nama_lengkap ||
+                      daftarKebun.find(
+                        (k) => (k.auth_id || k.id) === selectedKebunId,
+                      )?.nama_kebun ||
+                      "-- Silakan Pilih --"}
+                </span>
+              </div>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
+            />
+          </div>
+
+          {/* Menu Pilihan (Dropdown Menjuntai Lebar Penuh) */}
+          <div
+            className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+              isDropdownOpen
+                ? "opacity-100 scale-y-100"
+                : "opacity-0 scale-y-0 pointer-events-none"
+            }`}
+          >
+            <div className="max-h-60 overflow-y-auto py-1">
+              {daftarKebun.map((kb) => {
+                const idKebun = kb.auth_id || kb.id;
+                const namaKebun =
+                  kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
+                const isSelected = idKebun === selectedKebunId;
+
+                return (
+                  <div
+                    key={idKebun}
+                    onClick={() => {
+                      setSelectedKebunId(idKebun);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`px-5 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                      isSelected
+                        ? "bg-red-50 text-[#B5302D] font-bold"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {namaKebun}
+                    {isSelected && (
+                      <div className="w-2 h-2 rounded-full bg-[#B5302D]" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-        {/* LOOPING KEBUN (ROLE GM DISTRIK / KEBUN TUNGGAL) */}
-        {daftarKebun.map((kebun) => {
-          // Ambil data tabel berdasarkan ID Kebun yang di-loop
-          const filteredJual = riwayatJual[kebun.id] || [];
-          const filteredPinjam = riwayatPinjam[kebun.id] || [];
-          const isLoading = isLoadingTransaksi[kebun.id];
-          const isExpanded = expandedKebun === kebun.id;
+        {/* HAPUS .MAP() - LANGSUNG AMBIL BERDASARKAN ID TERPILIH */}
+        {(() => {
+          if (!selectedKebunId) return null;
+
+          const filteredJual = riwayatJual[selectedKebunId] || [];
+          const filteredPinjam = riwayatPinjam[selectedKebunId] || [];
+          const isLoading = isLoadingTransaksi[selectedKebunId];
 
           return (
-            <div
-              key={kebun.id}
-              className="border border-[#B5302D] rounded-xl overflow-hidden bg-white shadow-sm"
-            >
-              {/* HEADER BUNGKUSAN KEBUN */}
-              <div
-                className="bg-[#B5302D] p-4 flex justify-between items-center cursor-pointer hover:bg-[#9a2825] transition-colors"
-                onClick={() => toggleKebun(kebun.id)}
-              >
-                <h2 className="text-white font-bold text-lg">
-                  {kebun.nama_kebun}
-                </h2>
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-white" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-white" />
-                )}
-              </div>
-
-              {/* KONTEN JIKA KEBUN DIBUKA */}
-              {isExpanded && (
-                <div className="p-4 sm:p-8 space-y-8 bg-gray-50">
-                  {/* SECTION 1 PENJUALAN BARANG */}
-                  <SectionCard title="Penjualan Barang">
-                    <div className="flex justify-between items-start mb-4">
-                      <p className="text-xs text-gray-500">
-                        Tabel riwayat penjualan barang ke petani/anggota di{" "}
-                        {kebun.nama_kebun}.
-                      </p>
-                      {/* Tombol Insert Jual HANYA MUNCUL kalau bukan GM */}
-                      {!isGM && (
-                        <button
-                          onClick={() => setShowModalJual(true)}
-                          className="flex items-center gap-1 bg-[#EF8523] hover:bg-[#d8721c] text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-orange-100 transition-all"
-                        >
-                          <Plus className="w-3 h-3" /> Penjualan
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                            <th className="p-4 font-bold rounded-tl-xl">No</th>
-                            <th className="p-4 font-bold">Nama Petani</th>
-                            <th className="p-4 font-bold">Tgl Pembelian</th>
-                            <th className="p-4 font-bold">Jenis</th>
-                            <th className="p-4 font-bold">Nama Barang</th>
-                            <th className="p-4 font-bold">Jumlah</th>
-                            <th className="p-4 font-bold">Total Harga</th>
-                            <th className="p-4 font-bold rounded-tr-xl">
-                              ID/Nota
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-xs text-gray-700 bg-white">
-                          {isLoading ? (
-                            <tr>
-                              <td colSpan="8" className="p-4 text-center">
-                                Memuat data...
-                              </td>
-                            </tr>
-                          ) : filteredJual.length > 0 ? (
-                            filteredJual.map((item, index) => (
-                              <tr
-                                key={item.id}
-                                className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                              >
-                                <td className="p-4 font-bold text-center">
-                                  {index + 1}
-                                </td>
-                                <td className="p-4 font-medium">
-                                  {item.nama_petani || "Tidak Diketahui"}
-                                </td>
-                                <td className="p-4 text-gray-500">
-                                  {item.tanggal_pembelian}
-                                </td>
-                                <td className="p-4">
-                                  <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">
-                                    {item.jenis_barang}
-                                  </span>
-                                </td>
-                                <td className="p-4 font-bold">
-                                  {item.nama_barang_tercatat}
-                                </td>
-                                <td className="p-4">{item.jumlah}</td>
-                                <td className="p-4 font-bold text-[#B5302D]">
-                                  {item.total_harga
-                                    ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
-                                    : "-"}
-                                </td>
-                                <td className="p-4 text-gray-400 italic">
-                                  #{item.id}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan="8" className="p-4 text-center">
-                                Belum ada riwayat penjualan untuk kebun ini.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </SectionCard>
-
-                  {/* SECTION 2 PEMINJAMAN */}
-                  <SectionCard title="Peminjaman Inventaris">
-                    <div className="flex justify-between items-start mb-4">
-                      <p className="text-xs text-gray-500">
-                        Tabel riwayat peminjaman aset kebun.
-                      </p>
-                      {/* Tombol Insert Pinjam HANYA MUNCUL kalau bukan GM */}
-                      {!isGM && (
-                        <button
-                          onClick={() => setShowModalPinjam(true)}
-                          className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
-                        >
-                          <Plus className="w-3 h-3" /> Peminjaman
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                            <th className="p-4 font-bold rounded-tl-xl">No</th>
-                            <th className="p-4 font-bold">Nama Peminjam</th>
-                            <th className="p-4 font-bold">Tgl Pinjam</th>
-                            <th className="p-4 font-bold">Nama Barang</th>
-                            <th className="p-4 font-bold text-center">
-                              Jumlah Dipinjam
-                            </th>
-                            <th className="p-4 font-bold text-center">
-                              Jumlah Kembali
-                            </th>
-                            <th className="p-4 font-bold rounded-tr-xl">
-                              Status
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-xs text-gray-700 bg-white">
-                          {isLoading ? (
-                            <tr>
-                              <td colSpan="7" className="p-4 text-center">
-                                Memuat data...
-                              </td>
-                            </tr>
-                          ) : filteredPinjam.length > 0 ? (
-                            filteredPinjam.map((item, index) => (
-                              <tr
-                                key={item.id}
-                                className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                              >
-                                <td className="p-4 font-bold text-center">
-                                  {index + 1}
-                                </td>
-                                <td className="p-4 font-medium">
-                                  {item.nama_petani || "Tidak Diketahui"}
-                                </td>
-                                <td className="p-4 text-gray-500">
-                                  {item.tanggal_peminjaman}
-                                </td>
-                                <td className="p-4 font-bold">
-                                  {item.nama_barang_tercatat}
-                                </td>
-                                <td className="p-4 text-center">
-                                  {item.jumlah_dipinjam}
-                                </td>
-                                <td className="p-4 text-center">
-                                  {item.jumlah_dikembalikan}
-                                </td>
-                                <td className="p-4">
-                                  <span
-                                    className={`px-2 py-1 rounded text-[10px] font-bold ${
-                                      item.status_peminjaman === "DIKEMBALIKAN"
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-red-100 text-red-700"
-                                    }`}
-                                  >
-                                    {item.status_peminjaman}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan="7" className="p-4 text-center">
-                                Belum ada riwayat peminjaman.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </SectionCard>
+            <div className="space-y-8 bg-transparent">
+              {/* SECTION 1 PENJUALAN BARANG */}
+              <SectionCard title="Penjualan Barang">
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-xs text-gray-500">
+                    Tabel riwayat penjualan barang ke petani/anggota.
+                  </p>
+                  {/* Tombol Insert Jual HANYA MUNCUL kalau bukan GM */}
+                  {!isGM && (
+                    <button
+                      onClick={() => setShowModalJual(true)}
+                      className="flex items-center gap-1 bg-[#EF8523] hover:bg-[#d8721c] text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-orange-100 transition-all"
+                    >
+                      <Plus className="w-3 h-3" /> Penjualan
+                    </button>
+                  )}
                 </div>
-              )}
+
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                        <th className="p-4 font-bold rounded-tl-xl">No</th>
+                        <th className="p-4 font-bold">Nama Petani</th>
+                        <th className="p-4 font-bold">Tgl Pembelian</th>
+                        <th className="p-4 font-bold">Jenis</th>
+                        <th className="p-4 font-bold">Nama Barang</th>
+                        <th className="p-4 font-bold">Jumlah</th>
+                        <th className="p-4 font-bold">Total Harga</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-xs text-gray-700 bg-white">
+                      {isLoading ? (
+                        <tr>
+                          <td colSpan="8" className="p-4 text-center">
+                            Memuat data...
+                          </td>
+                        </tr>
+                      ) : filteredJual.length > 0 ? (
+                        filteredJual.map((item, index) => (
+                          <tr
+                            key={item.id}
+                            className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                          >
+                            <td className="p-4 font-bold text-center">
+                              {index + 1}
+                            </td>
+                            <td className="p-4 font-medium">
+                              {item.nama_petani || "Tidak Diketahui"}
+                            </td>
+                            <td className="p-4 text-gray-500">
+                              {item.tanggal_pembelian}
+                            </td>
+                            <td className="p-4">
+                              <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">
+                                {item.jenis_barang}
+                              </span>
+                            </td>
+                            <td className="p-4 font-bold">
+                              {item.nama_barang_tercatat}
+                            </td>
+                            <td className="p-4">{item.jumlah}</td>
+                            <td className="p-4 font-bold text-[#B5302D]">
+                              {item.total_harga
+                                ? `Rp ${item.total_harga.toLocaleString("id-ID")}`
+                                : "-"}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" className="p-4 text-center">
+                            Belum ada riwayat penjualan untuk kebun ini.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+
+              {/* SECTION 2 PEMINJAMAN */}
+              <SectionCard title="Peminjaman Inventaris">
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-xs text-gray-500">
+                    Tabel riwayat peminjaman aset kebun.
+                  </p>
+                  {/* Tombol Insert Pinjam HANYA MUNCUL kalau bukan GM */}
+                  {!isGM && (
+                    <button
+                      onClick={() => setShowModalPinjam(true)}
+                      className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-lg shadow-green-100 transition-all"
+                    >
+                      <Plus className="w-3 h-3" /> Peminjaman
+                    </button>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                        <th className="p-4 font-bold rounded-tl-xl">No</th>
+                        <th className="p-4 font-bold">Nama Peminjam</th>
+                        <th className="p-4 font-bold">Tgl Pinjam</th>
+                        <th className="p-4 font-bold">Nama Barang</th>
+                        <th className="p-4 font-bold text-center">
+                          Jumlah Dipinjam
+                        </th>
+                        <th className="p-4 font-bold text-center">
+                          Jumlah Kembali
+                        </th>
+                        <th className="p-4 font-bold rounded-tr-xl">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-xs text-gray-700 bg-white">
+                      {isLoading ? (
+                        <tr>
+                          <td colSpan="7" className="p-4 text-center">
+                            Memuat data...
+                          </td>
+                        </tr>
+                      ) : filteredPinjam.length > 0 ? (
+                        filteredPinjam.map((item, index) => (
+                          <tr
+                            key={item.id}
+                            className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                          >
+                            <td className="p-4 font-bold text-center">
+                              {index + 1}
+                            </td>
+                            <td className="p-4 font-medium">
+                              {item.nama_petani || "Tidak Diketahui"}
+                            </td>
+                            <td className="p-4 text-gray-500">
+                              {item.tanggal_peminjaman}
+                            </td>
+                            <td className="p-4 font-bold">
+                              {item.dinamis_peralatan?.nama_alat ||
+                                item.dinamis_peralatan?.nama ||
+                                "Alat"}
+                            </td>
+                            <td className="p-4 text-center font-bold text-orange-600">
+                              {item.jumlah_dipinjam}
+                            </td>
+                            <td className="p-4 text-center font-bold text-green-600">
+                              {item.jumlah_dikembalikan}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`px-3 py-1 rounded-full text-[10px] font-bold border ${
+                                  item.status === "DIPINJAMKAN" ||
+                                  item.status === "DIPINJAM"
+                                    ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                    : "bg-green-50 text-green-700 border-green-200"
+                                }`}
+                              >
+                                {item.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" className="p-4 text-center">
+                            Belum ada riwayat peminjaman.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
             </div>
           );
-        })}
+        })()}
       </div>
 
       {/* --- MODAL PENJUALAN --- */}
@@ -888,11 +952,11 @@ const Operasional = () => {
   );
 };
 
-// HELPER COMPONENT
+// HELPER COMPONENT (Tetap butuh di sini)
 const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[20px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-[#EF8523]"></div>
-    <h3 className="text-sm font-bold text-[#B5302D] uppercase tracking-widest mb-4 flex items-center gap-2">
+  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
+    <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
       {title}
     </h3>
     {children}

@@ -2,19 +2,21 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
-  Plus,
   FileText,
-  Trash2,
   Upload,
-  Search,
   CheckCircle,
   X,
   ShoppingCart,
   ChevronDown,
   ChevronUp,
+  MapPin,
 } from "lucide-react";
 // Sesuaikan import config dengan konstanta Anda
-import { API_ENDPOINTS, API_BASE_URLS } from "../../../config/constants.js";
+import {
+  API_ENDPOINTS,
+  API_BASE_URLS,
+  getFileUrl,
+} from "../../../config/constants.js";
 
 const DOKUMEN_CONFIG = [
   {
@@ -36,7 +38,8 @@ const Operasional2 = () => {
   // -- STATE IDENTITAS & ROLE --
   const [userRole, setUserRole] = useState(null);
   const [daftarKebun, setDaftarKebun] = useState([]);
-  const [expandedKebun, setExpandedKebun] = useState(null);
+  const [selectedKebunId, setSelectedKebunId] = useState(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // -- STATE DATA PER KEBUN (Object Key: kebun_id) --
   const [dataOrganisasi, setDataOrganisasi] = useState({});
@@ -124,7 +127,7 @@ const Operasional2 = () => {
     [isGM],
   );
 
-  // 2. Tambahkan fetchDataOrganisasi ke dalam dependency array fetchDaftarKebun
+  // fetchDataOrganisasi ke dalam dependency array fetchDaftarKebun
   const fetchDaftarKebun = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -138,25 +141,25 @@ const Operasional2 = () => {
         if (res.ok) {
           const data = await res.json();
           setDaftarKebun(data);
+
           if (data.length > 0) {
-            setExpandedKebun(data[0].auth_id);
-            fetchDataOrganisasi(data[0].auth_id); // Fungsi ini sekarang stabil
+            const firstId = data[0].auth_id || data[0].id || "kebun-0";
+            setSelectedKebunId(firstId);
+            fetchDataOrganisasi(firstId);
           }
         }
       } else {
         const res = await fetch(`${API_BASE_URLS.USER}/users/me`, { headers });
         if (res.ok) {
           const data = await res.json();
-          const validId = data.auth_id || data.id; // Ambil mana yang tersedia dari BE
+          const validId = data.auth_id || data.id || "kebun-0";
+
           const single = [
             { auth_id: validId, nama_lengkap: data.nama_lengkap },
           ];
           setDaftarKebun(single);
-          setExpandedKebun(validId);
+          setSelectedKebunId(validId);
           fetchDataOrganisasi(validId);
-          setDaftarKebun(single);
-          setExpandedKebun(data.auth_id);
-          fetchDataOrganisasi(data.auth_id);
         }
       }
     } catch (error) {
@@ -168,15 +171,12 @@ const Operasional2 = () => {
     if (userRole) fetchDaftarKebun();
   }, [userRole, fetchDaftarKebun]);
 
-  // 4. Handler Toggle Accordion
-  const toggleKebun = (id) => {
-    if (expandedKebun === id) {
-      setExpandedKebun(null);
-    } else {
-      setExpandedKebun(id);
-      if (!dataOrganisasi[id]) fetchDataOrganisasi(id);
+  useEffect(() => {
+    if (selectedKebunId && !dataOrganisasi[selectedKebunId]) {
+      fetchDataOrganisasi(selectedKebunId);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKebunId]);
 
   // 5. Handler POST TBS (Hanya Kebun)
   const handleTBSChange = (e) => {
@@ -223,8 +223,9 @@ const Operasional2 = () => {
   };
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+    // Tambahkan class 'relative' pada div terluar ini
+    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
@@ -254,136 +255,180 @@ const Operasional2 = () => {
         </div>
       </div>
 
-      {/* LIST KEBUN (ACCORDION) */}
-      <div className="space-y-4">
-        {daftarKebun.map((kebun, index) => {
-          // Buat identifier yang dijamin unik. Jika auth_id tidak ada, gunakan id, jika tidak ada juga, gunakan index.
-          const safeId = kebun.auth_id || kebun.id || `kebun-${index}`;
+      {/* --- UI DROPDOWN PILIH KEBUN (Memanjang Penuh) --- */}
+      {isGM && (
+        <div className="mb-8 relative z-30">
+          {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+          {isDropdownOpen && (
+            <div 
+              className="fixed inset-0 z-20" 
+              onClick={() => setIsDropdownOpen(false)}
+            />
+          )}
 
-          const isExpanded = expandedKebun === safeId;
+          {/* Tombol Utama (Bentuk Bar Memanjang) */}
+          <div
+            onClick={() => daftarKebun.length > 0 && setIsDropdownOpen(!isDropdownOpen)}
+            className={`flex items-center justify-between w-full px-5 py-3 rounded-xl border cursor-pointer transition-all relative z-30 ${
+              isDropdownOpen 
+                ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md" 
+                : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <MapPin className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`} />
+              <div className="flex flex-col text-left">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}>
+                  Pilih Kebun:
+                </span>
+                <span className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}>
+                  {daftarKebun.length === 0 
+                    ? "Memuat data..." 
+                    : daftarKebun.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_lengkap || 
+                      daftarKebun.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_kebun || 
+                      "-- Silakan Pilih --"}
+                </span>
+              </div>
+            </div>
+            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`} />
+          </div>
+
+          {/* Menu Pilihan (Dropdown Menjuntai Lebar Penuh) */}
+          <div 
+            className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+              isDropdownOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"
+            }`}
+          >
+            <div className="max-h-60 overflow-y-auto py-1">
+              {daftarKebun.map((kb) => {
+                const idKebun = kb.auth_id || kb.id;
+                const namaKebun = kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
+                const isSelected = idKebun === selectedKebunId;
+
+                return (
+                  <div
+                    key={idKebun}
+                    onClick={() => {
+                      setSelectedKebunId(idKebun);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`px-5 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                      isSelected 
+                        ? "bg-red-50 text-[#B5302D] font-bold" 
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {namaKebun}
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-[#B5302D]" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- KONTEN ORGANISASI (Hanya muncul jika kebun sudah dipilih) --- */}
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 z-10 relative">
+        {(() => {
+          if (!selectedKebunId) return null;
+
+          const safeId = selectedKebunId;
           const docs = dataOrganisasi[safeId] || [];
           const loading = loadingKebun[safeId];
 
           return (
-            <div
-              key={safeId} // Gunakan safeId di sini
-              className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm"
-            >
-              <div
-                onClick={() => toggleKebun(safeId)} // Gunakan safeId juga untuk toggle
-                className={`p-4 flex justify-between items-center cursor-pointer transition-colors ${
-                  isExpanded ? "bg-red-50" : "hover:bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#B5302D] text-white rounded-full flex items-center justify-center font-bold">
-                    {kebun.nama_lengkap?.charAt(0)}
-                  </div>
-                  <span className="font-bold text-gray-700">
-                    {kebun.nama_lengkap}
-                  </span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-transparent">
+              {/* SEKSI 1: DOKUMEN */}
+              <SectionCard title="Arsip Dokumen Legalitas">
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-xs text-gray-400">
+                    Daftar kelengkapan dokumen ISPO/RSPO.
+                  </p>
+                  {!isGM && (
+                    <button className="text-[10px] bg-[#B5302D] text-white px-3 py-1 rounded-full font-bold shadow-md shadow-red-100 hover:bg-[#a02927] transition-all">
+                      + Upload Baru
+                    </button>
+                  )}
                 </div>
-                {isExpanded ? <ChevronUp /> : <ChevronDown />}
-              </div>
-
-              {isExpanded && (
-                <div className="p-6 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* SEKSI DOKUMEN */}
-                    <SectionCard title="Arsip Dokumen Legalitas">
-                      <div className="flex justify-between items-center mb-4">
-                        <p className="text-xs text-gray-400">
-                          Daftar kelengkapan dokumen ISPO/RSPO.
-                        </p>
-                        {!isGM && (
-                          <button className="text-[10px] bg-[#B5302D] text-white px-3 py-1 rounded-full font-bold">
-                            + Upload Baru
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-3">
-                        {loading ? (
-                          <p className="text-center py-4 text-xs">
-                            Memuat dokumen...
-                          </p>
-                        ) : (
-                          DOKUMEN_CONFIG.map((conf) => {
-                            const fileExist = docs.find(
-                              (d) => d.tipe_dokumen === conf.code,
-                            );
-                            return (
-                              <div
-                                key={conf.id}
-                                className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <FileText
-                                    className={`w-5 h-5 ${fileExist ? "text-green-500" : "text-gray-300"}`}
-                                  />
-                                  <span className="text-xs font-medium text-gray-600">
-                                    {conf.label}
-                                  </span>
-                                </div>
-                                {fileExist ? (
-                                  <div className="flex items-center gap-2">
-                                    <CheckCircle className="w-4 h-4 text-green-500" />
-                                    <button
-                                      onClick={() =>
-                                        window.open(
-                                          fileExist.file_url,
-                                          "_blank",
-                                        )
-                                      }
-                                      className="text-[#B5302D] hover:underline text-[10px] font-bold"
-                                    >
-                                      Lihat
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <span className="text-[10px] text-gray-400 italic">
-                                    Belum diunggah
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </SectionCard>
-
-                    {/* SEKSI TBS (HANYA INFO UNTUK GM, TOMBOL INPUT UNTUK KEBUN) */}
-                    <SectionCard title="Harga TBS Pemerintah">
-                      <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-4">
-                        <p className="text-[10px] text-green-700 font-bold uppercase mb-1">
-                          Status Update
-                        </p>
-                        <h4 className="text-lg font-bold text-green-800">
-                          Rp 2.850{" "}
-                          <span className="text-xs font-normal">/ Kg</span>
-                        </h4>
-                        <p className="text-[10px] text-green-600">
-                          Periode: Oktober 2023
-                        </p>
-                      </div>
-                      {!isGM && (
-                        <button
-                          onClick={() => setShowModalTBS(true)}
-                          className="w-full py-3 bg-white border-2 border-dashed border-green-300 rounded-xl text-green-600 text-xs font-bold hover:bg-green-50 transition-all flex items-center justify-center gap-2"
+                <div className="space-y-3">
+                  {loading ? (
+                    <p className="text-center py-4 text-xs">
+                      Memuat dokumen...
+                    </p>
+                  ) : (
+                    DOKUMEN_CONFIG.map((conf) => {
+                      const fileExist = docs.find(
+                        (d) => d.tipe_dokumen === conf.code,
+                      );
+                      return (
+                        <div
+                          key={conf.id}
+                          className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 transition-all"
                         >
-                          <Upload className="w-4 h-4" /> Perbarui Harga & Upload
-                          SK
-                        </button>
-                      )}
-                    </SectionCard>
-                  </div>
+                          <div className="flex items-center gap-3">
+                            <FileText
+                              className={`w-5 h-5 ${fileExist ? "text-green-500" : "text-gray-300"}`}
+                            />
+                            <span className="text-xs font-medium text-gray-600">
+                              {conf.label}
+                            </span>
+                          </div>
+                          {fileExist ? (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                              <button
+                                onClick={() =>
+                                  window.open(
+                                    getFileUrl(fileExist.file_url),
+                                    "_blank",
+                                  )
+                                }
+                                className="text-[#B5302D] hover:underline text-[10px] font-bold"
+                              >
+                                Lihat
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-gray-400 italic">
+                              Belum diunggah
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-              )}
+              </SectionCard>
+
+              {/* SEKSI 2: HARGA TBS */}
+              <SectionCard title="Harga TBS Pemerintah">
+                <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-4">
+                  <p className="text-[10px] text-green-700 font-bold uppercase mb-1">
+                    Status Update
+                  </p>
+                  <h4 className="text-lg font-bold text-green-800">
+                    Rp 2.850 <span className="text-xs font-normal">/ Kg</span>
+                  </h4>
+                  <p className="text-[10px] text-green-600">
+                    Periode: Oktober 2023
+                  </p>
+                </div>
+                {!isGM && (
+                  <button
+                    onClick={() => setShowModalTBS(true)}
+                    className="w-full py-3 bg-white border-2 border-dashed border-green-300 rounded-xl text-green-600 text-xs font-bold hover:bg-green-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" /> Perbarui Harga & Upload SK
+                  </button>
+                )}
+              </SectionCard>
             </div>
           );
-        })}
+        })()}
       </div>
 
-      {/* MODAL INPUT TBS (Hanya muncul jika dipicu role kebun) */}
+      {/* --- MODAL INPUT TBS ASLI MILIK ANDA --- */}
       {showModalTBS && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
@@ -467,11 +512,11 @@ const Operasional2 = () => {
   );
 };
 
-// HELPER COMPONENT
+// HELPER COMPONENT (Tetap butuh di sini)
 const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 p-5 relative overflow-hidden shadow-sm">
-    <div className="absolute top-0 left-0 w-1 h-full bg-[#B5302D]"></div>
-    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest mb-4">
+  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
+    <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
       {title}
     </h3>
     {children}

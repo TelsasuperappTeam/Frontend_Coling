@@ -4,22 +4,15 @@ import { API_ENDPOINTS, ROLES, getFileUrl } from "../../../config/constants.js";
 import DataDiriGMDistrik from "./DataDiriGMDistrik";
 import {
   Loader2,
-  Check,
-  X,
   User,
   MapPin,
-  Phone,
   FileText,
   Truck,
   Calendar,
   Coins,
+  ChevronDown,
 } from "lucide-react";
 
-/**
- * --- Komponen Card Reusable ---
- * Menggunakan styling yang lebih modern dengan rounded corners yang lebih besar,
- * shadow yang lebih soft, dan header yang lebih clean.
- */
 const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
   <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-full overflow-hidden">
     {/* Header Lebih Compact (Versi Petani) */}
@@ -70,7 +63,8 @@ export default function DashboardGMDistrik() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isValidasiLoading, setIsValidasiLoading] = useState(false);
   const [daftarKebun, setDaftarKebun] = useState([]);
-  const [selectedKebunId, setSelectedKebunId] = useState("");
+  const [selectedKebunId, setSelectedKebunId] = useState(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // --- STATE GRAFIK HARGA TBS (Dinamis) ---
   const [hargaTbsData, setHargaTbsData] = useState([]);
@@ -192,8 +186,6 @@ export default function DashboardGMDistrik() {
         const token = getToken();
         if (!token) return;
 
-        // Sesuaikan Base URL User Service (port 8002) dengan constant yang kamu punya
-        // Asumsi API_ENDPOINTS.USER_SERVICE_URL ada, atau gunakan domain langsung jika env terpisah
         const response = await fetch(
           API_ENDPOINTS.USER.GMDistrik.GET_KEBUN_LIST,
           {
@@ -209,8 +201,6 @@ export default function DashboardGMDistrik() {
 
         const data = await response.json();
 
-        // Asumsi responsenya berupa array object.
-        // Pastikan kita mengambil 'auth_id' sesuai instruksi BE untuk passing ke target_kebun_auth_id
         const mappedKebun = data.map((k) => ({
           id: k.auth_id || k.id, // Sesuaikan field auth_id dari respon BE
           nama: k.nama_kebun || k.nama_lengkap || k.nama, // Sesuaikan field nama dari respon BE
@@ -355,7 +345,7 @@ export default function DashboardGMDistrik() {
     };
 
     fetchGrafikHarga();
-  }, [selectedKebunId, tahunTbs, daftarKebun]); // <--- Dependency sudah benar menggunakan daftarKebun
+  }, [selectedKebunId, tahunTbs, daftarKebun]);
 
   const handleProfileSaved = (dataSaved) => {
     if (dataSaved) {
@@ -389,9 +379,7 @@ export default function DashboardGMDistrik() {
 
   return (
     <div className="space-y-6 sm:space-y-8 p-4 sm:p-10 min-h-screen font-sans bg-white">
-      {/* =========================================
-          SECTION 1: DATA DIRI
-         ========================================= */}
+      {/* SECTION 1: DATA DIRI */}
       <div className="bg-gradient-to-r from-[#EF8523] to-[#f19d4e] rounded-2xl p-5 sm:p-8 shadow-lg relative overflow-hidden text-white">
         <div className="absolute top-0 right-0 w-64 h-64 sm:h-72 bg-white opacity-5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
 
@@ -440,9 +428,8 @@ export default function DashboardGMDistrik() {
                   )}
                 </div>
               </div>
-              {/* --- AKHIR BAGIAN FOTO --- */}
 
-              {/* BAGIAN DATA TEKS (TETAP SAMA) */}
+              {/* BAGIAN DATA TEKS */}
               <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 sm:gap-y-2 w-full">
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow label="Nama Lengkap" value={profile.nama_kebun} />
@@ -475,30 +462,86 @@ export default function DashboardGMDistrik() {
           Dashboard Fitur Utama General Manager Distrik
         </h2>
 
-        {/* DROPDOWN GLOBAL UNTUK MEMILIH KEBUN */}
-        <div className="flex items-center gap-3 bg-red-50 px-4 py-2 rounded-xl border border-red-100 shadow-sm w-full sm:w-auto">
-          <MapPin className="w-5 h-5 text-[#B5302D]" />
-          <div className="flex flex-col w-full">
-            <span className="text-[10px] font-bold text-[#B5302D] uppercase tracking-wider">
-              Pilih Kebun:
-            </span>
-            <select
-              value={selectedKebunId}
-              onChange={(e) => setSelectedKebunId(e.target.value)}
-              className="bg-transparent text-gray-800 font-bold text-sm outline-none focus:ring-0 cursor-pointer w-full min-w-[150px]"
-              disabled={daftarKebun.length === 0}
-            >
-              <option value="" className="text-gray-500">
-                {daftarKebun.length === 0
-                  ? "Memuat data kebun..."
-                  : "-- Silakan Pilih Kebun --"}
-              </option>
-              {daftarKebun.map((k) => (
-                <option key={k.id} value={k.id} className="text-black">
-                  {k.nama}
-                </option>
-              ))}
-            </select>
+        {/* UI DROPDOWN PILIH KEBUN (Sesuai Desain Operasional) */}
+        <div className="relative z-30 w-full sm:w-auto min-w-[250px]">
+          {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+          {isDropdownOpen && (
+            <div
+              className="fixed inset-0 z-20"
+              onClick={() => setIsDropdownOpen(false)}
+            />
+          )}
+
+          {/* Tombol Utama */}
+          <div
+            onClick={() =>
+              daftarKebun.length > 0 && setIsDropdownOpen(!isDropdownOpen)
+            }
+            className={`flex items-center justify-between w-full px-5 py-3 rounded-xl border cursor-pointer transition-all relative z-30 ${
+              isDropdownOpen
+                ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md"
+                : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <MapPin
+                className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
+              />
+              <div className="flex flex-col text-left">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
+                >
+                  Pilih Kebun:
+                </span>
+                <span
+                  className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}
+                >
+                  {daftarKebun.length === 0
+                    ? "Memuat data..."
+                    : daftarKebun.find((k) => k.id === selectedKebunId)?.nama ||
+                      "-- Silakan Pilih --"}
+                </span>
+              </div>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
+            />
+          </div>
+
+          {/* Menu Pilihan (Dropdown Menjuntai) */}
+          <div
+            className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+              isDropdownOpen
+                ? "opacity-100 scale-y-100"
+                : "opacity-0 scale-y-0 pointer-events-none"
+            }`}
+          >
+            <div className="max-h-60 overflow-y-auto py-1">
+              {daftarKebun.map((kb) => {
+                // Menggunakan kb.id sesuai mapping data Anda
+                const isSelected = kb.id === selectedKebunId;
+
+                return (
+                  <div
+                    key={kb.id}
+                    onClick={() => {
+                      setSelectedKebunId(kb.id);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`px-5 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                      isSelected
+                        ? "bg-red-50 text-[#B5302D] font-bold"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {kb.nama}
+                    {isSelected && (
+                      <div className="w-2 h-2 rounded-full bg-[#B5302D]" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -918,3 +961,5 @@ export default function DashboardGMDistrik() {
     </div>
   );
 }
+
+

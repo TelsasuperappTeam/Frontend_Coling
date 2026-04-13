@@ -216,7 +216,7 @@ export default function InventarisPetani() {
     }
   }, [handleDeletePeralatan]);
 
-// Helper render link dokumen
+  // Helper render link dokumen
   const renderFileLink = (path, title = "Dokumen") => {
     if (!path) return null;
     return (
@@ -311,7 +311,6 @@ export default function InventarisPetani() {
         },
       ],
     },
-
 
     bibit: {
       title: "Stok Bibit",
@@ -932,7 +931,7 @@ const Section = ({ config, data, onAdd }) => (
     </div>
     <div className="overflow-x-auto">
       <table className="w-full text-xs sm:text-sm min-w-[600px] sm:min-w-0">
-        <thead className="bg-[#B5302D] text-white">
+        <thead className="bg-[#EF8523] text-white">
           <tr>
             <th className="px-3 sm:px-4 py-3 text-left font-semibold pl-4 sm:pl-5 w-10">
               No
