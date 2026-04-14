@@ -450,7 +450,7 @@ export default function DashboardKebun() {
               <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 sm:gap-y-2 w-full">
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow label="Nama Kebun" value={profile.nama_kebun} />
-                  <DataRow label="Role" value={profile.role} />
+                  <DataRow label="Role" value="Kebun" />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow label="Email" value={profile.email} />
@@ -472,7 +472,7 @@ export default function DashboardKebun() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Dashboard Fitur Utama Kebun
+        Tampilan Utama Fitur Utama Kebun
       </h2>
 
       {/* =========================================

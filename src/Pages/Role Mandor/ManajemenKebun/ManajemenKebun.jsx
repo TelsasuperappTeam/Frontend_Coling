@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  Trees,
-  ClipboardList,
-  Sprout,
-  Warehouse,
-} from "lucide-react"; 
+import { Trees, ClipboardList, Sprout, Warehouse } from "lucide-react";
 import RencanaKerja from "./RencanaKerja";
 import BudidayaMonitoring from "./BudidayaMonitoring";
 import Inventaris from "./InventarisPetani";
@@ -13,9 +8,9 @@ import Inventaris from "./InventarisPetani";
 export default function ManajemenKebun() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // State untuk tab aktif
-  const [activeTab, setActiveTab] = useState("rencana");
+  const [activeTab, setActiveTab] = useState("inventaris");
 
   // Base path untuk fitur ini
   const basePath = "/petani/manajemenkebun";
@@ -23,43 +18,43 @@ export default function ManajemenKebun() {
   // 1. Sinkronisasi URL ke State & Auto Redirect
   useEffect(() => {
     const path = location.pathname;
-    
-    if (path.includes("rencanakerja")) {
+
+    if (path.includes("inventaris")) {
+      setActiveTab("inventaris");
+    } else if (path.includes("rencanakerja")) {
       setActiveTab("rencana");
     } else if (path.includes("budidayamonitoring")) {
       setActiveTab("budidaya");
-    } else if (path.includes("inventaris")) {
-      setActiveTab("inventaris");
     } else {
-      setActiveTab("rencana");
-      navigate(`${basePath}/rencanakerja`, { replace: true });
+      // Ubah fallback default ke inventaris
+      setActiveTab("inventaris");
+      navigate(`${basePath}/inventaris`, { replace: true });
     }
   }, [location.pathname, navigate]);
 
   // 2. Fungsi menangani klik tab
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    
+
     let targetPath = "";
     switch (tabId) {
+      case "inventaris":
+        targetPath = `${basePath}/inventaris`;
+        break;
       case "rencana":
         targetPath = `${basePath}/rencanakerja`;
         break;
       case "budidaya":
         targetPath = `${basePath}/budidayamonitoring`;
         break;
-      case "inventaris":
-        targetPath = `${basePath}/inventaris`;
-        break;
       default:
-        targetPath = `${basePath}/rencanakerja`;
+        targetPath = `${basePath}/inventaris`; // Ubah default fallback
     }
     navigate(targetPath);
   };
 
   return (
     <div className="p-4 sm:p-10 min-h-screen font-sans">
-      
       {/* === HEADER HERO === */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6 sm:mb-8">
         <div className="flex items-center gap-4">
@@ -82,20 +77,20 @@ export default function ManajemenKebun() {
       {/* === TAB NAVIGATION  === */}
       <div className="flex flex-row mb-8 border border-gray-200 rounded-2xl overflow-hidden shadow-sm bg-white p-1 gap-1 sm:gap-0">
         {[
-          { 
-            id: "rencana", 
-            label: "Rencana Kerja", 
-            icon: <ClipboardList size={20} />
+          {
+            id: "inventaris",
+            label: "Inventaris",
+            icon: <Warehouse size={20} />,
           },
-          { 
-            id: "budidaya", 
-            label: "Budidaya & Monitoring", 
-            icon: <Sprout size={20} />
+          {
+            id: "rencana",
+            label: "Rencana Kerja",
+            icon: <ClipboardList size={20} />,
           },
-          { 
-            id: "inventaris", 
-            label: "Inventaris", 
-            icon: <Warehouse size={20} />
+          {
+            id: "budidaya",
+            label: "Budidaya & Monitoring",
+            icon: <Sprout size={20} />,
           },
         ].map((tab) => (
           <button
@@ -111,7 +106,7 @@ export default function ManajemenKebun() {
                   : "bg-transparent hover:bg-gray-50 text-black"
               }
             `}
-            title={tab.label} 
+            title={tab.label}
           >
             {tab.icon}
             <span className="hidden sm:block whitespace-nowrap">

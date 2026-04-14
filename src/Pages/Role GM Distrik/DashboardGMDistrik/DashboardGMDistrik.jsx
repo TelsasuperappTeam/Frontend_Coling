@@ -459,7 +459,7 @@ export default function DashboardGMDistrik() {
          ========================================= */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 sm:mt-8 mb-6 sm:mb-10 gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] px-1 border-l-4 border-[#B5302D] pl-3">
-          Dashboard Fitur Utama General Manager Distrik
+          Tampilan Utama Fitur Utama General Manager Distrik
         </h2>
 
         {/* UI DROPDOWN PILIH KEBUN (Sesuai Desain Operasional) */}

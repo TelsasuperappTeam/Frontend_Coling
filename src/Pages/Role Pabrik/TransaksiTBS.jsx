@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -13,38 +13,10 @@ import {
   PencilLine,
   XCircle,
 } from "lucide-react";
+// Pastikan path API_ENDPOINTS Anda benar
+import { API_ENDPOINTS } from "../../config/constants";
 
-// === MOCK DATA ===
-const dataTigaHari = [
-  {
-    id: 1,
-    tanggal: "20-03-2025",
-    jenis: "Tenera",
-    harga: "Rp 1.450/kg",
-    kuota: "20/50 ton",
-    status_kuota: "Hampir Penuh",
-    color_status: "bg-orange-100 text-orange-700",
-  },
-  {
-    id: 2,
-    tanggal: "21-03-2025",
-    jenis: "Tenera",
-    harga: "Rp 1.450/kg",
-    kuota: "10/50 ton",
-    status_kuota: "Tersedia",
-    color_status: "bg-green-100 text-green-700",
-  },
-  {
-    id: 3,
-    tanggal: "23-03-2025",
-    jenis: "Tenera",
-    harga: "Rp 1.450/kg",
-    kuota: "50/50 ton",
-    status_kuota: "Penuh",
-    color_status: "bg-red-100 text-red-700",
-  },
-];
-
+// === MOCK DATA PENAWARAN (Tetap dipertahankan) ===
 const dataPenawaran = [
   {
     id: 101,
@@ -75,10 +47,146 @@ const dataPenawaran = [
   },
 ];
 
+// ==========================================
+// DEKLARASI KOMPONEN UTAMA (Tadi Terhapus Disini)
+// ==========================================
 const TransaksiTBS = () => {
+  // --- STATE UI DASAR ---
   const [activeMainSection, setActiveMainSection] = useState("rencana");
   const [activeSubRencana, setActiveSubRencana] = useState(null);
   const [openDetailId, setOpenDetailId] = useState(null);
+
+  // --- STATE LIST RENCANA AKTIF ---
+  const [kebutuhanAktif, setKebutuhanAktif] = useState([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+
+  // --- STATE FORM RENCANA HARIAN ---
+  const [isLoading, setIsLoading] = useState(false);
+  const [formRencana, setFormRencana] = useState({
+    jenis_sawit: "Tenera",
+    harga_beli: "",
+    kapasitas_ton: "",
+    tanggal_mulai: "",
+  });
+
+  // ==========================================
+  // FUNGSI & LOGIKA
+  // ==========================================
+
+  // Fungsi untuk mengambil data rencana aktif dari backend
+  const fetchKebutuhanAktif = async () => {
+    setIsLoadingList(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        API_ENDPOINTS.FARM.MARKETPLACE.GET_KEBUTUHAN_AKTIF,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (response.ok) {
+        setKebutuhanAktif(data);
+      } else {
+        console.error("Gagal memuat rencana aktif:", data);
+      }
+    } catch (error) {
+      console.error("Fetch Error:", error);
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  // Trigger fetch ketika pengguna berada di tab "rencana"
+  useEffect(() => {
+    if (activeMainSection === "rencana") {
+      fetchKebutuhanAktif();
+    }
+  }, [activeMainSection]);
+
+  // Helper untuk mengubah tanggal menjadi label "Hari Ini", "Besok", "Lusa"
+  const getLabelHari = (tanggalStr) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(tanggalStr);
+    target.setHours(0, 0, 0, 0);
+    const diffTime = target - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Hari Ini";
+    if (diffDays === 1) return "Besok";
+    if (diffDays === 2) return "Lusa";
+    if (diffDays < 0) return "Lewat";
+    return `H+${diffDays}`;
+  };
+
+  // Handler untuk mengikat input field form dengan state
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormRencana((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Fungsi POST ke API untuk membuat Rencana Baru
+  const handleSubmitRencana = async () => {
+    if (
+      !formRencana.tanggal_mulai ||
+      !formRencana.harga_beli ||
+      !formRencana.kapasitas_ton
+    ) {
+      alert("Harap lengkapi Tanggal, Harga, dan Kapasitas!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const payload = {
+        tanggal_rencana_kebutuhan: formRencana.tanggal_mulai,
+        jenis_sawit_dibutuhkan: formRencana.jenis_sawit,
+        kuota_kapasitas_kg: parseFloat(formRencana.kapasitas_ton) * 1000,
+        harga_beli_per_kg: parseFloat(formRencana.harga_beli),
+      };
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        API_ENDPOINTS.FARM.MARKETPLACE.CREATE_KEBUTUHAN,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message || "Rencana Kebutuhan berhasil diterbitkan!");
+        // Reset form setelah sukses
+        setFormRencana({
+          jenis_sawit: "Tenera",
+          harga_beli: "",
+          kapasitas_ton: "",
+          tanggal_mulai: "",
+        });
+        setActiveSubRencana(null); // Tutup accordion
+        fetchKebutuhanAktif(); // Langsung refresh data list setelah post berhasil
+      } else {
+        alert("Gagal: " + (data.detail || "Terjadi kesalahan pada server."));
+      }
+    } catch (error) {
+      console.error("Submit Error:", error);
+      alert("Terjadi kesalahan jaringan.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleMainSection = (section) => {
     setActiveMainSection(section);
@@ -94,6 +202,9 @@ const TransaksiTBS = () => {
     setOpenDetailId(openDetailId === id ? null : id);
   };
 
+  // ==========================================
+  // RENDER UI (HTML/JSX)
+  // ==========================================
   return (
     <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* ======================== HEADER ============================ */}
@@ -191,10 +302,15 @@ const TransaksiTBS = () => {
                       <label className="text-[11px] font-bold text-gray-600 uppercase">
                         Jenis Sawit
                       </label>
-                      <select className="w-full border rounded-lg p-3 text-sm bg-white outline-none focus:border-[#EF8523]">
-                        <option>Tenera</option>
-                        <option>Dura</option>
-                        <option>Pesifera</option>
+                      <select
+                        name="jenis_sawit"
+                        value={formRencana.jenis_sawit}
+                        onChange={handleInputChange}
+                        className="w-full border rounded-lg p-3 text-sm bg-white outline-none focus:border-[#EF8523]"
+                      >
+                        <option value="Tenera">Tenera</option>
+                        <option value="Dura">Dura</option>
+                        <option value="Pisifera">Pisifera</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -203,8 +319,12 @@ const TransaksiTBS = () => {
                       </label>
                       <input
                         type="number"
+                        name="harga_beli"
+                        min="1"
+                        value={formRencana.harga_beli}
+                        onChange={handleInputChange}
                         className="w-full border rounded-lg p-3 text-sm outline-none focus:border-[#EF8523]"
-                        placeholder="Rp 1.430"
+                        placeholder="Contoh: 1430"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -213,8 +333,13 @@ const TransaksiTBS = () => {
                       </label>
                       <input
                         type="number"
+                        name="kapasitas_ton"
+                        min="0.1"
+                        step="any"
+                        value={formRencana.kapasitas_ton}
+                        onChange={handleInputChange}
                         className="w-full border rounded-lg p-3 text-sm outline-none focus:border-[#EF8523]"
-                        placeholder="0"
+                        placeholder="Contoh: 50"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -223,7 +348,7 @@ const TransaksiTBS = () => {
                       </label>
                       <input
                         type="text"
-                        value="Jl. Sawit Raya, Lampung (Otomatis)"
+                        value="Diambil Otomatis oleh Sistem"
                         disabled
                         className="w-full border bg-gray-50 rounded-lg p-3 text-sm text-gray-500 cursor-not-allowed"
                       />
@@ -234,16 +359,26 @@ const TransaksiTBS = () => {
                       </label>
                       <input
                         type="date"
+                        name="tanggal_mulai"
+                        value={formRencana.tanggal_mulai}
+                        onChange={handleInputChange}
                         className="w-full border rounded-lg p-3 text-sm outline-none focus:border-[#EF8523]"
                       />
                     </div>
                   </div>
 
-                  {/* === REVISI BAGIAN TOMBOL === */}
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <button className="w-full sm:flex-1 py-3 bg-[#B5302D] text-white text-xs font-bold rounded-xl shadow-md hover:bg-[#8e2523] transition-all flex items-center justify-center gap-2 order-2 sm:order-1">
-                      <Save size={16} /> Simpan Rencana
+                    <button
+                      onClick={handleSubmitRencana}
+                      disabled={isLoading}
+                      className={`w-full sm:flex-1 py-3 ${
+                        isLoading ? "bg-gray-400" : "bg-[#B5302D] hover:bg-[#8e2523]"
+                      } text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 order-2 sm:order-1`}
+                    >
+                      <Save size={16} />{" "}
+                      {isLoading ? "Menyimpan..." : "Simpan Rencana"}
                     </button>
+
                     <button className="w-full sm:w-auto px-6 py-3 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2 order-1 sm:order-2">
                       <PencilLine size={16} /> Edit
                     </button>
@@ -317,7 +452,6 @@ const TransaksiTBS = () => {
                       />
                     </div>
                   </div>
-                  {/* Revisi Tombol Terjadwal */}
                   <div className="flex flex-col sm:flex-row justify-end gap-3">
                     <button
                       onClick={() => toggleSubRencana("terjadwal")}
@@ -335,65 +469,119 @@ const TransaksiTBS = () => {
 
             <hr className="border-gray-100" />
 
-            {/* STATIC SECTION: 3 HARI KEDEPAN */}
+            {/* DYNAMIC SECTION: 3 HARI KEDEPAN */}
             <div>
-              <h3 className="text-sm font-bold text-[#B5302D] mb-4 flex items-center gap-2">
-                <Info size={16} /> Rencana Aktif (3 Hari Kedepan)
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {dataTigaHari.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border border-gray-200 bg-white p-4 rounded-xl relative flex flex-col shadow-sm"
-                  >
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-gray-50 border-l border-b border-gray-100 rounded-bl-xl text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                      {item.id === 1
-                        ? "Besok"
-                        : item.id === 2
-                        ? "Lusa"
-                        : "Nanti"}
-                    </div>
-                    <p className="text-[#EF8523] font-bold text-lg">
-                      {item.tanggal}
-                    </p>
-                    <p className="text-xs text-gray-400 mb-4">{item.jenis}</p>
-                    <div className="flex justify-between items-center text-xs mb-3">
-                      <span className="text-gray-500 font-medium">Harga:</span>
-                      <span className="font-bold text-gray-800">
-                        {item.harga}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5 mb-3 overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          item.id === 3 ? "bg-red-500" : "bg-green-500"
-                        }`}
-                        style={{
-                          width:
-                            item.id === 1
-                              ? "40%"
-                              : item.id === 2
-                              ? "20%"
-                              : "100%",
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center mb-4">
-                      <span
-                        className={`${item.color_status} px-2 py-0.5 rounded text-[10px] font-bold uppercase`}
-                      >
-                        {item.status_kuota}
-                      </span>
-                      <span className="text-[11px] font-mono font-bold text-gray-600">
-                        {item.kuota}
-                      </span>
-                    </div>
-                    <button className="w-full py-2.5 bg-gray-50 border border-gray-200 text-[#EF8523] text-xs font-bold rounded-lg hover:bg-[#EF8523] hover:text-white transition-all">
-                      Lihat Penawaran
-                    </button>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-[#B5302D] flex items-center gap-2">
+                  <Info size={16} /> Rencana Aktif (3 Hari Kedepan)
+                </h3>
+                <button
+                  onClick={fetchKebutuhanAktif}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Refresh Data
+                </button>
               </div>
+
+              {isLoadingList ? (
+                <div className="text-center py-6 text-gray-500 text-sm">
+                  Memuat data rencana aktif...
+                </div>
+              ) : kebutuhanAktif.length === 0 ? (
+                <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-xl border border-gray-200">
+                  Belum ada rencana kebutuhan yang aktif.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {kebutuhanAktif.map((item) => {
+                    // Konversi Harga
+                    const formatRupiah = new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      minimumFractionDigits: 0,
+                    }).format(item.harga_beli_per_kg);
+
+                    // Konversi Format Tanggal ke DD-MM-YYYY
+                    const tglObj = new Date(item.tanggal_rencana_kebutuhan);
+                    const tglFormat = tglObj
+                      .toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })
+                      .replace(/\//g, "-");
+
+                    // Konversi Kg ke Ton
+                    const kapasitasTon = item.kuota_kapasitas_kg / 1000;
+
+                    // Pengaturan Status Berdasarkan Enum BE
+                    let statusLabel = "Tersedia";
+                    let statusColor = "bg-green-100 text-green-700";
+                    let progressBarColor = "bg-green-500";
+                    let progressWidth = "0%";
+
+                    if (item.status === "TERPENUHI") {
+                      statusLabel = "Penuh";
+                      statusColor = "bg-red-100 text-red-700";
+                      progressBarColor = "bg-red-500";
+                      progressWidth = "100%";
+                    } else if (item.status === "DIBATALKAN") {
+                      statusLabel = "Dibatalkan";
+                      statusColor = "bg-gray-100 text-gray-700";
+                      progressBarColor = "bg-gray-500";
+                      progressWidth = "0%";
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="border border-gray-200 bg-white p-4 rounded-xl relative flex flex-col shadow-sm"
+                      >
+                        <div className="absolute top-0 right-0 px-3 py-1 bg-gray-50 border-l border-b border-gray-100 rounded-bl-xl text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                          {getLabelHari(item.tanggal_rencana_kebutuhan)}
+                        </div>
+                        <p className="text-[#EF8523] font-bold text-lg">
+                          {tglFormat}
+                        </p>
+                        <p className="text-xs text-gray-400 mb-4">
+                          {item.jenis_sawit_dibutuhkan}
+                        </p>
+
+                        <div className="flex justify-between items-center text-xs mb-3">
+                          <span className="text-gray-500 font-medium">
+                            Harga:
+                          </span>
+                          <span className="font-bold text-gray-800">
+                            {formatRupiah}/kg
+                          </span>
+                        </div>
+
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-3 overflow-hidden">
+                          <div
+                            className={`h-full ${progressBarColor}`}
+                            style={{ width: progressWidth }}
+                          />
+                        </div>
+
+                        <div className="flex justify-between items-center mb-4">
+                          <span
+                            className={`${statusColor} px-2 py-0.5 rounded text-[10px] font-bold uppercase`}
+                          >
+                            {statusLabel}
+                          </span>
+                          <span className="text-[11px] font-mono font-bold text-gray-600">
+                            Kapasitas: {kapasitasTon} Ton
+                          </span>
+                        </div>
+
+                        <button className="w-full py-2.5 bg-gray-50 border border-gray-200 text-[#EF8523] text-xs font-bold rounded-lg hover:bg-[#EF8523] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                          Lihat Penawaran
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

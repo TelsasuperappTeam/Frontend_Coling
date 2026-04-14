@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Store,
   MapPin,
@@ -11,35 +11,7 @@ import {
   FileText,
   X,
 } from "lucide-react";
-
-/* ===================== MOCK DATA ===================== */
-// Data simulasi kebutuhan pabrik untuk ditampilkan di tab "Lowongan"
-const MOCK_PABRIK_NEEDS = [
-  {
-    id: 1,
-    nama: "PT. Pabrik Agro Sejahtera",
-    alamat: "Desa Sukojadi, Kec. Lampung Tengah, Unit B-05",
-    tanggalKebutuhan: "23 Sep 2025",
-    jenisSawit: "Dura",
-    varietas: "DxP (Optional)",
-    kuota: 50, // Ton
-    terisi: 20, // Ton
-    harga: 1400, // Rupiah per kg
-    status: "Open",
-  },
-  {
-    id: 2,
-    nama: "PT. Sawit Makmur Abadi",
-    alamat: "Jl. Raya Lintas Sumatera KM 45, Lampung Selatan",
-    tanggalKebutuhan: "24 Sep 2025",
-    jenisSawit: "Tenera",
-    varietas: "Marihat",
-    kuota: 100,
-    terisi: 85,
-    harga: 1450,
-    status: "Open",
-  },
-];
+import { API_ENDPOINTS } from "../../config/constants";
 
 // Data simulasi riwayat pengajuan yang pernah dilakukan user
 const MOCK_RIWAYAT = [
@@ -88,13 +60,51 @@ const MOCK_MY_HARVEST_PLAN = [
 ];
 
 const Penjualan = () => {
-  // State manajemen: Mengatur tab aktif (Lowongan/Riwayat) dan tampilan (List/Detail/Form)
-  const [activeTab, setActiveTab] = useState("lowongan"); 
-  const [viewState, setViewState] = useState("list"); 
+  const [activeTab, setActiveTab] = useState("lowongan");
+  const [viewState, setViewState] = useState("list");
   const [selectedPabrik, setSelectedPabrik] = useState(null);
 
+  // --- STATE DATA API: KEBUTUHAN PABRIK ---
+  const [lowonganPabrik, setLowonganPabrik] = useState([]);
+  const [isLoadingLowongan, setIsLoadingLowongan] = useState(false);
+
+  // Fungsi Fetch Data dari Backend
+  const fetchKebutuhanPabrik = async () => {
+    setIsLoadingLowongan(true);
+    try {
+      const token = localStorage.getItem("token"); // Ambil token auth
+      const response = await fetch(
+        API_ENDPOINTS.FARM.MARKETPLACE.GET_KEBUTUHAN_AKTIF,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await response.json();
+      if (response.ok) {
+        setLowonganPabrik(data);
+      } else {
+        console.error("Gagal load kebutuhan pabrik:", data);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setIsLoadingLowongan(false);
+    }
+  };
+
+  // Trigger API Call saat tab "lowongan" dan view "list" aktif
+  useEffect(() => {
+    if (activeTab === "lowongan" && viewState === "list") {
+      fetchKebutuhanPabrik();
+    }
+  }, [activeTab, viewState]);
+
   // --- Navigasi Flow Functions ---
-  
+
   // Membuka detail pabrik tertentu
   const handleOpenDetail = (pabrik) => {
     setSelectedPabrik(pabrik);
@@ -121,8 +131,8 @@ const Penjualan = () => {
   const getSectionTitle = () => {
     if (viewState === "detail") return "Detail Kebutuhan Pabrik";
     if (viewState === "form") return "Form Pengajuan Penjualan";
-    return activeTab === "lowongan" 
-      ? "Ajukan Penjualan TBS ke Pabrik" 
+    return activeTab === "lowongan"
+      ? "Ajukan Penjualan TBS ke Pabrik"
       : "Status Pengajuan Penjualan";
   };
 
@@ -185,13 +195,23 @@ const Penjualan = () => {
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-4">
-                  {MOCK_PABRIK_NEEDS.map((item) => (
-                    <PabrikCard
-                      key={item.id}
-                      item={item}
-                      onRincian={() => handleOpenDetail(item)}
-                    />
-                  ))}
+                  {isLoadingLowongan ? (
+                    <div className="text-center py-10 text-gray-500 text-sm">
+                      Memuat daftar kebutuhan pabrik...
+                    </div>
+                  ) : lowonganPabrik.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500 text-sm bg-gray-50 rounded-2xl border border-gray-200">
+                      Saat ini belum ada pengumuman kebutuhan pabrik yang aktif.
+                    </div>
+                  ) : (
+                    lowonganPabrik.map((item) => (
+                      <PabrikCard
+                        key={item.id}
+                        item={item}
+                        onRincian={() => handleOpenDetail(item)}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
             ) : (
@@ -482,49 +502,73 @@ const SectionCard = ({ title, children }) => (
 );
 
 // Kartu Daftar Lowongan Pabrik
-const PabrikCard = ({ item, onRincian }) => (
-  <MainCard>
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div className="flex-1 space-y-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <h4 className="text-sm sm:text-base font-bold text-gray-900">
-              {item.nama}
-            </h4>
-            <p className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1.5 mt-1">
-              <MapPin className="w-3 h-3 text-gray-400" /> {item.alamat}
-            </p>
+const PabrikCard = ({ item, onRincian }) => {
+  // Pre-processing format data dari Backend ke Frontend UI
+  const kuotaTon = item.kuota_kapasitas_kg / 1000;
+
+  // Format Tanggal (YYYY-MM-DD ke DD MMMM YYYY)
+  const tglObj = new Date(item.tanggal_rencana_kebutuhan);
+  const tglFormat = tglObj.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  // Format Rupiah
+  const hargaRupiah = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(item.harga_beli_per_kg);
+
+  return (
+    <MainCard>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex-1 space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <h4 className="text-sm sm:text-base font-bold text-gray-900">
+                {item.nama_pabrik}
+              </h4>
+              <p className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1.5 mt-1">
+                <MapPin className="w-3 h-3 text-gray-400" />{" "}
+                {item.alamat_pabrik}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="px-3 py-1.5 bg-red-50 text-[#B5302D] rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-red-100">
+              <Calendar className="w-3 h-3" /> {tglFormat}
+            </div>
+            <div className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-green-100">
+              <DollarSign className="w-3 h-3" /> {hargaRupiah} /kg
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-2">
+              Jenis:{" "}
+              <span className="text-gray-700 font-bold">
+                {item.jenis_sawit_dibutuhkan}
+              </span>
+              <span className="text-gray-300">|</span>
+              Kapasitas:{" "}
+              <span className="text-gray-700 font-bold">{kuotaTon} Ton</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 pt-2">
-          <div className="px-3 py-1.5 bg-red-50 text-[#B5302D] rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-red-100">
-            <Calendar className="w-3 h-3" /> {item.tanggalKebutuhan}
-          </div>
-          <div className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-green-100">
-            <DollarSign className="w-3 h-3" /> Rp {item.harga} /kg
-          </div>
-          <div className="text-[10px] font-bold text-gray-400 uppercase">
-            Kuota:{" "}
-            <span className="text-gray-700">
-              {item.terisi}/{item.kuota} Ton
-            </span>
-          </div>
+        <div className="flex items-end md:items-center">
+          <button
+            onClick={onRincian}
+            className="w-full md:w-auto px-6 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 hover:border-[#B5302D] hover:text-[#B5302D] transition-all flex items-center justify-center gap-2 group"
+          >
+            Rincian{" "}
+            <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#B5302D]" />
+          </button>
         </div>
       </div>
-
-      <div className="flex items-end md:items-center">
-        <button
-          onClick={onRincian}
-          className="w-full md:w-auto px-6 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 hover:border-[#B5302D] hover:text-[#B5302D] transition-all flex items-center justify-center gap-2 group"
-        >
-          Rincian{" "}
-          <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#B5302D]" />
-        </button>
-      </div>
-    </div>
-  </MainCard>
-);
+    </MainCard>
+  );
+};
 
 // Kartu Riwayat Pengajuan (Style Table tapi Card)
 const RiwayatCard = ({ item, index }) => (
@@ -544,15 +588,15 @@ const RiwayatCard = ({ item, index }) => (
               item.status === "pending"
                 ? "bg-yellow-50 text-yellow-700 border-yellow-100"
                 : item.status === "accepted"
-                ? "bg-green-50 text-green-700 border-green-100"
-                : "bg-red-50 text-red-700 border-red-100"
+                  ? "bg-green-50 text-green-700 border-green-100"
+                  : "bg-red-50 text-red-700 border-red-100"
             }`}
           >
             {item.status === "pending"
               ? "Menunggu"
               : item.status === "accepted"
-              ? "Diterima"
-              : "Ditolak"}
+                ? "Diterima"
+                : "Ditolak"}
           </span>
         </div>
       </div>
@@ -589,8 +633,8 @@ const RiwayatCard = ({ item, index }) => (
           item.status === "pending"
             ? "bg-yellow-50 text-yellow-700 border-yellow-100"
             : item.status === "accepted"
-            ? "bg-green-50 text-green-700 border-green-100"
-            : "bg-red-50 text-red-700 border-red-100"
+              ? "bg-green-50 text-green-700 border-green-100"
+              : "bg-red-50 text-red-700 border-red-100"
         }`}
       >
         {item.status === "pending" && <History className="w-3 h-3" />}
@@ -598,13 +642,12 @@ const RiwayatCard = ({ item, index }) => (
         {item.status === "pending"
           ? "Pending"
           : item.status === "accepted"
-          ? "Diterima"
-          : "Ditolak"}
+            ? "Diterima"
+            : "Ditolak"}
       </span>
     </div>
   </div>
 );
-
 
 // Wrapper Card Utama
 const MainCard = ({ children }) => (
