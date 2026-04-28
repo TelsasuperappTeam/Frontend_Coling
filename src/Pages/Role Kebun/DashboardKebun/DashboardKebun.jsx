@@ -77,6 +77,7 @@ export default function DashboardKebun() {
     foto: "",
     koordinat: "",
     kebun_id: "",
+    distrik_id: "",
   });
 
   // Data dinamis dari API
@@ -154,6 +155,8 @@ export default function DashboardKebun() {
 
         const userData = await response.json();
 
+        console.log("==== DATA GET DARI BE ====", userData);
+
         setProfile({
           nama_kebun: userData.nama_lengkap || "-",
           role: userData.role || ROLES.KEBUN,
@@ -161,7 +164,8 @@ export default function DashboardKebun() {
           nomor_telepon: userData.no_hp || "-",
           alamat_kebun: userData.alamat || "",
           foto: getFileUrl(userData.foto_profil_url) || "",
-          kebun_id: userData.id || "-",
+          kebun_id: userData.kebun_id || userData.id || "-",
+          distrik_id: userData.distrik_id || "-",
           koordinat: userData.koordinat
             ? JSON.stringify(userData.koordinat)
             : "",
@@ -446,23 +450,27 @@ export default function DashboardKebun() {
               </div>
               {/* --- AKHIR BAGIAN FOTO --- */}
 
-              {/* BAGIAN DATA TEKS (TETAP SAMA) */}
-              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 sm:gap-y-2 w-full">
-                <div className="space-y-1 sm:space-y-2">
+              {/* BAGIAN DATA TEKS */}
+              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 w-full">
+                {/* KOLOM 1 */}
+                <div className="space-y-3">
                   <DataRow label="Nama Kebun" value={profile.nama_kebun} />
                   <DataRow label="Role" value="Kebun" />
+                  <DataRow label="Kode Kebun Relasi" value={profile.kebun_id} />
                 </div>
-                <div className="space-y-1 sm:space-y-2">
+
+                {/* KOLOM 2 */}
+                <div className="space-y-3">
                   <DataRow label="Email" value={profile.email} />
                   <DataRow
                     label="Nomor Telepon"
                     value={profile.nomor_telepon}
                   />
+                  <DataRow label="Kode Distrik" value={profile.distrik_id} />
                 </div>
-                <div className="space-y-1 sm:space-y-2">
-                  <DataRow label="Kebun Id" value={profile.kebun_id} />
-                </div>
-                <div className="space-y-1 sm:space-y-2">
+
+                {/* KOLOM 3 */}
+                <div className="space-y-3">
                   <DataRow label="Alamat Kebun" value={profile.alamat_kebun} />
                 </div>
               </div>
@@ -472,7 +480,7 @@ export default function DashboardKebun() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Tampilan Utama Fitur Utama Kebun
+        Tampilan Utama Fitur Kebun
       </h2>
 
       {/* =========================================

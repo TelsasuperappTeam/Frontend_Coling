@@ -2,7 +2,17 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_ENDPOINTS, ROLES, getFileUrl } from "../../../config/constants";
 import DataDiriTransport from "./DataDiriTransport";
-import { Loader2, Inbox, Send, Truck, MapPin, User } from "lucide-react";
+import {
+  Loader2,
+  Inbox,
+  Send,
+  Truck,
+  MapPin,
+  User,
+  Calendar,
+  Clock,
+  Plus,
+} from "lucide-react";
 
 // --- Komponen Card Reusable ---
 const Card = ({ title, icon: Icon, children, rightContent }) => (
@@ -36,6 +46,23 @@ export default function DashboardLogistik() {
   const navigate = useNavigate();
   const [showPopupDataDiri, setShowPopupDataDiri] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // --- STATE PERMINTAAN MASUK ---
+  const [permintaanMasuk, setPermintaanMasuk] = useState([]);
+  const [isLoadingPermintaan, setIsLoadingPermintaan] = useState(true);
+
+  // --- STATE PANTAU PENGIRIMAN ---
+  const [pengirimanAktif, setPengirimanAktif] = useState([]);
+  const [isLoadingPengiriman, setIsLoadingPengiriman] = useState(true);
+
+  // --- STATE ARMADA LOGISTIK ---
+  const [isLoadingArmada, setIsLoadingArmada] = useState(true);
+  const [armadaStats, setArmadaStats] = useState({
+    totalKendaraan: 0,
+    readyKendaraan: 0,
+    totalKru: 0,
+    readyKru: 0,
+  });
 
   // --- STATE PROFILE  ---
   const [profile, setProfile] = useState({
@@ -99,6 +126,101 @@ export default function DashboardLogistik() {
     fetchUserProfile();
   }, []);
 
+  // --- FETCH SEMUA DATA DASHBOARD SECARA PARALEL & EFISIEN ---
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      // Nyalakan semua loading
+      setIsLoadingPermintaan(true);
+      setIsLoadingPengiriman(true);
+      setIsLoadingArmada(true);
+
+      try {
+        const token =
+          localStorage.getItem("accessToken") || localStorage.getItem("token");
+        if (!token) return;
+
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        };
+
+        // 1. Tembak semua API secara serentak (Paralel)
+        // Menggunakan .catch(() => null) agar jika salah satu error, yang lain tetap jalan
+        const [resManagement, resKendaraan, resKru] = await Promise.all([
+          fetch(API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST, {
+            headers,
+          }).catch(() => null),
+          fetch(API_ENDPOINTS.TRACEABILITY.LOGISTIK.KENDARAAN.GET_ALL, {
+            headers,
+          }).catch(() => null),
+          fetch(API_ENDPOINTS.TRACEABILITY.LOGISTIK.KRU.GET_ALL, {
+            headers,
+          }).catch(() => null),
+        ]);
+
+        // 2. PROSES DATA PESANAN & PENGIRIMAN (1x Panggil API untuk 2 Card)
+        if (resManagement && resManagement.ok) {
+          const mgmtData = await resManagement.json();
+          const dataArray = Array.isArray(mgmtData)
+            ? mgmtData
+            : mgmtData.data || [];
+
+          // Pisahkan untuk Card Permintaan Masuk (Menunggu Konfirmasi)
+          const pending = dataArray.filter(
+            (item) =>
+              item.status_permintaan?.toLowerCase() === "menunggu konfirmasi",
+          );
+          setPermintaanMasuk(pending);
+
+          // Pisahkan untuk Card Pengiriman Aktif (Diterima)
+          const filteredPengiriman = dataArray.filter(
+            (item) => item.status_permintaan?.toLowerCase() === "diterima",
+          );
+          setPengirimanAktif(filteredPengiriman);
+        }
+
+        // Matikan loading pesanan & pengiriman
+        setIsLoadingPermintaan(false);
+        setIsLoadingPengiriman(false);
+
+        // 3. PROSES DATA ARMADA
+        let kendaraan = [];
+        let kru = [];
+
+        if (resKendaraan && resKendaraan.ok) {
+          const data = await resKendaraan.json();
+          kendaraan = Array.isArray(data) ? data : [];
+        }
+
+        if (resKru && resKru.ok) {
+          const data = await resKru.json();
+          kru = Array.isArray(data) ? data : [];
+        }
+
+        setArmadaStats({
+          totalKendaraan: kendaraan.length,
+          readyKendaraan: kendaraan.filter(
+            (v) => v.status_kendaraan?.toUpperCase() === "TERSEDIA",
+          ).length,
+          totalKru: kru.length,
+          readyKru: kru.filter((k) => k.status?.toUpperCase() === "TERSEDIA")
+            .length,
+        });
+
+        // Matikan loading armada
+        setIsLoadingArmada(false);
+      } catch (error) {
+        console.error("Fatal Error memuat Dashboard:", error);
+        // Pastikan loading mati jika terjadi error parah (misal internet putus)
+        setIsLoadingPermintaan(false);
+        setIsLoadingPengiriman(false);
+        setIsLoadingArmada(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   // --- LOGIKA PENGUNCIAN FIELD---
   const lockedFieldsConfig = {
     foto: !!profile.foto && profile.foto !== "",
@@ -108,52 +230,6 @@ export default function DashboardLogistik() {
       profile.alamat_pabrik !== "" &&
       profile.alamat_pabrik !== "-",
   };
-
-  // --- DATA DUMMY FITUR LAIN ---
-  const listPermintaan = [
-    {
-      id: 1,
-      kebun: "Kebun Sinar Makmur",
-      tglKirim: "15/12/2025",
-      tglTiba: "16/12/2025",
-    },
-    {
-      id: 2,
-      kebun: "Kebun Sinar Jaya",
-      tglKirim: "17/12/2025",
-      tglTiba: "18/12/2025",
-    },
-  ];
-
-  const listAjukan = [
-    { id: 1, kebun: "Kebun Mutiara", status: "Menunggu Konfirmasi" },
-    { id: 2, kebun: "Kebun Sawit Sejahtera", status: "Diproses" },
-    { id: 3, kebun: "Kebun Lestari", status: "Baru" },
-  ];
-
-  const armadaStats = {
-    totalKendaraan: 25,
-    totalKru: 50,
-    readyKendaraan: 18,
-    readyKru: 35,
-  };
-
-  const pantauPengiriman = [
-    {
-      id: 1,
-      kebun: "Kebun Sinar Makmur",
-      tujuan: "PKS Utama",
-      tglBerangkat: "14/12/2025",
-      estimasiTiba: "15/12/2025",
-    },
-    {
-      id: 2,
-      kebun: "Kebun Sejahtera",
-      tujuan: "PKS Blok B",
-      tglBerangkat: "14/12/2025",
-      estimasiTiba: "14/12/2025",
-    },
-  ];
 
   const handleProfileSaved = (dataSaved) => {
     if (dataSaved) {
@@ -222,22 +298,20 @@ export default function DashboardLogistik() {
               </div>
               {/* --- AKHIR BAGIAN FOTO --- */}
 
-              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 sm:gap-y-2 w-full">
+              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-y-1 sm:gap-y-2 w-full">
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow
                     label="Nama Logistik"
                     value={profile.nama_logistik}
                   />
                   <DataRow label="Role" value={profile.role} />
-                </div>
-                <div className="space-y-1 sm:space-y-2">
-                  <DataRow label="Email" value={profile.email} />
                   <DataRow
                     label="Nomor Telepon"
                     value={profile.nomor_telepon}
                   />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
+                  <DataRow label="Email" value={profile.email} />
                   <DataRow
                     label="Alamat Logistik"
                     value={profile.alamat_pabrik}
@@ -260,153 +334,244 @@ export default function DashboardLogistik() {
           title="Permintaan Jasa Logistik"
           icon={Inbox}
           rightContent={
-            <span className="bg-white text-[#B5302D] text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-              {listPermintaan.length} Permintaan
+            <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+              {permintaanMasuk.length} Permintaan
             </span>
           }
         >
           <div className="space-y-3 h-full flex flex-col">
             <div className="flex-grow space-y-3">
-              {listPermintaan.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3 bg-gray-50 rounded-xl border border-gray-300"
-                >
-                  <p className="font-bold text-[#B5302D] text-sm">
-                    {item.kebun}
-                  </p>
-                  <p className="text-[11px] text-gray-600 mt-1">
-                    Tgl Pengiriman: {item.tglKirim}
-                  </p>
-                  <p className="text-[11px] text-gray-600">
-                    Tgl Permintaan Tiba: {item.tglTiba}
-                  </p>
+              {isLoadingPermintaan ? (
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Memuat data...
                 </div>
-              ))}
+              ) : permintaanMasuk.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                  Tidak ada permintaan baru
+                </div>
+              ) : (
+                [...permintaanMasuk]
+                  .sort(
+                    (a, b) =>
+                      new Date(a.tanggal_rencana_panen) -
+                      new Date(b.tanggal_rencana_panen),
+                  )
+                  .slice(0, 5)
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className="group relative bg-white p-3.5 sm:p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-[#EF8523]/40 transition-all duration-300 flex items-start gap-3 sm:gap-4 overflow-hidden"
+                    >
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#B5302D] opacity-80 group-hover:bg-[#EF8523] transition-colors" />
+
+                      <div className="bg-red-50 p-2 sm:p-2.5 rounded-lg flex-shrink-0 mt-0.5 group-hover:bg-orange-50 transition-colors">
+                        <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-[#B5302D] group-hover:text-[#EF8523] transition-colors" />
+                      </div>
+
+                      {/* Konten Data */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-800 text-[13px] sm:text-sm truncate">
+                          {item.nama_gapoktan || "-"}
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 mt-2">
+                          {/* Tgl Panen */}
+                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-gray-500">
+                            <Calendar className="w-3 h-3 opacity-70" />
+                            <span>
+                              Panen:{" "}
+                              <span className="font-semibold text-gray-700">
+                                {item.tanggal_rencana_panen || "-"}
+                              </span>
+                            </span>
+                          </div>
+
+                          {/* Target Tiba */}
+                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold text-[#B5302D] bg-red-50/80 px-2 py-0.5 rounded-md w-fit border border-red-100">
+                            <Clock className="w-3 h-3" />
+                            <span>
+                              Tiba: {item.tanggal_permintaan_sampai || "-"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
-            <button
-              onClick={() => navigate("/logistik/manajemenpesanan")}
-              className="mt-2 text-right text-xs font-bold text-[#B5302D] hover:underline"
-            >
-              Lihat semua &rarr;
-            </button>
+
+            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-2 z-10 border-t border-gray-50 text-right">
+              <button
+                onClick={() => navigate("/logistik/manajemenpesanan")}
+                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
+              >
+                Lihat semua &rarr;
+              </button>
+            </div>
           </div>
         </Card>
 
-        {/* FITUR 2 Ajukan Jasa Logistik */}
+        {/* FITUR 2 Pantau Pengiriman */}
         <Card
-          title="Ajukan Jasa Logistik Ke Kebun"
-          icon={Send}
+          title="Pantau Pengiriman"
+          icon={MapPin}
           rightContent={
-            <span className="bg-white text-[#B5302D] text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-              {listAjukan.length} Pengajuan
+            <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+              {pengirimanAktif.length} Pengiriman
             </span>
           }
         >
           <div className="space-y-3 h-full flex flex-col">
             <div className="flex-grow space-y-3">
-              {listAjukan.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-300"
-                >
-                  <div>
-                    <p className="font-bold text-gray-800 text-sm">
-                      {item.kebun}
-                    </p>
-                    <p className="text-[10px] text-gray-500 italic">
-                      {item.status}
-                    </p>
-                  </div>
+              {isLoadingPengiriman ? (
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Memuat data...
                 </div>
-              ))}
+              ) : pengirimanAktif.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                  Tidak ada pengiriman aktif
+                </div>
+              ) : (
+                pengirimanAktif.slice(0, 5).map((log) => {
+                  // Dinamika Badge berdasarkan progress_db
+                  const rawProgress = log.progress_db || "menunggu_pengiriman";
+                  const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
+                  let statusLabel = log.progress_publik || "Menunggu";
+
+                  let badgeColor = "bg-gray-50 text-gray-600 border-gray-200"; // menunggu_pengiriman
+                  if (pDB === "mengirim")
+                    badgeColor =
+                      "bg-orange-50 text-[#EF8523] border-orange-100";
+                  if (pDB === "menuju_pabrik")
+                    badgeColor = "bg-blue-50 text-blue-600 border-blue-100";
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="relative bg-gray-50 rounded-xl p-3 border border-gray-300 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="absolute top-3 right-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9px] font-medium border ${badgeColor}`}
+                        >
+                          {statusLabel}
+                        </span>
+                      </div>
+
+                      {/* Asal dan Tujuan */}
+                      <p className="font-bold text-sm text-gray-800 pr-20 truncate">
+                        {log.nama_gapoktan || "-"}
+                      </p>
+                      <p className="text-[11px] text-gray-600 mt-1 truncate">
+                        Tujuan: {log.alamat_pengiriman_pabrik || "-"}
+                      </p>
+
+                      {/* Tanggal */}
+                      <div className="mt-2 grid grid-cols-2 gap-2 border-t border-gray-200 pt-2">
+                        <p className="text-[10px] text-gray-500">
+                          Berangkat:{" "}
+                          <span className="font-semibold text-gray-700">
+                            {log.tanggal_keberangkatan || "-"}
+                          </span>
+                        </p>
+                        <p className="text-[10px] text-gray-500 text-right">
+                          Estimasi:{" "}
+                          <span className="font-semibold text-[#B5302D]">
+                            {log.tanggal_permintaan_sampai || "-"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-            <button
-              onClick={() => navigate("/logistik/manajemenpesanan")}
-              className="mt-2 text-right text-xs font-bold text-[#B5302D] hover:underline"
-            >
-              Lihat semua &rarr;
-            </button>
+
+            {/* Tombol Lihat Semua yang dirapikan (Sticky & Background Putih) */}
+            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-2 z-10 border-t border-gray-50 text-right">
+              <button
+                onClick={() => navigate("/logistik/pengiriman")}
+                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
+              >
+                Lihat semua &rarr;
+              </button>
+            </div>
           </div>
         </Card>
 
-        {/* FITUR 3 Armada (Style Statistik) */}
+        {/* FITUR 3 Armada Logistik */}
         <Card title="Armada Logistik" icon={Truck}>
-          <div className="space-y-5 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-300 text-center">
-                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                  Total Kendaraan
-                </p>
-                <div className="bg-yellow-100 border border-yellow-400 py-1 rounded-lg font-bold text-xl">
-                  {armadaStats.totalKendaraan}
-                </div>
+          <div className="space-y-3 h-full flex flex-col justify-between">
+            {isLoadingArmada ? (
+              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                <p className="text-[10px]">Memuat data...</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-300 text-center">
-                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                  Total Kru
-                </p>
-                <div className="bg-yellow-100 border border-yellow-400 py-1 rounded-lg font-bold text-xl">
-                  {armadaStats.totalKru}
+            ) : (
+              <div className="flex-grow flex flex-col gap-3 mt-1">
+                {/* --- ROW 1: KENDARAAN --- */}
+                <div className="bg-gradient-to-br from-red-50 to-white p-3.5 sm:p-4 rounded-xl border border-red-100 flex items-center justify-between hover:shadow-md hover:border-red-200 transition-all group">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-sm group-hover:scale-105 transition-transform text-[#B5302D]">
+                      <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                        Kendaraan
+                      </p>
+                      <p className="text-xl sm:text-2xl font-black text-gray-800 leading-none mt-1">
+                        {armadaStats.totalKendaraan}{" "}
+                        <span className="text-[10px] font-semibold text-gray-400 lowercase">
+                          Total unit
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  {/* Badge Ready */}
+                  <div className="bg-green-100 text-green-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold border border-green-200 flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    {armadaStats.readyKendaraan} Ready
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="bg-green-50 p-4 rounded-xl border border-green-200 text-center">
-                <p className="text-[10px] font-bold text-green-600 uppercase mb-1">
-                  Kendaraan Ready
-                </p>
-                <div className="bg-yellow-100 border border-yellow-400 py-1 rounded-lg font-bold text-xl">
-                  {armadaStats.readyKendaraan}
-                </div>
-              </div>
-              <div className="bg-green-50 p-4 rounded-xl border border-green-200 text-center">
-                <p className="text-[10px] font-bold text-green-600 uppercase mb-1">
-                  Kru Ready
-                </p>
-                <div className="bg-yellow-100 border border-yellow-400 py-1 rounded-lg font-bold text-xl">
-                  {armadaStats.readyKru}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
 
-        {/* FITUR 4 Pantau Pengiriman */}
-        <Card title="Pantau Pengiriman" icon={MapPin}>
-          <div className="space-y-3 h-full flex flex-col">
-            <div className="flex-grow space-y-3">
-              {pantauPengiriman.map((log) => (
-                <div
-                  key={log.id}
-                  className="relative bg-gray-50 rounded-xl p-3 border border-gray-300 shadow-sm"
-                >
-                  <div className="absolute top-3 right-3">
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-blue-50 text-blue-600 border border-blue-100">
-                      Aktif
-                    </span>
+                {/* --- ROW 2: KRU / DRIVER --- */}
+                <div className="bg-gradient-to-br from-orange-50 to-white p-3.5 sm:p-4 rounded-xl border border-orange-100 flex items-center justify-between hover:shadow-md hover:border-orange-200 transition-all group">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-sm group-hover:scale-105 transition-transform text-[#EF8523]">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                        Kru / Driver
+                      </p>
+                      <p className="text-xl sm:text-2xl font-black text-gray-800 leading-none mt-1">
+                        {armadaStats.totalKru}{" "}
+                        <span className="text-[10px] font-semibold text-gray-400 lowercase">
+                          Total personil
+                        </span>
+                      </p>
+                    </div>
                   </div>
-                  <p className="font-bold text-sm text-gray-800">{log.kebun}</p>
-                  <p className="text-[11px] text-gray-600 mt-1">
-                    Tujuan: {log.tujuan}
-                  </p>
-                  <div className="mt-2 grid grid-cols-2 gap-2 border-t border-gray-200 pt-2">
-                    <p className="text-[10px] text-gray-500">
-                      Berangkat: {log.tglBerangkat}
-                    </p>
-                    <p className="text-[10px] text-gray-500 text-right">
-                      Estimasi: {log.estimasiTiba}
-                    </p>
+                  {/* Badge Ready */}
+                  <div className="bg-green-100 text-green-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold border border-green-200 flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    {armadaStats.readyKru} Ready
                   </div>
                 </div>
-              ))}
+              </div>
+            )}
+
+            {/* --- TOMBOL MANAJEMEN (DIRAPIHKAN & SERAGAM) --- */}
+            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-2 z-10 border-t border-gray-50 text-right">
+              <button
+                onClick={() => navigate("/logistik/armada")}
+                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
+              >
+                Lihat Semua &rarr;
+              </button>
             </div>
-            <button
-              onClick={() => navigate("/logistik/pengiriman")}
-              className="mt-2 text-right text-xs font-bold text-[#B5302D] hover:underline"
-            >
-              Lihat semua &rarr;
-            </button>
           </div>
         </Card>
       </div>

@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "melanjutkan untuk memeprbaiki UI/UX dan error"
+git commit -m "melanjutkan untuk memperbaiki error, kemudian mengecek kembali fitur yang sudah di buat apakah ada yang kurang atau tidak tepat dari logika yang sudah di buat"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"

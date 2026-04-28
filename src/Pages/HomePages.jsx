@@ -23,7 +23,12 @@ import {
   Sprout,
   ScanEye,
   Truck,
+  CheckCircle2,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
+
+import { API_ENDPOINTS } from "../config/constants";
 
 // =========================== KOMPONEN REUSABLE ===========================
 const AnimatedSection = ({ id, className, children }) => {
@@ -65,9 +70,36 @@ const HomePages = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [productionCode, setProductionCode] = useState("");
 
-  const handleCheckCodeSubmit = (e) => {
+  // --- STATE BARU UNTUK PELACAKAN API ---
+  const [traceResult, setTraceResult] = useState(null);
+  const [isLoadingTrack, setIsLoadingTrack] = useState(false);
+  const [trackError, setTrackError] = useState("");
+
+  // --- FUNGSI SUBMIT DINAMIS KE BACKEND ---
+  const handleCheckCodeSubmit = async (e) => {
     e.preventDefault();
-    alert(`Mengecek kode: ${productionCode}`);
+    if (!productionCode.trim()) return;
+
+    setIsLoadingTrack(true);
+    setTrackError("");
+    setTraceResult(null);
+
+    try {
+      // Panggil endpoint publik dari konstanta API
+      const url = API_ENDPOINTS.TRACEABILITY.KODE_PRODUKSI_PUBLIK.SCAN_TRACEABILITY(productionCode);
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (response.ok) {
+        setTraceResult(data);
+      } else {
+        setTrackError(data.detail || "Kode Produksi tidak ditemukan dalam sistem.");
+      }
+    } catch {
+      setTrackError("Terjadi kesalahan jaringan. Gagal menghubungi server.");
+    } finally {
+      setIsLoadingTrack(false);
+    }
   };
 
   return (
@@ -260,7 +292,7 @@ const HomePages = () => {
 
       {/* ================= CEK KODE PRODUKSI ================= */}
       <AnimatedSection id="cek-produksi" className="py-14 md:py-20 bg-gray-50">
-        <div className="container mx-auto px-4 md:px-6 max-w-3xl text-center">
+        <div className="container mx-auto px-4 md:px-6 max-w-4xl text-center">
           <h2 className="text-xl md:text-4xl font-bold text-gray-900 mb-3 md:mb-6">
             Lacak & Verifikasi Kode Produksi
           </h2>
@@ -270,25 +302,80 @@ const HomePages = () => {
             detail rantai pasok.
           </p>
 
+          {/* FORM INPUT DINAMIS */}
           <form
-            className="flex flex-col sm:flex-row gap-3 md:gap-4 max-w-xl mx-auto"
+            className="flex flex-col sm:flex-row gap-3 md:gap-4 max-w-2xl mx-auto"
             onSubmit={handleCheckCodeSubmit}
           >
             <input
               type="text"
               value={productionCode}
               onChange={(e) => setProductionCode(e.target.value)}
-              placeholder="Masukkan Kode Produksi..."
-              className="flex-1 px-4 py-3 md:px-6 md:py-4 rounded-full border border-gray-300 focus:ring-2 focus:ring-orange-500 shadow-sm text-sm md:text-lg"
+              placeholder="Masukkan Kode Produksi CPO..."
+              className="flex-1 px-5 py-3 md:px-6 md:py-4 rounded-full border border-gray-300 focus:ring-2 focus:ring-orange-500 shadow-sm text-sm md:text-lg outline-none"
               required
             />
             <button
               type="submit"
-              className="bg-linear-to-br from-orange-500 to-red-600 text-white font-semibold px-5 py-3 md:px-8 md:py-4 rounded-full hover:shadow-xl transition-all transform hover:-translate-y-1 text-sm md:text-base"
+              disabled={isLoadingTrack || !productionCode.trim()}
+              className="bg-linear-to-br from-orange-500 to-red-600 text-white font-semibold px-6 py-3 md:px-8 md:py-4 rounded-full hover:shadow-xl transition-all transform hover:-translate-y-1 text-sm md:text-base flex justify-center items-center gap-2 disabled:opacity-70 disabled:transform-none"
             >
-              Cek Sekarang
+              {isLoadingTrack ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cek Sekarang"}
             </button>
           </form>
+
+          {/* --- TAMPILAN ERROR --- */}
+          {trackError && (
+            <div className="mt-8 max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+              <AlertCircle className="w-5 h-5" />
+              {trackError}
+            </div>
+          )}
+
+          {/* --- TAMPILAN HASIL PELACAKAN --- */}
+          {traceResult && (
+            <div className="mt-8 max-w-2xl mx-auto p-6 md:p-8 bg-white border border-green-200 shadow-lg rounded-3xl text-left animate-in fade-in slide-in-from-bottom-4">
+              
+              <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+                <div className="p-2 bg-green-100 rounded-full shrink-0">
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="text-lg md:text-xl font-bold text-gray-900">Produk Terverifikasi Valid</h4>
+                  <p className="text-xs sm:text-sm text-gray-500">Tercatat resmi dalam sistem Traceability PalmaOne-08</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-gray-500 text-[10px] md:text-xs uppercase font-bold mb-1 tracking-wider">Kode Resi Produksi</p>
+                  <p className="font-mono font-bold text-gray-900 text-sm md:text-base break-words">
+                    {traceResult.kode_resi_produksi || productionCode}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-gray-500 text-[10px] md:text-xs uppercase font-bold mb-1 tracking-wider">Total Olahan (CPO)</p>
+                  <p className="font-bold text-green-600 text-sm md:text-base">
+                    {(traceResult.hasil_cpo_kg || 0).toLocaleString("id-ID")} Kg
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 sm:col-span-2">
+                  <p className="text-gray-500 text-[10px] md:text-xs uppercase font-bold mb-1 tracking-wider">Waktu Selesai Produksi</p>
+                  <p className="font-bold text-gray-900 text-sm md:text-base">
+                    {traceResult.waktu_produksi_selesai 
+                      ? new Date(traceResult.waktu_produksi_selesai).toLocaleString("id-ID", {
+                          dateStyle: "full", timeStyle: "long"
+                        })
+                      : "-"}
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          )}
+
         </div>
       </AnimatedSection>
 
@@ -319,7 +406,7 @@ const HomePages = () => {
                 rel="noopener noreferrer"
                 className="inline-block w-full sm:w-auto text-center bg-white border-2 border-orange-500 text-orange-600 font-semibold px-6 py-3 md:px-8 md:py-4 rounded-full hover:bg-orange-50 hover:shadow-xl transition-all transform hover:-translate-y-1 text-sm md:text-base"
               >
-                Buku Panduan Platform ISPO PalmaOne-08
+                Buku Panduan
               </a>
             </div>
           </div>
@@ -393,7 +480,7 @@ const HomePages = () => {
                 rel="noopener noreferrer"
                 className="inline-block w-full sm:w-auto text-center bg-white border-2 border-orange-500 text-orange-600 font-semibold px-6 py-3 md:px-8 md:py-4 rounded-full hover:bg-orange-50 hover:shadow-xl transition-all transform hover:-translate-y-1 text-sm md:text-base"
               >
-                Buku Panduan Platform ISPO PalmaOne-08
+                Buku Panduan
               </a>
             </div>
           </div>

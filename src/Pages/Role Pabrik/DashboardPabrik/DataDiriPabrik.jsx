@@ -579,7 +579,7 @@ export default function DataDiriPabrik({
                   }));
                 }}
                 placeholder={
-                  lockedFields.kapasitas_penyimpanan ? "0" : "Total Ton"
+                  lockedFields.kapasitas_penyimpanan ? "0" : "kg"
                 }
                 className={`w-full border rounded-xl px-4 py-3 text-sm transition-all outline-none 
                   ${
@@ -589,7 +589,7 @@ export default function DataDiriPabrik({
                   }`}
               />
               <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                <span className="text-gray-400 text-xs font-semibold">Ton</span>
+                <span className="text-gray-400 text-xs font-semibold">Kg</span>
               </div>
             </div>
             {(lockedFields.kapasitas_penyimpanan ||

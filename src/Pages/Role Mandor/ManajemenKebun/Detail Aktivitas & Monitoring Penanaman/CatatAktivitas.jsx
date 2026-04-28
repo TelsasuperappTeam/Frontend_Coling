@@ -17,7 +17,6 @@ import {
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
 import MonitoringGAP from "./MonitoringGAP";
 
-
 // KOMPONEN UTAMA
 export default function CatatAktivitas() {
   const { id } = useParams();
@@ -86,18 +85,15 @@ export default function CatatAktivitas() {
         Authorization: `Bearer ${token}`,
       };
 
-      // 1. Ambil Detail Blok (Header & Status Siklus)
-      // Pastikan endpoint ini sesuai konstanta Anda
+      // 1. Ambil Detail Blok (Header)
       let blokEndpoint = API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_BLOK_DETAIL(id);
-
       const responseBlok = await fetch(blokEndpoint, {
         method: "GET",
         headers,
       });
-      const dataBlok = await responseBlok.json();
 
       if (responseBlok.ok) {
-        // --- SET DATA HEADER BLOK & SIKLUS (Sama seperti kode lama) ---
+        const dataBlok = await responseBlok.json();
         setUnit(dataBlok.nama_unit);
         setRealisasiData({
           namaUnit: dataBlok.nama_unit,
@@ -109,18 +105,34 @@ export default function CatatAktivitas() {
           jumlahTanamanPerHa: dataBlok.jumlah_tanaman_per_ha,
           jumlahTotalTanaman: dataBlok.jumlah_total_tanaman,
           jarakTanam: dataBlok.jarak_tanam,
-          jarakTanamLainnya: dataBlok.jarak_tanam_lainnya || "", // Tangkap data "Lainnya" dari BE
-        });
-
-        setCurrentCycleInfo({
-          nomorSiklus: dataBlok.nomor_siklus_saat_ini || 1,
-          isFinished: dataBlok.is_siklus_finished || false,
-          sisaLuas: dataBlok.sisa_luas_unit || 0,
+          jarakTanamLainnya: dataBlok.jarak_tanam_lainnya || "",
         });
 
         if (dataBlok.status_panen === "done") setHasHarvestPlan(true);
 
-        // 2. [PERUBAHAN UTAMA] Fetch Data Monitoring Terpisah Sesuai Dokumen BE Poin 5
+        // --- 2. CEK STATUS SIKLUS KE BACKEND ---
+        // Panggil endpoint pengecekan khusus buatan BE
+        let isSiklusSelesai = false;
+        try {
+          const statusRes = await fetch(
+            API_ENDPOINTS.FARM.PETANI.ACTIVITY.CEK_STATUS_SIKLUS(id),
+            { headers },
+          );
+          if (statusRes.ok) {
+            const statusData = await statusRes.json();
+            // BE mengembalikan {"bisa_ganti": true/false}
+            isSiklusSelesai = statusData.bisa_ganti;
+          }
+        } catch (err) {
+          console.error("Gagal cek status ganti siklus", err);
+        }
+
+        setCurrentCycleInfo((prev) => ({
+          ...prev,
+          isFinished: isSiklusSelesai,
+        }));
+
+        // Fetch Data Monitoring Terpisah Sesuai Dokumen BE Poin 5
         // Gunakan Promise.all agar parallel dan cepat
         const baseMonitoringUrl = `${API_BASE_URLS.FARM}/farm/me/monitoring/${id}`;
 
@@ -163,8 +175,8 @@ export default function CatatAktivitas() {
     setLoadingHistory(true);
     try {
       const token = localStorage.getItem("token");
-      // Ganti penggunaan API_ENDPOINTS dengan template literal langsung
-      const endpoint = `${API_BASE_URLS.FARM}/farm/me/blok/${id}/list-arsip`;
+      const endpoint =
+        API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ARSIP_SIKLUS_LIST(id);
 
       const response = await fetch(endpoint, {
         method: "GET",
@@ -176,10 +188,31 @@ export default function CatatAktivitas() {
 
       if (response.ok) {
         const data = await response.json();
-        // Data format: [{ "nomor_siklus": 1, "status": "ARSIP" }, ...]
         setHistoryList(data);
-      } else {
-        console.error("Gagal mengambil list arsip");
+
+        // --- LOGIKA BARU MENCARI SIKLUS AKTIF ---
+        let activeCycleNum = 1;
+        if (data.length > 0) {
+          // 1. Cek jika BE mengirimkan siklus yang belum selesai
+          const isAnyActive = data.find(
+            (item) =>
+              item.status &&
+              !item.status.toUpperCase().includes("ARSIP") &&
+              !item.status.toUpperCase().includes("SELESAI"),
+          );
+
+          if (isAnyActive) {
+            activeCycleNum = isAnyActive.nomor_siklus;
+          } else {
+            // 2. JIKA SEMUA ADALAH ARSIP, MAKA SIKLUS AKTIF = SIKLUS ARSIP TERBESAR + 1
+            activeCycleNum = Math.max(...data.map((d) => d.nomor_siklus)) + 1;
+          }
+        }
+
+        setCurrentCycleInfo((prev) => ({
+          ...prev,
+          nomorSiklus: activeCycleNum,
+        }));
       }
     } catch (error) {
       console.error("Error fetching history list:", error);
@@ -293,32 +326,58 @@ export default function CatatAktivitas() {
   };
 
   // --- LOGIKA SIKLUS BARU (DIPERBARUI DENGAN BE) ---
-  const handleNewCycle = () => {
-    // [DOKUMENTASI / SESUAI BE MAHAR]
-    // Validasi berdasarkan field 'is_siklus_finished' dari header blok
+  const handleNewCycle = async () => {
     if (!currentCycleInfo.isFinished) {
       alert(
-        `Siklus ke-${currentCycleInfo.nomorSiklus} saat ini belum selesai (Panen belum difinalisasi). Tidak bisa memulai siklus baru.`,
+        `Siklus ke-${currentCycleInfo.nomorSiklus} saat ini belum selesai. Tidak bisa memulai siklus baru.`,
       );
       return;
     }
 
-    const confirmMsg =
-      "Untuk memulai siklus baru, Anda wajib mencatat REALISASI TANAM terlebih dahulu.\n\nLanjut ke form Realisasi?";
-    if (confirm(confirmMsg)) {
-      // 1. Buka accordion Realisasi
-      setOpenSection("realisasi");
-      // 2. Aktifkan mode edit
-      setIsEditingRealisasi(true);
-      // 3. (Opsional) Kosongkan field realisasi untuk data baru
-      setRealisasiData({
-        ...realisasiData,
-        tanggalTanam: "", // Reset tanggal agar user isi baru
-        // Reset field lain jika perlu, atau biarkan pre-filled dari rencana
-      });
+    const confirmMsg = `Anda akan menutup Siklus Ke-${currentCycleInfo.nomorSiklus} dan memulai siklus baru.\n\nData sebelumnya akan diarsipkan. Lanjutkan?`;
 
-      // Scroll ke atas
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (confirm(confirmMsg)) {
+      try {
+        const token = localStorage.getItem("token");
+        const endpoint =
+          API_ENDPOINTS.FARM.PETANI.ACTIVITY.BUAT_SIKLUS_BARU(id);
+
+        // 1. Tembak API Backend untuk Reset Siklus
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          alert(result.message || "Siklus baru berhasil dimulai!");
+
+          // 2. Refresh Data Halaman agar UI mendeteksi Siklus 2
+          await fetchRealisasiDetail();
+          fetchHistoryList();
+
+          // 3. Arahkan pengguna untuk mengisi Realisasi Tanam untuk Siklus Baru
+          alert("Silakan catat Realisasi Tanam untuk siklus yang baru ini.");
+          setOpenSection("realisasi");
+          setIsEditingRealisasi(true);
+          setRealisasiData({
+            ...realisasiData,
+            tanggalTanam: "", // Kosongkan agar diisi ulang
+          });
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          const errorData = await response.json();
+          alert(
+            `Gagal membuat siklus baru: ${errorData.detail || errorData.message}`,
+          );
+        }
+      } catch (error) {
+        console.error("Error trigger siklus baru:", error);
+        alert("Terjadi kesalahan jaringan saat mencoba membuat siklus baru.");
+      }
     }
   };
 
@@ -328,26 +387,35 @@ export default function CatatAktivitas() {
     );
   };
 
-  // RENDER MODAL RIWAYAT (DIPERBARUI)
+  // RENDER MODAL RIWAYAT SIKLUS (DENGAN DETAIL DINAMIS SESUAI BE MAHAR)
   const renderHistoryPopup = () => {
     if (!showHistoryModal) return null;
 
+    // Mapping Data dari Backend
+    const meta = selectedCycleDetail?.meta;
+    const tanam = selectedCycleDetail?.data_tanam;
+    const panen = selectedCycleDetail?.data_panen || [];
+    const monitoring = selectedCycleDetail?.data_monitoring;
+
+    // Hitung total panen dari array data_panen
+    const totalTbsSiklusIni = panen.reduce((total, p) => {
+      return total + (p.hasil_panen?.jumlah_total_tbs_terkumpul || 0);
+    }, 0);
+
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-2xl flex flex-col max-h-[80vh]">
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-3xl flex flex-col max-h-[85vh]">
           {/* Header Modal */}
           <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
             <div>
               <h3 className="text-sm sm:text-lg font-bold text-[#B5302D]">
                 {selectedCycleDetail
-                  ? `Detail Siklus ${
-                      selectedCycleDetail.info_siklus?.nomor_siklus || "-"
-                    }`
+                  ? `Detail Arsip Siklus Ke-${meta?.siklus_yang_ditampilkan || "-"}`
                   : "Daftar Riwayat Siklus"}
               </h3>
               <p className="text-[10px] sm:text-xs text-gray-500">
                 {selectedCycleDetail
-                  ? "Mode Baca (Read Only)"
+                  ? `Unit: ${meta?.blok_nama}`
                   : "Pilih siklus untuk melihat detail arsip"}
               </p>
             </div>
@@ -355,7 +423,7 @@ export default function CatatAktivitas() {
               {selectedCycleDetail && (
                 <button
                   onClick={() => setSelectedCycleDetail(null)}
-                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded text-black"
+                  className="px-3 py-1.5 text-xs font-bold bg-gray-200 hover:bg-gray-300 rounded-lg text-black transition"
                 >
                   Kembali ke List
                 </button>
@@ -365,98 +433,178 @@ export default function CatatAktivitas() {
                   setShowHistoryModal(false);
                   setSelectedCycleDetail(null);
                 }}
-                className="p-1.5 hover:bg-gray-200 rounded-full transition"
+                className="p-1.5 hover:bg-red-100 hover:text-red-600 rounded-full transition"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-gray-500 hover:text-red-600" />
               </button>
             </div>
           </div>
 
           {/* Body Modal */}
-          <div className="p-3 sm:p-6 overflow-y-auto">
+          <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
             {loadingHistory ? (
               <div className="text-center py-10">
-                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-gray-400" />
-                <p className="text-xs text-gray-500 mt-2">Memuat data...</p>
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#EF8523]" />
+                <p className="text-xs text-gray-500 mt-2 font-medium">
+                  Membongkar Arsip...
+                </p>
               </div>
             ) : selectedCycleDetail ? (
-              // --- TAMPILAN DETAIL SIKLUS (READ ONLY) ---
-              <div className="space-y-4">
-                {/* Info Ringkas Siklus */}
-                <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                  <div className="grid grid-cols-2 gap-4 text-xs">
+              // --- TAMPILAN DETAIL SIKLUS (BACA DATA BE YANG ASLI) ---
+              <div className="space-y-5 animate-fadeIn">
+                {/* 1. INFORMASI TANAM & STATUS */}
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                  <h4 className="font-bold text-blue-900 text-sm mb-3 border-b border-blue-200 pb-2">
+                    Informasi Penanaman
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                     <div>
-                      <p className="text-gray-500">Nomor Siklus</p>
-                      <p className="font-bold text-black text-sm">
-                        {selectedCycleDetail.info_siklus?.nomor_siklus}
+                      <p className="text-gray-500 mb-0.5">Status Siklus</p>
+                      <p className="font-bold text-black bg-white px-2 py-1 rounded inline-block border border-gray-200">
+                        {tanam?.status || "-"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Status</p>
-                      <p className="font-bold text-black text-sm">
-                        {selectedCycleDetail.info_siklus?.status}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Tanggal Mulai</p>
+                      <p className="text-gray-500 mb-0.5">Tanggal Tanam</p>
                       <p className="font-bold text-black">
-                        {selectedCycleDetail.info_siklus?.tanggal_mulai || "-"}
+                        {tanam?.tanggal_tanam || "-"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Total TBS Siklus</p>
+                      <p className="text-gray-500 mb-0.5">Bibit Digunakan</p>
                       <p className="font-bold text-black">
-                        {selectedCycleDetail.info_siklus?.total_tbs_siklus || 0}{" "}
-                        Kg
+                        {tanam?.jenis_bibit} ({tanam?.varietas})
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Jumlah Pohon Awal</p>
+                      <p className="font-bold text-black">
+                        {tanam?.jumlah_pohon_awal || 0} Pokok
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Section Dummy untuk konten detail lain (Monitoring, Panen) */}
-                <div className="text-center p-4 border border-dashed border-gray-300 rounded-lg">
-                  <FileText className="w-8 h-8 mx-auto text-gray-300 mb-2" />
-                  <p className="text-xs text-gray-500">
-                    Detail monitoring, realisasi, dan panen untuk siklus ini
-                    ditampilkan di sini (Read Only).
-                  </p>
-                  {/* Jika ingin menampilkan raw data untuk debug: */}
-                  {/* <pre className="text-[10px] text-left mt-2 overflow-auto max-h-40">{JSON.stringify(selectedCycleDetail, null, 2)}</pre> */}
+                {/* 2. RANGKUMAN PANEN */}
+                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                  <div className="flex justify-between items-center mb-3 border-b border-green-200 pb-2">
+                    <h4 className="font-bold text-green-900 text-sm">
+                      Hasil Produksi Panen
+                    </h4>
+                    <span className="font-extrabold text-green-700 bg-white px-3 py-1 rounded-full text-xs shadow-sm">
+                      Total: {totalTbsSiklusIni} Kg
+                    </span>
+                  </div>
+
+                  {panen.length === 0 ? (
+                    <p className="text-xs text-gray-500 italic">
+                      Belum ada riwayat panen di siklus ini.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {panen.map((p, idx) => (
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center bg-white p-2 rounded-lg text-xs border border-green-100"
+                        >
+                          <div>
+                            <span className="font-bold text-gray-700">
+                              {p.tanggal_rencana_panen}
+                            </span>
+                            <span className="text-gray-500 ml-2">
+                              ({p.status})
+                            </span>
+                          </div>
+                          <span className="font-bold text-green-600">
+                            + {p.hasil_panen?.jumlah_total_tbs_terkumpul || 0}{" "}
+                            Kg
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. REKAP MONITORING (DARI DUMMY JADI DATA ASLI) */}
+                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                  <h4 className="font-bold text-orange-900 text-sm mb-3 border-b border-orange-200 pb-2">
+                    Rekapitulasi Perawatan
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.pupuk?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Kali Pemupukan
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.pestisida?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Kali Semprot Hama
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.sanitasi?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Kegiatan Sanitasi
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.piringan?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Cek Piringan
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ) : // --- TAMPILAN LIST SIKLUS ---
+            ) : // --- TAMPILAN LIST SIKLUS (AWAL) ---
             historyList.length === 0 ? (
-              <p className="text-center text-gray-400 italic py-10 text-xs sm:text-sm">
-                Belum ada riwayat siklus yang diarsipkan.
-              </p>
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                <History className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-400 font-medium text-xs sm:text-sm">
+                  Belum ada riwayat siklus yang diarsipkan.
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {historyList.map((item) => (
                   <div
                     key={item.nomor_siklus}
                     onClick={() => fetchCycleDetail(item.nomor_siklus)}
-                    className={`border rounded-lg p-3 flex justify-between items-center transition cursor-pointer ${
+                    className={`border rounded-xl p-4 flex justify-between items-center transition cursor-pointer shadow-sm hover:shadow-md ${
                       item.status === "AKTIF"
                         ? "bg-green-50 border-green-200 hover:bg-green-100"
-                        : "bg-white border-gray-200 hover:bg-orange-50"
+                        : "bg-white border-gray-200 hover:border-[#EF8523]"
                     }`}
                   >
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-black text-xs sm:text-base">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-extrabold text-black text-sm sm:text-base">
                           Siklus Ke-{item.nomor_siklus}
                         </p>
                         {item.status === "AKTIF" && (
-                          <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded">
-                            Sedang Berjalan
+                          <span className="text-[9px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">
+                            Berjalan
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
-                        Status: {item.status}
+                      <p className="text-[11px] sm:text-xs text-gray-500 font-medium">
+                        Mulai: {item.tanggal_mulai} • Produksi:{" "}
+                        <span className="font-bold text-black">
+                          {item.total_produksi} Kg
+                        </span>
                       </p>
                     </div>
-                    <button className="text-gray-400 hover:text-[#EF8523] p-1">
+                    <button className="text-gray-400 hover:text-[#EF8523] bg-gray-50 hover:bg-orange-50 p-2 rounded-full transition">
                       <Eye className="w-5 h-5" />
                     </button>
                   </div>

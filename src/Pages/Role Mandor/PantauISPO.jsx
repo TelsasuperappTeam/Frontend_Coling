@@ -710,14 +710,13 @@ export default function PantauISPO() {
 
                               return isUploaded ? (
                                 <button
-                                  onClick={
-                                    () =>
-                                      fileUrl
-                                        ? window.open(fileUrl, "_blank")
-                                        : showNotif(
-                                            "URL file tidak tersedia",
-                                            "error",
-                                          )
+                                  onClick={() =>
+                                    fileUrl
+                                      ? window.open(fileUrl, "_blank")
+                                      : showNotif(
+                                          "URL file tidak tersedia",
+                                          "error",
+                                        )
                                   }
                                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                                 >
@@ -938,40 +937,54 @@ export default function PantauISPO() {
     }
   };
 
- return (
+  return (
     <div className="p-4 sm:p-10 min-h-screen font-sans relative">
-      
       {/* ======================== FLOATING NOTIFICATION ============================ */}
       {notif.show && (
         <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4 animate-fade-in">
-          <div className={`flex items-start gap-3 p-4 rounded-xl shadow-lg border max-w-sm w-full sm:max-w-md ${
-            notif.type === 'success' ? 'bg-green-50 border-green-200' :
-            notif.type === 'error' ? 'bg-red-50 border-red-200' :
-            'bg-blue-50 border-blue-200'
-          }`}>
+          <div
+            className={`flex items-start gap-3 p-4 rounded-xl shadow-lg border max-w-sm w-full sm:max-w-md ${
+              notif.type === "success"
+                ? "bg-green-50 border-green-200"
+                : notif.type === "error"
+                  ? "bg-red-50 border-red-200"
+                  : "bg-blue-50 border-blue-200"
+            }`}
+          >
             {/* Ikon Dinamis */}
-            {notif.type === 'success' ? (
+            {notif.type === "success" ? (
               <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-            ) : notif.type === 'error' ? (
+            ) : notif.type === "error" ? (
               <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             ) : (
               <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             )}
-            
-            <p className={`flex-1 text-xs sm:text-sm font-medium leading-relaxed ${
-              notif.type === 'success' ? 'text-green-800' :
-              notif.type === 'error' ? 'text-red-800' :
-              'text-blue-800'
-            }`}>
+
+            <p
+              className={`flex-1 text-xs sm:text-sm font-medium leading-relaxed ${
+                notif.type === "success"
+                  ? "text-green-800"
+                  : notif.type === "error"
+                    ? "text-red-800"
+                    : "text-blue-800"
+              }`}
+            >
               {notif.message}
             </p>
-            
-            <button onClick={() => setNotif((prev) => ({ ...prev, show: false }))} className="shrink-0 p-1 rounded-md hover:bg-black/5 transition-colors">
-              <X className={`w-4 h-4 ${
-                notif.type === 'success' ? 'text-green-600' :
-                notif.type === 'error' ? 'text-red-600' :
-                'text-blue-600'
-              }`} />
+
+            <button
+              onClick={() => setNotif((prev) => ({ ...prev, show: false }))}
+              className="shrink-0 p-1 rounded-md hover:bg-black/5 transition-colors"
+            >
+              <X
+                className={`w-4 h-4 ${
+                  notif.type === "success"
+                    ? "text-green-600"
+                    : notif.type === "error"
+                      ? "text-red-600"
+                      : "text-blue-600"
+                }`}
+              />
             </button>
           </div>
         </div>

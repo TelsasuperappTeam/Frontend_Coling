@@ -224,13 +224,10 @@ const Operasional2 = () => {
         </SectionCard>
 
         {/* SECTION 2 DOKUMEN ORGANISASI */}
-        <SectionCard title="Kelengkapan Dokumen Organisasi">
+        <SectionCard title="Kelengkapan Dokumen Organisasi Kebun">
           <div className="-mt-4 mb-6">
             {/* Garis Pemisah */}
             <div className="w-full h-[1px] bg-gray-300 mb-4 mt-2" />
-            <p className="text-sm text-gray-500 font-light mb-4">
-              Upload Dokumen organisasi Untuk Petani Mitra
-            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

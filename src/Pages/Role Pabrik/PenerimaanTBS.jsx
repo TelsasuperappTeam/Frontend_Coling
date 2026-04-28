@@ -1,384 +1,865 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
+  ChevronDown,
+  ChevronUp,
+  MapPin,
   Truck,
-  FileText,
   CheckCircle2,
-  X,
+  Clock,
+  Calendar,
+  Phone,
+  User,
+  Hash,
   PackageCheck,
+  CheckCircle,
+  X,
+  Upload,
+  FileText,
+  History, // <-- Icon History ditambahkan
 } from "lucide-react";
 
-// === MOCK DATA: PENGIRIMAN ===
-const dataPengiriman = [
-  {
-    id: "RE-03748397322",
-    petani: "Pak Jaya",
-    alamat: "Desa Sukadamai, Kecamatan Lampung Selatan, Lampung",
-    jumlah: "12",
-    tanggalKirim: "23-03-2025",
-    estimasiTiba: "25-03-2025",
-    status: "Dalam Perjalanan",
-    gapoktan: "Gapoktan Maju Bersama",
-    jenisSawit: "Tenera",
-    usiaPohon: "30",
-    tanggalTanam: "20-03-2015",
-    tanggalPanen: "13-03-2025",
-    jenisTanah: "Mineral",
-    alamatAsal: "Kebun Berseri, Desa Sukojadi, Kec. Lampung Tengah, Unit B-05",
-    hargaStandar: "1.430/kg",
-    supir: {
-      nama: "Ujang",
-      telepon: "08123458800",
-      kendaraan: "Truck",
-      model: "Isuzu Elf NLR 55",
-      plat: "BE 1234 EF",
-      totalKendaraan: "2",
-      kapasitas: "4500",
-      biayaPerKm: "50.0000",
-      biayaFinal: "1.100.000",
-      alamatJemput: "Gapoktan Surabaya, No 18",
-      alamatTujuan: "Pabrik Rajawali, Makasar",
-      tanggalBerangkat: "20-03-2025",
-      tanggalTiba: "23-03-2025",
-    },
-  },
-  {
-    id: "RE-03748397323",
-    petani: "Pak Wahyu",
-    alamat: "Desa Jatimulyo, Kecamatan Lampung Selatan, Lampung",
-    jumlah: "30",
-    tanggalKirim: "20-03-2025",
-    estimasiTiba: "22-03-2025",
-    status: "Dalam Perjalanan",
-    gapoktan: "Koperasi Tani Sejahtera",
-    jenisSawit: "Dura",
-    usiaPohon: "15",
-    tanggalTanam: "10-05-2010",
-    tanggalPanen: "18-03-2025",
-    jenisTanah: "Gambut",
-    alamatAsal: "Desa Wates, Lampung Selatan",
-    hargaStandar: "1.410/kg",
-    supir: {
-      nama: "Budi",
-      telepon: "08129998877",
-      kendaraan: "Truck",
-      model: "Mitsubishi Canter",
-      plat: "BE 5678 XY",
-      totalKendaraan: "1",
-      kapasitas: "8000",
-      biayaPerKm: "55.0000",
-      biayaFinal: "1.500.000",
-      alamatJemput: "Desa Wates, Lampung",
-      alamatTujuan: "Pabrik Rajawali, Makasar",
-      tanggalBerangkat: "20-03-2025",
-      tanggalTiba: "22-03-2025",
-    },
-  },
-];
+import { API_ENDPOINTS } from "../../config/constants.js";
 
 const PenerimaanTBS = () => {
-  const [viewMode, setViewMode] = useState("list");
-  const [selectedShipment, setSelectedShipment] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  // --- STATE TAB (Aktif vs Histori) ---
+  const [activeTab, setActiveTab] = useState("aktif");
 
-  const handleOpenDetail = (item) => {
-    setSelectedShipment(item);
-    setViewMode("detail");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // --- STATE DATA AKTIF ---
+  const [shipments, setShipments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // --- STATE DATA HISTORI ---
+  const [historyData, setHistoryData] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // --- STATE UI & MODAL ---
+  const [expandedId, setExpandedId] = useState(null);
+  const [loadingTerimaId, setLoadingTerimaId] = useState(null);
+  const [showModalForm, setShowModalForm] = useState(false);
+  const [selectedFormId, setSelectedFormId] = useState(null);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+  const [fileNota, setFileNota] = useState(null);
+  const [formDataPem, setFormDataPem] = useState({
+    bruto: "",
+    tarra: "",
+    brondolan: "",
+    buah_terlalu_masak: "",
+    buah_mentah: "",
+    buah_busuk: "",
+    catatan: "",
+  });
+
+  const toggleExpand = (id) => setExpandedId(expandedId === id ? null : id);
+
+  // ====================================================================
+  // 1. FETCH DATA AKTIF (MONITORING)
+  // ====================================================================
+const fetchShipments = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const url = `${API_ENDPOINTS.TRACEABILITY.PABRIK.GET_MONITORING}?is_history=false`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok)
+        throw new Error("Gagal mengambil data monitoring pabrik");
+      
+      const data = await response.json();
+
+      // --- CONSOLE LOG RESPON BE DITAMBAHKAN DI SINI ---
+      console.log("=== DATA TRUK MASUK (AKTIF) DARI BE ===", data);
+
+      const filteredData = data.filter(
+        (item) => item.status_permintaan?.toLowerCase() === "diterima",
+      );
+      setShipments(filteredData);
+    } catch (error) {
+      console.error("Error fetching shipments:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ====================================================================
+  // 2. FETCH DATA HISTORI (DASHBOARD PEMERIKSAAN)
+  // ====================================================================
+  const fetchHistory = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const token = localStorage.getItem("token");
+      const url = API_ENDPOINTS.TRACEABILITY.PABRIK.PEMERIKSAAN.DASHBOARD;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Gagal mengambil data histori");
+      const data = await response.json();
+
+      console.log("=== DATA HISTORI PEMERIKSAAN ===", data);
+      setHistoryData(data);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  // Effect untuk trigger fetch sesuai Tab yang aktif
+  useEffect(() => {
+    setExpandedId(null); // Tutup semua rincian jika ganti tab
+    if (activeTab === "aktif") {
+      fetchShipments();
+    } else {
+      fetchHistory();
+    }
+  }, [activeTab, fetchShipments, fetchHistory]);
+
+  // ====================================================================
+  // 3. ACTION KONFIRMASI TRUK TIBA
+  // ====================================================================
+  const handleTerimaPesanan = async (id) => {
+    setLoadingTerimaId(id);
+    try {
+      const token = localStorage.getItem("token");
+      const url = API_ENDPOINTS.TRACEABILITY.PABRIK.TERIMA_PESANAN(id);
+
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Gagal mengkonfirmasi penerimaan");
+
+      alert(
+        "Truk dikonfirmasi tiba! Silakan lanjutkan mengisi hasil Timbangan & Sortasi TBS.",
+      );
+
+      // Update UI Lokal agar tidak perlu fetch ulang yang merefresh layar
+      setShipments((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, progress_db: "terima" } : item,
+        ),
+      );
+      openModalPemeriksaan(id); // Buka popup otomatis
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoadingTerimaId(null);
+    }
   };
 
-  const handleCloseDetail = () => {
-    setViewMode("list");
-    setSelectedShipment(null);
+  // ====================================================================
+  // 4. ACTION SUBMIT FORM PEMERIKSAAN
+  // ====================================================================
+  const openModalPemeriksaan = (pengirimanId) => {
+    setSelectedFormId(pengirimanId);
+    setFormDataPem({
+      bruto: "",
+      tarra: "",
+      brondolan: "",
+      buah_terlalu_masak: "",
+      buah_mentah: "",
+      buah_busuk: "",
+      catatan: "",
+    });
+    setFileNota(null);
+    setShowModalForm(true);
   };
 
-  const handleOpenModal = () => setShowModal(true);
-  const handleCloseModal = () => setShowModal(false);
+  const handleSubmitPemeriksaan = async (e) => {
+    e.preventDefault();
+    setIsSubmittingForm(true);
+    try {
+      const token = localStorage.getItem("token");
+      const url =
+        API_ENDPOINTS.TRACEABILITY.PABRIK.PEMERIKSAAN.SUBMIT(selectedFormId);
+
+      const form = new FormData();
+      form.append("bruto", parseFloat(formDataPem.bruto) || 0);
+      form.append("tarra", parseFloat(formDataPem.tarra) || 0);
+      form.append("brondolan", parseFloat(formDataPem.brondolan) || 0);
+      form.append(
+        "buah_terlalu_masak",
+        parseFloat(formDataPem.buah_terlalu_masak) || 0,
+      );
+      form.append("buah_mentah", parseFloat(formDataPem.buah_mentah) || 0);
+      form.append("buah_busuk", parseFloat(formDataPem.buah_busuk) || 0);
+      if (formDataPem.catatan) form.append("catatan", formDataPem.catatan);
+      if (fileNota) form.append("dokumen_nota", fileNota);
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Gagal submit pemeriksaan");
+
+      alert("Data Pemeriksaan & Timbangan Berhasil Disimpan!");
+      setShowModalForm(false);
+
+      // UX PLUS: Langsung pindahkan user ke Tab Riwayat agar mereka bisa melihat hasilnya
+      setActiveTab("riwayat");
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsSubmittingForm(false);
+    }
+  };
+
+  const getStatusLabel = (pDB) => {
+    if (pDB === "terima") return "Tiba di Pabrik";
+    if (pDB === "menuju_pabrik") return "Dalam Perjalanan";
+    if (pDB === "mengirim") return "Menjemput";
+    return "Menunggu Penjemputan";
+  };
+
+  // Variabel Penentu Tab Aktif
+  const isAktif = activeTab === "aktif";
+  const currentData = isAktif ? shipments : historyData;
+  const currentLoading = isAktif ? isLoading : isLoadingHistory;
 
   return (
-    <div className="space-y-6 p-4 sm:p-10 min-h-screen font-sans relative">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
-            <PackageCheck className="text-[#B5302D]" size={28} />
+    <div className="p-4 sm:p-8 md:p-10 min-h-screen text-gray-800 font-sans">
+      {/* --- HEADER --- */}
+      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
+            <PackageCheck className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
               Penerimaan TBS
             </h1>
-            <p className="text-xs md:text-sm text-gray-500">
-              Validasi dan monitoring penerimaan buah dari kebun menuju pabrik.
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+              Pantau kedatangan armada dan rekapitulasi timbangan TBS.
             </p>
           </div>
         </div>
-      </div>
 
-      <hr className="border-gray-200 mb-8" />
-
-      {/* ======================== CONTAINER UTAMA ============================ */}
-      <div className="relative bg-white rounded-[30px] sm:rounded-[40px] border border-gray-200 shadow-sm transition-all duration-300 min-h-[500px] overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-[6px] bg-gradient-to-r from-[#B5302D] to-[#EF8523] z-10" />
-
-        {/* HEADER SECTION (Hanya tampil di mode Detail) */}
-        {viewMode === "detail" && (
-          <div className="p-6 sm:p-8 pt-10 sm:pt-12 border-b border-gray-100 bg-white animate-fadeIn">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-[#B5302D]">
-                  Detail Pengiriman
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1 leading-relaxed max-w-2xl">
-                  Informasi lengkap pengiriman dari {selectedShipment?.petani}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CONTENT AREA */}
-        <div
-          className={`sm:p-8 animate-fadeIn ${
-            viewMode === "list" ? "p-4 pt-12 sm:pt-14" : "p-4 pt-6"
-          }`}
-        >
-          {/* === MODE: LIST === */}
-          {viewMode === "list" && (
-            <div className="space-y-4">
-              {dataPengiriman.map((item) => (
-                <div
-                  key={item.id}
-                  className="border border-gray-100 rounded-2xl p-5 hover:border-[#B5302D]/30 hover:shadow-md transition-all bg-white group relative shadow-sm"
-                >
-                  <div className="flex flex-col md:flex-row justify-between gap-5">
-                    <div className="flex-1 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-[#B5302D] shrink-0">
-                            <Truck size={20} />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-base sm:text-lg text-gray-800 leading-tight">
-                              {item.petani}
-                            </h3>
-                            <p className="text-[10px] sm:text-xs text-gray-400 font-mono mt-0.5">
-                              {item.id}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="md:hidden bg-[#E8F5E9] text-green-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-green-200">
-                          {item.status}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm text-gray-600 pl-[52px]">
-                        <div>
-                          <span className="text-gray-400 text-[10px] uppercase font-bold block">
-                            Alamat Kebun
-                          </span>
-                          <span className="font-medium text-gray-800 line-clamp-1">
-                            {item.alamat}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 text-[10px] uppercase font-bold block">
-                            Jumlah Muatan
-                          </span>
-                          <span className="font-medium text-gray-800">
-                            {item.jumlah} Ton
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 text-[10px] uppercase font-bold block">
-                            Estimasi Tiba
-                          </span>
-                          <span className="font-medium text-gray-800">
-                            {item.estimasiTiba}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end justify-between gap-4 mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-gray-100">
-                      <div className="hidden md:block bg-[#E8F5E9] text-green-800 text-xs font-bold px-3 py-1.5 rounded-full border border-green-200">
-                        {item.status}
-                      </div>
-                      <div className="w-full md:w-auto">
-                        <button
-                          onClick={() => handleOpenDetail(item)}
-                          className="w-full md:w-auto px-6 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-gray-600 hover:bg-white hover:border-[#B5302D] hover:text-[#B5302D] hover:shadow-sm transition-all active:scale-[0.98]"
-                        >
-                          Rincian
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* === MODE: DETAIL === */}
-          {viewMode === "detail" && selectedShipment && (
-            <div className="animate-fadeIn">
-              <div className="bg-white rounded-2xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12 mb-8">
-                  <DetailItem
-                    label="Nama Petani"
-                    value={selectedShipment.petani}
-                    isMain
-                  />
-                  <DetailItem
-                    label="Gapoktan"
-                    value={selectedShipment.gapoktan}
-                  />
-                  <DetailItem
-                    label="Jenis Sawit"
-                    value={selectedShipment.jenisSawit}
-                  />
-                  <DetailItem
-                    label="Usia Pohon"
-                    value={`${selectedShipment.usiaPohon} Tahun`}
-                  />
-                  <DetailItem
-                    label="Alamat Asal"
-                    value={selectedShipment.alamatAsal}
-                  />
-                  <DetailItem
-                    label="Total TBS"
-                    value={`${selectedShipment.jumlah} Ton`}
-                    isMain
-                  />
-                  <DetailItem
-                    label="Harga Standar"
-                    value={`Rp ${selectedShipment.hargaStandar}`}
-                    isMain
-                  />
-                </div>
-
-                <hr className="border-gray-100 my-8" />
-
-                <h3 className="text-[#B5302D] font-bold text-sm sm:text-base mb-6 flex items-center gap-2">
-                  <Truck size={18} /> Status Pengiriman
-                </h3>
-
-                <div className="mb-8">
-                  <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">
-                    <span className="text-[#B5302D]">Ditugaskan</span>
-                    <span>Tiba di Pabrik</span>
-                  </div>
-                  <div className="relative w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#B5302D] to-[#EF8523] w-[60%] rounded-full"></div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                  <DetailItem
-                    label="Nama Supir"
-                    value={selectedShipment.supir.nama}
-                  />
-                  <DetailItem
-                    label="Telepon"
-                    value={selectedShipment.supir.telepon}
-                  />
-                  <DetailItem
-                    label="Kendaraan"
-                    value={selectedShipment.supir.model}
-                  />
-                  <DetailItem
-                    label="Plat Nomor"
-                    value={selectedShipment.supir.plat}
-                    isMain
-                  />
-                  <DetailItem
-                    label="Biaya Final"
-                    value={`Rp ${selectedShipment.supir.biayaFinal}`}
-                    isMain
-                  />
-                </div>
-
-                <div className="mt-10 flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-100">
-                  <button
-                    onClick={handleCloseDetail}
-                    className="w-full sm:w-auto px-8 py-3 rounded-xl bg-white border border-gray-300 text-gray-600 text-xs font-bold hover:bg-gray-50 transition-colors"
-                  >
-                    Kembali
-                  </button>
-                  <button
-                    onClick={handleOpenModal}
-                    className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#B6F5D5] text-green-900 text-xs font-bold hover:bg-[#9AEBC0] shadow-sm transition-all flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle2 size={16} /> Konfirmasi Sampai
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+        {/* TAB SWITCHER */}
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full lg:w-auto">
+          <button
+            onClick={() => setActiveTab("aktif")}
+            className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              activeTab === "aktif"
+                ? "bg-white text-[#B5302D] shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            <Truck className="w-4 h-4" /> Truk Masuk (Aktif)
+          </button>
+          <button
+            onClick={() => setActiveTab("riwayat")}
+            className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              activeTab === "riwayat"
+                ? "bg-white text-[#B5302D] shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            <History className="w-4 h-4" /> Riwayat Selesai
+          </button>
         </div>
       </div>
 
-      {/* ======================= POPUP PEMERIKSAAN TBS ====================== */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn backdrop-blur-sm">
-          <div className="bg-white rounded-[30px] shadow-2xl w-full max-w-2xl overflow-hidden animate-scaleIn flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-start shrink-0">
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
+
+      {/* --- LIST KARTU CONTAINER --- */}
+      <SectionCard
+        title={
+          isAktif
+            ? "Daftar Truk Menuju Pabrik"
+            : "Rekapitulasi Riwayat Pemeriksaan"
+        }
+      >
+        {currentLoading ? (
+          <div className="text-center py-10 text-gray-400 text-sm">
+            Memuat data...
+          </div>
+        ) : currentData.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 text-sm">
+            Tidak ada data yang tersedia di tab ini.
+          </div>
+        ) : (
+          <div className="space-y-4 sm:space-y-6">
+            {currentData.map((item) => {
+              const rawProgress = item.progress_db || "menunggu_pengiriman";
+              const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
+              const uiStatusLabel = getStatusLabel(pDB);
+
+              return (
+                <MainCard key={item.id}>
+                  {/* DATA RINGKAS (SELALU MUNCUL) */}
+                  <div
+                    className="flex flex-col md:flex-row justify-between gap-0 sm:gap-4 cursor-pointer w-full"
+                    onClick={() => toggleExpand(item.id)}
+                  >
+                    <div className="flex-1 w-full">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100 pb-4">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div className="p-2 sm:p-2.5 bg-red-50 rounded-xl border border-red-100 shrink-0 mt-1 sm:mt-0">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#B5302D]" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                              Asal Kebun
+                            </p>
+                            <p className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
+                              {item.nama_gapoktan}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center sm:block justify-between bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none w-full sm:w-auto mt-1 sm:mt-0">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:mb-1">
+                            No. Resi
+                          </p>
+                          <p className="text-xs sm:text-sm font-mono font-bold text-gray-700 bg-white sm:bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                            {item.kode_resi || "Menunggu"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mt-4">
+                        <div className="col-span-2 sm:col-span-1 md:col-span-3 lg:col-span-1">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            Lokasi Penjemputan
+                          </p>
+                          <p className="text-xs sm:text-sm font-medium text-gray-700 leading-relaxed line-clamp-2">
+                            {item.alamat_pickup_teks}
+                          </p>
+                        </div>
+                        <div className="col-span-1">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            Est Tiba di Pabrik
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-blue-600 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 shrink-0" />
+                            {item.tanggal_permintaan_sampai || "-"}
+                          </p>
+                        </div>
+                        <div className="col-span-1">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            Biaya Kirim
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-green-500">
+                            Rp {(item.biaya_final || 0).toLocaleString("id-ID")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
+                      <div className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-bold text-gray-600 group-hover:bg-gray-50 transition-all shadow-sm w-full md:w-auto">
+                        <span>
+                          {expandedId === item.id
+                            ? "Tutup Rincian"
+                            : "Lihat Rincian"}
+                        </span>
+                        {expandedId === item.id ? (
+                          <ChevronUp className="w-4 h-4 text-[#B5302D]" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DATA DETAIL & ACTION (MUNCUL SAAT DI KLIK) */}
+                  {expandedId === item.id && (
+                    <div className="mt-5 sm:mt-8 pt-5 sm:pt-8 border-t border-gray-100 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-top-2">
+                      {/* Pelacakan Armada */}
+                      <div className="bg-gray-50 p-5 sm:p-6 rounded-[20px] sm:rounded-[25px] border border-gray-200">
+                        <p className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase mb-6 sm:mb-8 tracking-widest text-center">
+                          Proses Pelacakan Armada
+                        </p>
+                        <div className="flex justify-between items-center max-w-3xl mx-auto relative px-2 sm:px-4">
+                          <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -translate-y-1/2 z-0 rounded-full"></div>
+                          <StatusStep label="Menunggu" active={true} />
+                          <StatusStep
+                            label="Menjemput"
+                            active={[
+                              "mengirim",
+                              "menuju_pabrik",
+                              "terima",
+                            ].includes(pDB)}
+                          />
+                          <StatusStep
+                            label="Perjalanan"
+                            active={["menuju_pabrik", "terima"].includes(pDB)}
+                          />
+                          <StatusStep
+                            label="Selesai"
+                            active={pDB === "terima"}
+                          />
+                        </div>
+
+                        {/* --- TOMBOL AKSI HANYA MUNCUL DI TAB AKTIF --- */}
+                        {isAktif && (
+                          <div className="mt-8 flex flex-col items-center">
+                            {(pDB === "menunggu_pengiriman" ||
+                              pDB === "mengirim") && (
+                              <div className="w-full sm:w-auto flex justify-center items-center gap-2 text-gray-500 bg-white px-6 py-3 rounded-xl text-[11px] sm:text-xs font-bold border border-gray-200 text-center cursor-not-allowed shadow-sm">
+                                <Clock className="w-4 h-4 animate-spin-slow shrink-0 text-blue-500" />
+                                Menunggu Kedatangan Truk Logistik
+                              </div>
+                            )}
+
+                            {pDB === "menuju_pabrik" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTerimaPesanan(item.id);
+                                }}
+                                disabled={loadingTerimaId === item.id}
+                                className="w-full sm:w-auto bg-orange-500 text-white px-8 py-3.5 rounded-xl text-xs sm:text-sm font-bold shadow-lg hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                              >
+                                {loadingTerimaId === item.id ? (
+                                  <>
+                                    <Clock className="w-4 h-4 animate-spin-slow" />{" "}
+                                    Memproses...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="w-4 h-4" />{" "}
+                                    Konfirmasi Truk Telah Tiba
+                                  </>
+                                )}
+                              </button>
+                            )}
+
+                            {pDB === "terima" && !item.pemeriksaan && (
+                              <div className="w-full sm:w-auto flex flex-col gap-3 animate-in fade-in">
+                                <div className="text-center p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 text-xs font-semibold">
+                                  Truk telah tiba! Silakan timbang dan lakukan
+                                  sortasi TBS.
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModalPemeriksaan(item.id);
+                                  }}
+                                  className="w-full bg-[#B5302D] text-white px-8 py-3.5 rounded-xl text-xs sm:text-sm font-bold shadow-lg hover:bg-[#962624] transition-all flex items-center justify-center gap-2"
+                                >
+                                  <FileText className="w-4 h-4" /> Isi Form
+                                  Pemeriksaan TBS
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* --- INFO HASIL TIMBANGAN MUNCUL JIKA DI TAB RIWAYAT --- */}
+                        {!isAktif && item.pemeriksaan && (
+                          <div className="mt-8 bg-green-50 border border-green-200 rounded-xl p-4 sm:p-5 animate-in fade-in">
+                            <h4 className="text-xs font-bold text-green-800 uppercase border-b border-green-200/50 pb-2 mb-3">
+                              Hasil Timbangan & Pemeriksaan
+                            </h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div>
+                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
+                                  Berat Bruto
+                                </p>
+                                <p className="text-sm font-bold text-green-900">
+                                  {item.pemeriksaan.bruto.toLocaleString(
+                                    "id-ID",
+                                  )}{" "}
+                                  Kg
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
+                                  Potongan
+                                </p>
+                                <p className="text-sm font-bold text-green-900">
+                                  {item.pemeriksaan.total_potongan.toLocaleString(
+                                    "id-ID",
+                                  )}{" "}
+                                  Kg
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
+                                  Netto Akhir
+                                </p>
+                                <p className="text-sm font-extrabold text-green-900">
+                                  {item.pemeriksaan.netto.toLocaleString(
+                                    "id-ID",
+                                  )}{" "}
+                                  Kg
+                                </p>
+                              </div>
+                              <div className="md:text-right">
+                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
+                                  Total Harga
+                                </p>
+                                <p className="text-sm font-extrabold text-green-900 bg-white inline-block px-2 py-1 rounded border border-green-200">
+                                  Rp{" "}
+                                  {item.pemeriksaan.harga_final?.toLocaleString(
+                                    "id-ID",
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* --- GRID DETAIL INFORMASI --- */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                        <div className="flex flex-col gap-3 sm:gap-4">
+                          <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                            <Hash className="w-4 h-4" /> Informasi Transaksi
+                          </h4>
+                          <div className="flex-1 flex flex-col justify-center gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">No Resi:</span>
+                              <span className="font-bold font-mono text-gray-700">
+                                {item.kode_resi || "-"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">
+                                Tanggal Kirim:
+                              </span>
+                              <span className="font-bold text-right">
+                                {item.tanggal_keberangkatan || "-"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center pt-3 mt-1 border-t border-gray-50">
+                              <span className="text-gray-500">
+                                Biaya Kirim:
+                              </span>
+                              <span className="font-extrabold text-[#B5302D] text-sm">
+                                Rp{" "}
+                                {(item.biaya_final || 0).toLocaleString(
+                                  "id-ID",
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:gap-4">
+                          <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                            <Truck className="w-4 h-4" /> Armada & Supir
+                          </h4>
+                          <div className="flex-1 flex flex-col gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                            <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                              <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
+                                <User className="w-4 h-4 text-gray-400" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900">
+                                  {item.kru?.nama_supir || "-"}
+                                </p>
+                                <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5">
+                                  <Phone className="w-3 h-3" />{" "}
+                                  {item.kru?.nomor_telepon || "-"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-y-2.5 pt-1">
+                              <p className="text-gray-500">Kendaraan</p>
+                              <p className="font-semibold text-right">
+                                {item.kendaraan?.jenis_kendaraan_nama || "-"}
+                              </p>
+                              <p className="text-gray-500">Plat</p>
+                              <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
+                                {item.kendaraan?.plat_kendaraan || "-"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:gap-4">
+                          <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                            <MapPin className="w-4 h-4" /> Rute & Estimasi
+                          </h4>
+                          <div className="flex-1 flex flex-col justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                            <div className="flex flex-col gap-4">
+                              <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
+                                <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-orange-400 border-2 border-white" />
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                                  Dari: Kebun
+                                </p>
+                                <p className="font-medium text-gray-700">
+                                  {item.alamat_pickup_teks}
+                                </p>
+                              </div>
+                              <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
+                                <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                                  Tujuan: Pabrik
+                                </p>
+                                <p className="font-medium text-gray-700">
+                                  {item.alamat_pengiriman_pabrik
+}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                              <div>
+                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-0.5">
+                                  Est. Jarak
+                                </p>
+                                <p className="font-bold text-gray-900">
+                                  {item.estimasi_jarak_km
+                                    ? `${item.estimasi_jarak_km} KM`
+                                    : "-"}
+                                </p>
+                              </div>
+                              <div className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100">
+                                {uiStatusLabel}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-5 sm:pt-6 mt-2 border-t border-gray-100">
+                        <button
+                          onClick={() => toggleExpand(null)}
+                          className="w-full sm:w-auto px-8 py-3 bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-300 transition-all"
+                        >
+                          Tutup Rincian
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </MainCard>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ================================================================= */}
+      {/* MODAL FORM PEMERIKSAAN & TIMBANGAN */}
+      {/* ================================================================= */}
+      {showModalForm && (
+        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-red-50/50 rounded-t-2xl">
               <div>
-                <h2 className="text-xl font-bold text-[#B5302D]">
-                  Pemeriksaan TBS
-                </h2>
+                <h3 className="text-lg font-bold text-[#B5302D] flex items-center gap-2">
+                  <FileText className="w-5 h-5" /> Form Pemeriksaan TBS
+                </h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  Validasi penerimaan barang di pabrik.
+                  Masukkan hasil timbangan dan potongan sortasi kualitas.
                 </p>
               </div>
               <button
-                onClick={handleCloseModal}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => setShowModalForm(false)}
+                className="p-1.5 bg-white text-gray-400 rounded-full hover:bg-red-100 hover:text-red-500 transition-colors shadow-sm"
               >
-                <X size={20} />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                    Total TBS Diterima (Ton)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    className="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-[#EF8523] transition-all"
-                  />
+            <form
+              onSubmit={handleSubmitPemeriksaan}
+              className="flex flex-col overflow-hidden"
+            >
+              <div className="p-6 overflow-y-auto space-y-6">
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-gray-800 uppercase border-b border-gray-100 pb-2">
+                    Data Timbangan Jembatan
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Berat Bruto (Kg) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        step="0.01"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:border-[#B5302D] outline-none"
+                        value={formDataPem.bruto}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            bruto: e.target.value,
+                          })
+                        }
+                        placeholder="Contoh: 12000"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Berat Tarra Truk (Kg) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        step="0.01"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:border-[#B5302D] outline-none"
+                        value={formDataPem.tarra}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            tarra: e.target.value,
+                          })
+                        }
+                        placeholder="Contoh: 4000"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                    Catatan Pemeriksaan
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder="Kualitas buah grade A..."
-                    className="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-[#EF8523] resize-none transition-all"
-                  />
+
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-gray-800 uppercase border-b border-gray-100 pb-2">
+                    Potongan Sortasi / Kualitas (Kg)
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Brondolan
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.brondolan}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            brondolan: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Buah Mentah
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.buah_mentah}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            buah_mentah: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Buah Busuk
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.buah_busuk}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            buah_busuk: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Terlalu Masak
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.buah_terlalu_masak}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            buah_terlalu_masak: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-gray-800 uppercase border-b border-gray-100 pb-2">
+                    Dokumen & Catatan
+                  </h4>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                      Upload Nota Timbangan (Opsional)
+                    </label>
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-red-50 hover:border-[#B5302D] transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                        <p className="text-xs text-gray-500 font-semibold">
+                          {fileNota
+                            ? fileNota.name
+                            : "Klik untuk unggah foto nota"}
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setFileNota(e.target.files[0])}
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                      Catatan Pemeriksaan
+                    </label>
+                    <textarea
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm min-h-[80px]"
+                      value={formDataPem.catatan}
+                      onChange={(e) =>
+                        setFormDataPem({
+                          ...formDataPem,
+                          catatan: e.target.value,
+                        })
+                      }
+                      placeholder="Catatan tambahan bila ada..."
+                    ></textarea>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 pt-4 border-t border-gray-100 bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0">
-              <button
-                onClick={handleCloseModal}
-                className="w-full sm:w-auto px-8 py-3 rounded-xl bg-white border border-gray-300 text-gray-600 text-xs font-bold hover:bg-gray-100 transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => {
-                  alert("Data berhasil disimpan!");
-                  handleCloseModal();
-                  handleCloseDetail();
-                }}
-                className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#B6F5D5] text-green-900 text-xs font-bold hover:bg-[#9AEBC0] shadow-sm flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={16} /> Simpan Hasil
-              </button>
-            </div>
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
+                <button
+                  type="button"
+                  onClick={() => setShowModalForm(false)}
+                  className="px-6 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-100 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingForm}
+                  className="px-8 py-2.5 bg-[#B5302D] text-white rounded-xl text-xs font-bold shadow-lg shadow-red-100 hover:bg-[#962624] transition-all disabled:opacity-50"
+                >
+                  {isSubmittingForm
+                    ? "Menyimpan..."
+                    : "Simpan Hasil Pemeriksaan"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -386,26 +867,36 @@ const PenerimaanTBS = () => {
   );
 };
 
-// --- HELPER COMPONENT ---
-const DetailItem = ({
-  label,
-  value,
-  isMain = false,
-  color = "text-gray-800",
-}) => (
-  <div>
-    <label className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider font-bold block mb-1">
-      {label}
-    </label>
-    <p
-      className={`${
-        isMain
-          ? "text-base sm:text-lg font-bold"
-          : "text-sm sm:text-base font-semibold"
-      } ${color} leading-snug`}
+/* --- KOMPONEN HELPER --- */
+const SectionCard = ({ title, children }) => (
+  <div className="bg-white rounded-[24px] sm:rounded-[30px] border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-90" />
+    <h3 className="text-base sm:text-lg font-bold text-[#B5302D] mb-5 flex items-center gap-2">
+      {title}
+    </h3>
+    {children}
+  </div>
+);
+
+const MainCard = ({ children }) => (
+  <div className="relative bg-white rounded-[20px] sm:rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md transition-all p-4 sm:p-6 overflow-hidden group">
+    <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
+    {children}
+  </div>
+);
+
+const StatusStep = ({ label, active }) => (
+  <div className="flex flex-col items-center justify-start gap-1.5 sm:gap-2 z-10 flex-1 px-1">
+    <div
+      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500 shrink-0 ${active ? "bg-green-600 border-green-600 text-white shadow-md scale-110" : "bg-white border-gray-200 text-gray-300"}`}
     >
-      {value}
-    </p>
+      <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+    </div>
+    <span
+      className={`text-[9px] sm:text-xs font-medium sm:font-bold capitalize sm:uppercase text-center leading-tight tracking-tight break-words max-w-[65px] sm:max-w-none ${active ? "text-gray-900" : "text-gray-400"}`}
+    >
+      {label}
+    </span>
   </div>
 );
 

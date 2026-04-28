@@ -122,24 +122,56 @@ export default function Panen() {
     setLoadingPlans(true);
     try {
       const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      // --- 1. MENCARI TAHU SIKLUS AKTIF SAAT INI DARI ARSIP BE ---
+      let activeCycleNum = 1;
+      try {
+        const arsipUrl =
+          API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ARSIP_SIKLUS_LIST(
+            ACTIVE_BLOK_ID,
+          );
+        const arsipRes = await fetch(arsipUrl, { method: "GET", headers });
+        if (arsipRes.ok) {
+          const arsipData = await arsipRes.json();
+          if (arsipData.length > 0) {
+            const isAnyActive = arsipData.find(
+              (item) =>
+                item.status &&
+                !item.status.toUpperCase().includes("ARSIP") &&
+                !item.status.toUpperCase().includes("SELESAI"),
+            );
+            if (isAnyActive) {
+              activeCycleNum = isAnyActive.nomor_siklus;
+            } else {
+              activeCycleNum =
+                Math.max(...arsipData.map((d) => d.nomor_siklus)) + 1;
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Gagal get arsip", e);
+      }
+
+      // --- 2. AMBIL SELURUH DATA PANEN DARI BE ---
       const url =
         API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_RENCANA_PANEN_LIST(
-          ACTIVE_BLOK_ID
+          ACTIVE_BLOK_ID,
         );
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await fetch(url, { method: "GET", headers });
       if (!response.ok) throw new Error("Gagal mengambil data rencana panen");
 
       const data = await response.json();
 
-      const mappedPlans = data.map((item) => ({
+      // --- 3. FILTER HANYA DATA UNTUK SIKLUS AKTIF SAJA ---
+      const activeCycleData = data.filter(
+        (item) => item.nomor_siklus === activeCycleNum,
+      );
+
+      const mappedPlans = activeCycleData.map((item) => ({
         id: item.id,
         unit: item.nama_unit,
         tanggal: item.tanggal_rencana_panen,
@@ -167,7 +199,7 @@ export default function Panen() {
           jamSelesai: log.jam_selesai,
           jumlahTandan: log.jumlah_tandan_dipanen,
           kondisiKebun: log.kondisi_kebun,
-        }))
+        })),
       );
 
       allLogs.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
@@ -179,6 +211,7 @@ export default function Panen() {
     }
   }, [ACTIVE_BLOK_ID]);
 
+  
   useEffect(() => {
     if (ACTIVE_BLOK_ID) {
       fetchBlokDetail();
@@ -413,7 +446,7 @@ export default function Panen() {
               onClick={(e) => {
                 if (blokData?.isCycleFinished) {
                   alert(
-                    "Siklus saat ini sudah selesai. Silakan mulai siklus baru di menu Aktivitas/Realisasi."
+                    "Siklus saat ini sudah selesai. Silakan mulai siklus baru di menu Aktivitas/Realisasi.",
                   );
                   return;
                 }
@@ -459,7 +492,7 @@ export default function Panen() {
                       <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
                         <span
                           className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border shadow-sm ${getStatusColor(
-                            plan.status
+                            plan.status,
                           )}`}
                         >
                           {plan.status || "PENDING"}
@@ -670,7 +703,7 @@ export default function Panen() {
                     </h4>
 
                     {plans.filter(
-                      (p) => p.status === "DISETUJUI" && !p.hasil_panen
+                      (p) => p.status === "DISETUJUI" && !p.hasil_panen,
                     ).length === 0 ? (
                       <div className="text-center py-4 sm:py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                         <p className="text-[10px] sm:text-xs text-gray-400">
@@ -681,7 +714,7 @@ export default function Panen() {
                       <div className="space-y-2 sm:space-y-3">
                         {plans
                           .filter(
-                            (p) => p.status === "DISETUJUI" && !p.hasil_panen
+                            (p) => p.status === "DISETUJUI" && !p.hasil_panen,
                           )
                           .map((plan) => (
                             <div
@@ -870,7 +903,7 @@ export default function Panen() {
               value={formLog.selectedPlanId}
               onChange={(e) => {
                 const plan = plans.find(
-                  (p) => p.id === parseInt(e.target.value)
+                  (p) => p.id === parseInt(e.target.value),
                 );
                 setFormLog({
                   ...formLog,

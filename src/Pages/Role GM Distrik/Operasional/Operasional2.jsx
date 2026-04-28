@@ -44,16 +44,8 @@ const Operasional2 = () => {
   // -- STATE DATA PER KEBUN (Object Key: kebun_id) --
   const [dataOrganisasi, setDataOrganisasi] = useState({});
   const [loadingKebun, setLoadingKebun] = useState({});
-
-  // -- STATE MODAL TBS (Hanya untuk Role Kebun) --
-  const [showModalTBS, setShowModalTBS] = useState(false);
-  const [isSubmittingTBS, setIsSubmittingTBS] = useState(false);
-  const [tbsFormData, setTbsFormData] = useState({
-    periode_bulan: new Date().getMonth() + 1,
-    periode_tahun: new Date().getFullYear(),
-    harga_per_kg: "",
-    file: null,
-  });
+  const [dataPengurus, setDataPengurus] = useState({});
+  const [loadingPengurus, setLoadingPengurus] = useState({});
 
   // 1. Ambil Role dari Token
   useEffect(() => {
@@ -127,6 +119,44 @@ const Operasional2 = () => {
     [isGM],
   );
 
+  // 2. Fungsi Fetch Data Pengurus
+  const fetchDataPengurus = useCallback(
+    async (kebunAuthId) => {
+      if (!kebunAuthId) return;
+      setLoadingPengurus((prev) => ({ ...prev, [kebunAuthId]: true }));
+      try {
+        const token = localStorage.getItem("token");
+        const queryParam = isGM ? `?target_kebun_auth_id=${kebunAuthId}` : "";
+        const url = `${API_ENDPOINTS.USER.KEBUN.PENGURUS.MAIN}${queryParam}`;
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Pastikan data berupa array sebelum disimpan
+          setDataPengurus((prev) => ({
+            ...prev,
+            [kebunAuthId]: Array.isArray(data) ? data : [],
+          }));
+        } else {
+          setDataPengurus((prev) => ({ ...prev, [kebunAuthId]: [] }));
+        }
+      } catch (error) {
+        console.error("Fetch pengurus error:", error);
+        setDataPengurus((prev) => ({ ...prev, [kebunAuthId]: [] }));
+      } finally {
+        setLoadingPengurus((prev) => ({ ...prev, [kebunAuthId]: false }));
+      }
+    },
+    [isGM],
+  );
+
   // fetchDataOrganisasi ke dalam dependency array fetchDaftarKebun
   const fetchDaftarKebun = useCallback(async () => {
     try {
@@ -172,55 +202,13 @@ const Operasional2 = () => {
   }, [userRole, fetchDaftarKebun]);
 
   useEffect(() => {
-    if (selectedKebunId && !dataOrganisasi[selectedKebunId]) {
-      fetchDataOrganisasi(selectedKebunId);
+    if (selectedKebunId) {
+      if (!dataOrganisasi[selectedKebunId])
+        fetchDataOrganisasi(selectedKebunId);
+      if (!dataPengurus[selectedKebunId]) fetchDataPengurus(selectedKebunId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedKebunId]);
-
-  // 5. Handler POST TBS (Hanya Kebun)
-  const handleTBSChange = (e) => {
-    const { name, value, files } = e.target;
-    setTbsFormData((prev) => ({
-      ...prev,
-      [name]: files ? files[0] : value,
-    }));
-  };
-
-  const submitTBS = async (e) => {
-    e.preventDefault();
-    if (isGM) return alert("Hanya role Kebun yang dapat menginput harga!");
-
-    setIsSubmittingTBS(true);
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("periode_bulan", tbsFormData.periode_bulan);
-      formData.append("periode_tahun", tbsFormData.periode_tahun);
-      formData.append("harga_per_kg", tbsFormData.harga_per_kg);
-      formData.append("file", tbsFormData.file);
-
-      const res = await fetch(
-        `${API_BASE_URLS.FARM}/farm/kebun/harga-tbs/input`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        },
-      );
-
-      if (res.ok) {
-        alert("Harga TBS Berhasil disimpan!");
-        setShowModalTBS(false);
-      } else {
-        alert("Gagal menyimpan harga TBS.");
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSubmittingTBS(false);
-    }
-  };
 
   return (
     // Tambahkan class 'relative' pada div terluar ini
@@ -260,49 +248,66 @@ const Operasional2 = () => {
         <div className="mb-8 relative z-30">
           {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
           {isDropdownOpen && (
-            <div 
-              className="fixed inset-0 z-20" 
+            <div
+              className="fixed inset-0 z-20"
               onClick={() => setIsDropdownOpen(false)}
             />
           )}
 
           {/* Tombol Utama (Bentuk Bar Memanjang) */}
           <div
-            onClick={() => daftarKebun.length > 0 && setIsDropdownOpen(!isDropdownOpen)}
+            onClick={() =>
+              daftarKebun.length > 0 && setIsDropdownOpen(!isDropdownOpen)
+            }
             className={`flex items-center justify-between w-full px-5 py-3 rounded-xl border cursor-pointer transition-all relative z-30 ${
-              isDropdownOpen 
-                ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md" 
+              isDropdownOpen
+                ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md"
                 : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
             }`}
           >
             <div className="flex items-center gap-3">
-              <MapPin className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`} />
+              <MapPin
+                className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
+              />
               <div className="flex flex-col text-left">
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}>
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
+                >
                   Pilih Kebun:
                 </span>
-                <span className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}>
-                  {daftarKebun.length === 0 
-                    ? "Memuat data..." 
-                    : daftarKebun.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_lengkap || 
-                      daftarKebun.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_kebun || 
+                <span
+                  className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}
+                >
+                  {daftarKebun.length === 0
+                    ? "Memuat data..."
+                    : daftarKebun.find(
+                        (k) => (k.auth_id || k.id) === selectedKebunId,
+                      )?.nama_lengkap ||
+                      daftarKebun.find(
+                        (k) => (k.auth_id || k.id) === selectedKebunId,
+                      )?.nama_kebun ||
                       "-- Silakan Pilih --"}
                 </span>
               </div>
             </div>
-            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`} />
+            <ChevronDown
+              className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
+            />
           </div>
 
           {/* Menu Pilihan (Dropdown Menjuntai Lebar Penuh) */}
-          <div 
+          <div
             className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
-              isDropdownOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"
+              isDropdownOpen
+                ? "opacity-100 scale-y-100"
+                : "opacity-0 scale-y-0 pointer-events-none"
             }`}
           >
             <div className="max-h-60 overflow-y-auto py-1">
               {daftarKebun.map((kb) => {
                 const idKebun = kb.auth_id || kb.id;
-                const namaKebun = kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
+                const namaKebun =
+                  kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
                 const isSelected = idKebun === selectedKebunId;
 
                 return (
@@ -313,13 +318,15 @@ const Operasional2 = () => {
                       setIsDropdownOpen(false);
                     }}
                     className={`px-5 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
-                      isSelected 
-                        ? "bg-red-50 text-[#B5302D] font-bold" 
+                      isSelected
+                        ? "bg-red-50 text-[#B5302D] font-bold"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
                     {namaKebun}
-                    {isSelected && <div className="w-2 h-2 rounded-full bg-[#B5302D]" />}
+                    {isSelected && (
+                      <div className="w-2 h-2 rounded-full bg-[#B5302D]" />
+                    )}
                   </div>
                 );
               })}
@@ -334,16 +341,84 @@ const Operasional2 = () => {
           if (!selectedKebunId) return null;
 
           const safeId = selectedKebunId;
+
+          // Data Dokumen
           const docs = dataOrganisasi[safeId] || [];
           const loading = loadingKebun[safeId];
 
+          // Data Pengurus
+          const pengurusList = dataPengurus[safeId] || [];
+          const isLoadingPeng = loadingPengurus[safeId];
+
           return (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-transparent">
-              {/* SEKSI 1: DOKUMEN */}
-              <SectionCard title="Arsip Dokumen Legalitas">
+            <div className="grid grid-cols-1 gap-8 bg-transparent">
+              {/* --- CARD DAFTAR ANGGOTA PENGURUS (BARU) --- */}
+              <SectionCard title="Daftar Anggota Pengurus">
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-xs text-gray-500">
+                    Struktur organisasi kelompok tani.
+                  </p>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                        <th className="p-4 font-bold rounded-tl-xl">No</th>
+                        <th className="p-4 font-bold">Nama Anggota</th>
+                        <th className="p-4 font-bold">Jabatan</th>
+                        <th className="p-4 font-bold">No. HP</th>
+                        <th className="p-4 font-bold rounded-tr-xl">
+                          Tugas & Tanggung Jawab
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-xs text-gray-700 bg-white">
+                      {isLoadingPeng ? (
+                        <tr>
+                          <td colSpan="5" className="p-4 text-center">
+                            Memuat data...
+                          </td>
+                        </tr>
+                      ) : pengurusList.length > 0 ? (
+                        pengurusList.map((item, index) => (
+                          <tr
+                            key={item.id || index}
+                            className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                          >
+                            <td className="p-4 font-bold text-center">
+                              {index + 1}
+                            </td>
+                            <td className="p-4 font-bold">
+                              {item.nama_anggota}
+                            </td>
+                            <td className="p-4 font-medium text-[#B5302D]">
+                              {item.jabatan_pengurus}
+                            </td>
+                            <td className="p-4 text-gray-500">
+                              {item.no_hp || "-"}
+                            </td>
+                            <td className="p-4 text-gray-500">
+                              {item.tugas_pengurus || "-"}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="p-4 text-center">
+                            Belum ada data pengurus.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+
+              {/* SEKSI 2: DOKUMEN */}
+              <SectionCard title="Kelengkapan Dokumen Organisasi Kebun">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-xs text-gray-400">
-                    Daftar kelengkapan dokumen ISPO/RSPO.
+                    Daftar kelengkapan dokumen ISPO organisasi.
                   </p>
                   {!isGM && (
                     <button className="text-[10px] bg-[#B5302D] text-white px-3 py-1 rounded-full font-bold shadow-md shadow-red-100 hover:bg-[#a02927] transition-all">
@@ -380,7 +455,7 @@ const Operasional2 = () => {
                               <button
                                 onClick={() =>
                                   window.open(
-                                    getFileUrl(fileExist.file_url),
+                                    getFileUrl(fileExist.file_url, "ISPO"),
                                     "_blank",
                                   )
                                 }
@@ -400,114 +475,10 @@ const Operasional2 = () => {
                   )}
                 </div>
               </SectionCard>
-
-              {/* SEKSI 2: HARGA TBS */}
-              <SectionCard title="Harga TBS Pemerintah">
-                <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-4">
-                  <p className="text-[10px] text-green-700 font-bold uppercase mb-1">
-                    Status Update
-                  </p>
-                  <h4 className="text-lg font-bold text-green-800">
-                    Rp 2.850 <span className="text-xs font-normal">/ Kg</span>
-                  </h4>
-                  <p className="text-[10px] text-green-600">
-                    Periode: Oktober 2023
-                  </p>
-                </div>
-                {!isGM && (
-                  <button
-                    onClick={() => setShowModalTBS(true)}
-                    className="w-full py-3 bg-white border-2 border-dashed border-green-300 rounded-xl text-green-600 text-xs font-bold hover:bg-green-50 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Upload className="w-4 h-4" /> Perbarui Harga & Upload SK
-                  </button>
-                )}
-              </SectionCard>
             </div>
           );
         })()}
       </div>
-
-      {/* --- MODAL INPUT TBS ASLI MILIK ANDA --- */}
-      {showModalTBS && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
-            <div className="p-4 bg-green-600 flex justify-between items-center text-white">
-              <h3 className="font-bold text-sm">Input Harga TBS</h3>
-              <X
-                className="cursor-pointer"
-                onClick={() => setShowModalTBS(false)}
-              />
-            </div>
-            <form onSubmit={submitTBS} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1">
-                    Bulan
-                  </label>
-                  <select
-                    name="periode_bulan"
-                    value={tbsFormData.periode_bulan}
-                    onChange={handleTBSChange}
-                    className="w-full p-2 border rounded-lg text-sm"
-                  >
-                    {[...Array(12)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1">
-                    Tahun
-                  </label>
-                  <input
-                    type="number"
-                    name="periode_tahun"
-                    value={tbsFormData.periode_tahun}
-                    onChange={handleTBSChange}
-                    className="w-full p-2 border rounded-lg text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 mb-1">
-                  Harga (Rp/Kg)
-                </label>
-                <input
-                  type="number"
-                  name="harga_per_kg"
-                  required
-                  onChange={handleTBSChange}
-                  className="w-full p-2 border rounded-lg text-sm"
-                  placeholder="Contoh: 2800"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 mb-1">
-                  File SK (.pdf)
-                </label>
-                <input
-                  type="file"
-                  name="file"
-                  accept="application/pdf"
-                  required
-                  onChange={handleTBSChange}
-                  className="w-full text-xs"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={isSubmittingTBS}
-                className="w-full py-3 bg-green-600 text-white rounded-xl font-bold text-sm"
-              >
-                {isSubmittingTBS ? "Proses..." : "Simpan Data"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

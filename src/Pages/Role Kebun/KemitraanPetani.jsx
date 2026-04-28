@@ -12,35 +12,14 @@ import {
 // Pastikan getFileUrl di-export dari constants.js
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 
-/* ===================== MOCK DATA (STATIC) ===================== */
-const MOCK_DOKUMEN_SERTIFIKASI = [
-  {
-    id: 1,
-    nama: "Pak Budi Santoso",
-    jenisDok: "Surat Hak Milik (SHM)",
-    prinsip: "Prinsip 1 (Legalitas)",
-    file: "shm_budi.pdf",
-    catatan: "-",
-    status: "pending",
-  },
-  {
-    id: 2,
-    nama: "Pak Joko Widodo",
-    jenisDok: "Bukti Pembelian Bibit",
-    prinsip: "Prinsip 4 (Good Agriculture)",
-    file: "nota_bibit.pdf",
-    catatan: "Foto kurang jelas",
-    status: "pending",
-  },
-];
-
 const KemitraanPetani = () => {
   // State manajemen tab
   const [activeTab, setActiveTab] = useState("validasi");
 
-  // State data dinamis untuk Validasi
+  // State data  untuk Validasi
   const [pendingPanen, setPendingPanen] = useState([]);
   const [pendingTanam, setPendingTanam] = useState([]);
+  const [pendingDokumen, setPendingDokumen] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // --- TAMBAHKAN STATE INI ---
@@ -74,19 +53,27 @@ const KemitraanPetani = () => {
       // (SESUAI BE MAHAR): FETCH RENCANA PANEN PENDING
       const resPanen = await fetch(
         API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING,
-        { headers }
+        { headers },
       );
       const dataPanen = await resPanen.json();
 
       // (SESUAI BE MAHAR): FETCH RENCANA TANAM (BLOK) PENDING
       const resTanam = await fetch(
         API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK,
-        { headers }
+        { headers },
       );
       const dataTanam = await resTanam.json();
 
+      // (SESUAI BE MAHAR): FETCH PENDING DOKUMEN ISPO
+      const resDokumen = await fetch(
+        API_ENDPOINTS.ISPO.KEBUN.GET_PETANI_PENDING_SUBMISSION_ISPO,
+        { headers },
+      );
+      const dataDokumen = await resDokumen.json();
+
       if (Array.isArray(dataPanen)) setPendingPanen(dataPanen);
       if (Array.isArray(dataTanam)) setPendingTanam(dataTanam);
+      if (Array.isArray(dataDokumen)) setPendingDokumen(dataDokumen); // <-- SIMPAN DATA DOKUMEN
     } catch (error) {
       console.error("Gagal mengambil data validasi:", error);
     } finally {
@@ -205,6 +192,42 @@ const KemitraanPetani = () => {
     await sendApprovalRequest(url, isApprove, reason, "Rencana Tanam");
   };
 
+  // (SESUAI BE MAHAR): Handler Approve/Reject Dokumen ISPO
+  const processActionDokumen = async (id, isApprove, reason = null) => {
+    // Karena URL pakai {id}, kita replace string-nya
+    const url = API_ENDPOINTS.ISPO.KEBUN.REVIEW_DOKUMEN_ISPO.replace(
+      "{id}",
+      id,
+    );
+
+    // Payload spesifik ISPO (bukan status_approval, tapi status)
+    const payload = {
+      status: isApprove ? "APPROVED" : "REJECTED",
+    };
+    if (!isApprove && reason) {
+      payload.catatan_revisi = reason;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Gagal mereview dokumen ISPO");
+      alert(`Dokumen berhasil ${isApprove ? "disetujui" : "ditolak"}`);
+      fetchValidasiData(); // Refresh tabel
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
+
   const handleSubmitRejection = async () => {
     if (!rejectReason.trim()) {
       alert("Harap isi alasan penolakan.");
@@ -215,6 +238,9 @@ const KemitraanPetani = () => {
       await processActionPanen(selectedRejectItem.id, false, rejectReason);
     } else if (selectedRejectItem.type === "tanam") {
       await processActionTanam(selectedRejectItem.id, false, rejectReason);
+    } else if (selectedRejectItem.type === "dokumen") {
+      // <-- TAMBAHAN UNTUK DOKUMEN ISPO
+      await processActionDokumen(selectedRejectItem.id, false, rejectReason);
     }
 
     closeRejectModal();
@@ -223,7 +249,7 @@ const KemitraanPetani = () => {
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
       {/* --- HEADER --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-8">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             {activeTab === "validasi" ? (
@@ -255,7 +281,7 @@ const KemitraanPetani = () => {
             }`}
           >
             <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span className="leading-tight text-center">Pengajuan (Read Only)</span>
+            <span className="leading-tight text-center">Validasi</span>
           </button>
           <button
             onClick={() => setActiveTab("manajemen")}
@@ -270,6 +296,9 @@ const KemitraanPetani = () => {
           </button>
         </div>
       </div>
+
+      {/* --- GARIS PEMBATAS --- */}
+      <hr className="border-gray-200 mb-8" />
 
       {/* --- CONTENT AREA --- */}
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -471,7 +500,7 @@ const KemitraanPetani = () => {
                                     <a
                                       href={getFileUrl(
                                         item.dok_bukti_terasering_url,
-                                        "FARM"
+                                        "FARM",
                                       )}
                                       target="_blank"
                                       rel="noreferrer"
@@ -504,7 +533,7 @@ const KemitraanPetani = () => {
                                     <a
                                       href={getFileUrl(
                                         item.dok_bukti_drainase_url,
-                                        "FARM"
+                                        "FARM",
                                       )}
                                       target="_blank"
                                       rel="noreferrer"
@@ -590,43 +619,78 @@ const KemitraanPetani = () => {
                     </tr>
                   </thead>
                   <tbody className="text-xs text-gray-700 bg-white">
-                    {MOCK_DOKUMEN_SERTIFIKASI.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                      >
-                        <td className="p-4 font-bold text-center">
-                          {index + 1}
-                        </td>
-                        <td className="p-4 font-bold">{item.nama}</td>
-                        <td className="p-4 font-medium">{item.jenisDok}</td>
-                        <td className="p-4 text-gray-500">{item.prinsip}</td>
-                        <td className="p-4">
-                          <button className="flex items-center gap-1 text-blue-600 hover:underline">
-                            <FileText className="w-3 h-3" /> Lihat
-                          </button>
-                        </td>
-                        <td className="p-4 italic text-gray-400">
-                          {item.catatan}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-center gap-3">
-                            <button
-                              className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
-                              title="Tolak"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="text-green-500 hover:bg-green-50 p-1 rounded transition-colors"
-                              title="Validasi"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                          </div>
+                    {pendingDokumen.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="p-6 text-center text-gray-400"
+                        >
+                          Tidak ada dokumen sertifikasi yang menunggu validasi.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      pendingDokumen.map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                        >
+                          <td className="p-4 font-bold text-center">
+                            {index + 1}
+                          </td>
+
+                          {/* Nama Petani tidak ada di BE response, gunakan Profile ID sementara */}
+                          <td className="p-4 font-bold text-[#B5302D]">
+                            Petani ID: {item.user_id}
+                          </td>
+
+                          <td className="p-4 font-medium">
+                            {item.requirement_code}
+                          </td>
+                          <td className="p-4 text-gray-500">
+                            {/* Ambil Prinsip dari awalan string requirement_code, misal P1, P2 */}
+                            Prinsip{" "}
+                            {item.requirement_code
+                              .split("_")[0]
+                              .replace("P", "")}
+                          </td>
+                          <td className="p-4">
+                            <a
+                              href={getFileUrl(item.file_url, "ISPO")}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1 text-blue-600 hover:underline font-bold"
+                            >
+                              <FileText className="w-3 h-3" /> Buka File
+                            </a>
+                          </td>
+                          <td className="p-4 italic text-gray-400">
+                            {item.catatan_revisi || "-"}
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center justify-center gap-3">
+                              <button
+                                onClick={() =>
+                                  openRejectModal(item.id, "dokumen")
+                                }
+                                className="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                title="Tolak"
+                              >
+                                <XCircle className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  processActionDokumen(item.id, true)
+                                }
+                                className="text-green-500 hover:bg-green-50 p-1.5 rounded transition-colors"
+                                title="Validasi (Setujui)"
+                              >
+                                <CheckCircle className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -765,14 +829,14 @@ const ValidationCard = ({ title, children }) => {
 // Komponen PetaniProfileCard (Manajemen Petani)
 const PetaniProfileCard = ({ data }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // --- STATE BARU UNTUK PROGRESS ISPO ---
   const [ispoProgress, setIspoProgress] = useState(null);
   const [loadingIspo, setLoadingIspo] = useState(false);
 
   // Buat URL Foto Profil. Gunakan UI-Avatars jika foto_profil_url kosong/null
-  const fotoProfilUrl = data.foto_profil_url 
-    ? getFileUrl(data.foto_profil_url, "USER") 
+  const fotoProfilUrl = data.foto_profil_url
+    ? getFileUrl(data.foto_profil_url, "USER")
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama_lengkap)}&background=random`;
 
   // --- EFEK FETCH PROGRESS ISPO SAAT CARD DIBUKA ---
@@ -784,12 +848,16 @@ const PetaniProfileCard = ({ data }) => {
         try {
           const token = localStorage.getItem("token");
           // Pastikan API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN sudah Anda definisikan di constants.js
-          const url = API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN.replace('{petani_id}', data.id);
-          
+          const url =
+            API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN.replace(
+              "{petani_id}",
+              data.id,
+            );
+
           const res = await fetch(url, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
-          
+
           if (res.ok) {
             const result = await res.json();
             // Simpan bagian progress_summary ke state
@@ -807,7 +875,6 @@ const PetaniProfileCard = ({ data }) => {
       fetchProgressIspo();
     }
   }, [isOpen, data.id, ispoProgress]);
-
 
   return (
     <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
@@ -843,7 +910,9 @@ const PetaniProfileCard = ({ data }) => {
                 </div>
                 <div>
                   <p className="font-bold text-gray-500">Status:</p>
-                  <p className="text-gray-800 font-bold capitalize">{data.status || "Approved"}</p>
+                  <p className="text-gray-800 font-bold capitalize">
+                    {data.status || "Approved"}
+                  </p>
                 </div>
                 <div className="sm:col-span-2">
                   <p className="font-bold text-gray-500">Alamat:</p>
@@ -852,44 +921,63 @@ const PetaniProfileCard = ({ data }) => {
               </div>
             </div>
           </div>
-          
+
           {/* --- BAGIAN PROGRESS ISPO DINAMIS --- */}
           <div className="flex flex-col items-center lg:items-end gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 w-full lg:w-auto">
             <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
               Progres ISPO (P1 - P5)
             </p>
-            
+
             {loadingIspo ? (
               <div className="flex gap-3 justify-center items-center h-12">
-                <span className="text-xs text-gray-400 animate-pulse">Menghitung progres...</span>
+                <span className="text-xs text-gray-400 animate-pulse">
+                  Menghitung progres...
+                </span>
               </div>
             ) : (
               <div className="flex gap-2 justify-center">
-                {['prinsip_1', 'prinsip_2', 'prinsip_3', 'prinsip_4', 'prinsip_5'].map((prinsip, idx) => {
+                {[
+                  "prinsip_1",
+                  "prinsip_2",
+                  "prinsip_3",
+                  "prinsip_4",
+                  "prinsip_5",
+                ].map((prinsip, idx) => {
                   // Ambil skor dari state, jika null/undefined jadikan 0
-                  const score = ispoProgress ? (ispoProgress[prinsip] || 0) : 0;
+                  const score = ispoProgress ? ispoProgress[prinsip] || 0 : 0;
                   const displayScore = Math.round(score); // Bulatkan koma
-                  
+
                   return (
-                    <div key={idx} className="flex flex-col items-center gap-1.5 group relative">
+                    <div
+                      key={idx}
+                      className="flex flex-col items-center gap-1.5 group relative"
+                    >
                       {/* Tooltip sederhana saat di-hover */}
                       <span className="absolute -top-6 bg-gray-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
                         Prinsip {idx + 1}: {displayScore}%
                       </span>
-                      
+
                       {/* Lingkaran Progres SVG Ultra-Tipis & Elegan */}
                       <div className="relative w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm ring-1 ring-black/5 p-1">
-                        <svg 
-                          viewBox="0 0 36 36" 
+                        <svg
+                          viewBox="0 0 36 36"
                           className="absolute top-0 left-0 w-full h-full transform -rotate-90"
                         >
                           <defs>
-                            <linearGradient id={`kemitraanGradient-${idx}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#FF7875" /> {/* Merah Terang */}
-                              <stop offset="100%" stopColor="#B5302D" /> {/* Merah Tua */}
+                            <linearGradient
+                              id={`kemitraanGradient-${idx}`}
+                              x1="0%"
+                              y1="0%"
+                              x2="100%"
+                              y2="0%"
+                            >
+                              <stop offset="0%" stopColor="#FF7875" />{" "}
+                              {/* Merah Terang */}
+                              <stop offset="100%" stopColor="#B5302D" />{" "}
+                              {/* Merah Tua */}
                             </linearGradient>
                           </defs>
-                          
+
                           {/* Lingkaran Track (Abu-abu Pudar) */}
                           <path
                             className="text-gray-100"
@@ -898,7 +986,7 @@ const PetaniProfileCard = ({ data }) => {
                             fill="none"
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                           />
-                          
+
                           {/* Lingkaran Progres Dinamis */}
                           <path
                             stroke={`url(#kemitraanGradient-${idx})`}
@@ -910,7 +998,7 @@ const PetaniProfileCard = ({ data }) => {
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                           />
                         </svg>
-                        
+
                         {/* Teks Persentase di Tengah */}
                         <div className="relative z-10 flex flex-col items-center">
                           <span className="text-[10px] font-bold text-[#B5302D] leading-none">
@@ -918,16 +1006,17 @@ const PetaniProfileCard = ({ data }) => {
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* Label P1, P2, dst */}
-                      <span className="text-[9px] font-bold text-gray-500">P{idx + 1}</span>
+                      <span className="text-[9px] font-bold text-gray-500">
+                        P{idx + 1}
+                      </span>
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
-
         </div>
       )}
     </div>

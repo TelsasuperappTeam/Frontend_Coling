@@ -617,7 +617,7 @@ export default function DashboardMandor() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Tampilan Utama Fitur Utama Mandor
+        Tampilan Utama Fitur Mandor
       </h2>
 
       {/* --- SECTION 2: WIDGETS --- */}

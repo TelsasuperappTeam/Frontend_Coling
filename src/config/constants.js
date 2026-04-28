@@ -28,6 +28,7 @@ export const API_BASE_URLS = {
   USER: import.meta.env.VITE_API_USER_URL || DEFAULT_SERVER_URL,
   FARM: import.meta.env.VITE_API_FARM_URL || DEFAULT_SERVER_URL,
   ISPO: import.meta.env.VITE_API_ISPO_URL || DEFAULT_SERVER_URL,
+  TRACEABILITY: import.meta.env.VITE_API_TRACEABILITY_URL || DEFAULT_SERVER_URL,
 };
 
 // ======================= ENDPOINT API =======================
@@ -211,6 +212,12 @@ export const API_ENDPOINTS = {
         // GET Detail Arsip per Siklus
         GET_ARSIP_SIKLUS_DETAIL: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/arsip/{nomor_siklus}`,
+
+        CEK_STATUS_SIKLUS: (blokId) =>
+          `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/status-ganti-siklus`,
+
+        BUAT_SIKLUS_BARU: (blokId) =>
+          `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/siklus-baru`,
       },
 
       // RENCANA KERJA (TO DO LIST HARIAN PETANI)
@@ -295,29 +302,36 @@ export const API_ENDPOINTS = {
         PINJAMKAN: `${API_BASE_URLS.FARM}/farm/kebun/transaksi/pinjamkan`,
       },
     },
-    
+
     MARKETPLACE: {
       // --- TAHAP 1: KEBUTUHAN PABRIK ---
-      // [POST] Pabrik membuat pengumuman kebutuhan bahan baku
+      // SUDAH [POST] Pabrik membuat pengumuman kebutuhan bahan baku
       CREATE_KEBUTUHAN: `${API_BASE_URLS.FARM}/farm/marketplace/kebutuhan`,
 
-      // [GET] Kebun & Pabrik melihat daftar kebutuhan yang sedang aktif (H s/d H+3)
+      // SUDAH [GET] Kebun & Pabrik melihat daftar kebutuhan yang sedang aktif (H s/d H+3)
       GET_KEBUTUHAN_AKTIF: `${API_BASE_URLS.FARM}/farm/marketplace/kebutuhan/aktif`,
 
+      // SUDAH [PATCH] Pabrik mengedit rencana kebutuhan pada 1 HARI SPESIFIK
+      UPDATE_KEBUTUHAN: (kebutuhanId) =>
+        `${API_BASE_URLS.FARM}/farm/marketplace/kebutuhan/${kebutuhanId}`,
+
       // --- TAHAP 2: MATCHING & PENGAJUAN (KEBUN) ---
-      // [GET] Kebun mencari rencana panen petani yang cocok dengan spesifikasi/tanggal (Filter pintar)
+      // SUDAH [GET] Kebun mencari rencana panen petani yang cocok dengan spesifikasi/tanggal (Filter pintar)
       GET_MATCHING_PANEN: `${API_BASE_URLS.FARM}/farm/marketplace/matching`,
 
-      // [POST] Kebun menggabungkan rencana panen & mengirim ke Pabrik
+      // SUDAH [POST] Kebun menggabungkan rencana panen & mengirim ke Pabrik
       CREATE_GRUP_PENJUALAN: `${API_BASE_URLS.FARM}/farm/marketplace/grup-penjualan`,
 
       // --- TAHAP 3: REVIEW PABRIK ---
-      // [GET] Pabrik melihat daftar pengajuan/tawaran masuk dari Kebun
+      // SUDAH [GET] Pabrik dan Kebun melihat daftar pengajuan/tawaran masuk dari Kebun
       GET_PENGAJUAN_MASUK: `${API_BASE_URLS.FARM}/farm/marketplace/pengajuan-masuk`,
 
-      // [PATCH] Pabrik menyetujui/menolak pengajuan grup penjualan (Dynamic ID)
+      // SUDAH [PATCH] Pabrik menyetujui/menolak pengajuan grup penjualan (Dynamic ID)
       ACTION_PENGAJUAN: (grupId) =>
         `${API_BASE_URLS.FARM}/farm/marketplace/pengajuan-masuk/${grupId}/action`,
+
+      // [BARU] [GET] Menampilkan daftar Grup Penjualan yang siap dikirim (Untuk Dropdown Kebun)
+      GET_DROPDOWN_SIAP_KIRIM: `${API_BASE_URLS.FARM}/farm/marketplace/grup-penjualan/dropdown/siap-kirim`,
     },
   },
 
@@ -345,13 +359,125 @@ export const API_ENDPOINTS = {
       // Endpoint POST submission dokumen manual
       SUBMISSION: `${API_BASE_URLS.ISPO}/ispo/submission`,
 
-      // belum dipakai
       // Melihat seluruh submission ISPO berstatus PENDING milik petani binaan
       GET_PETANI_PENDING_SUBMISSION_ISPO: `${API_BASE_URLS.ISPO}/ispo/kebun/pending-approvals`,
 
-      // belum dipakai
       // Review Dokumen ISPO
       REVIEW_DOKUMEN_ISPO: `${API_BASE_URLS.ISPO}/ispo/submission/{id}/review`,
+    },
+  },
+
+  // --- SERVICE TRACEABILITY  ---
+  TRACEABILITY: {
+    LOGISTIK: {
+      // --- KENDARAAN ---
+      KENDARAAN: {
+        // SUDAH [POST] Tambah kendaraan baru
+        ADD: `${API_BASE_URLS.TRACEABILITY}/logistik/kendaraan`,
+        // SUDAH [GET] Lihat daftar kendaraan
+        GET_ALL: `${API_BASE_URLS.TRACEABILITY}/logistik/kendaraan`,
+        // SUDAH [PATCH] Edit kendaraan by ID
+        UPDATE: (kendaraanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/kendaraan/${kendaraanId}`,
+        // SUDAH [DELETE] Hapus kendaraan by ID
+        DELETE: (kendaraanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/kendaraan/${kendaraanId}`,
+      },
+
+      // --- KRU (SUPIR) ---
+      KRU: {
+        // SUDAH [POST] Tambah supir baru
+        ADD: `${API_BASE_URLS.TRACEABILITY}/logistik/kru`,
+        // SUDAH [GET] Lihat daftar supir
+        GET_ALL: `${API_BASE_URLS.TRACEABILITY}/logistik/kru`,
+        // SUDAH [PATCH] Edit profil supir by ID
+        UPDATE: (kruId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/kru/${kruId}`,
+        // SUDAH [DELETE] Hapus supir by ID
+        DELETE: (kruId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/kru/${kruId}`,
+      },
+      // --- DROPDOWN TERSEDIA ---
+      DROPDOWN: {
+        // [GET] Daftar supir status TERSEDIA
+        KRU: `${API_BASE_URLS.TRACEABILITY}/logistik/dropdown/kru`,
+        // SUDAH [GET] Daftar kendaraan status TERSEDIA
+        KENDARAAN: `${API_BASE_URLS.TRACEABILITY}/logistik/dropdown/kendaraan`,
+      },
+
+      // --- MANAGEMENT PENGIRIMAN ---
+      MANAGEMENT: {
+        // [GET] Daftar pengiriman (ALL ROLES: logistik, kebun, pabrik)
+        GET_LIST: `${API_BASE_URLS.TRACEABILITY}/logistik/management`,
+
+        // [POST] Terima pengajuan, tugaskan armada, generate resi otomatis
+        TERIMA_TUGASKAN: (pengirimanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/terima-tugaskan`,
+
+        // [PATCH] Tolak pengajuan pengiriman
+        TOLAK: (pengirimanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/tolak`,
+
+        // [PATCH] Update progress pengiriman (Mengirim -> Menuju Pabrik -> Terima)
+        UPDATE_PROGRESS: (pengirimanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/progress`,
+      },
+    },
+
+    // --- KEBUN POV ---
+    KEBUN: {
+      // [POST] Submit form pengajuan pengiriman ke Mitra Logistik pilihan
+      AJUKAN_PENGIRIMAN: (logistikUserId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/pengiriman/ajukan/${logistikUserId}`,
+
+      // SUDAH [GET] Melihat daftar Mitra Logistik yang tersedia di platform (beserta resume armada)
+      GET_MITRA_LOGISTIK: `${API_BASE_URLS.TRACEABILITY}/logistik/mitra-logistik`,
+      
+      // Dropdown Grup ID yang pernah dipakai sebelumnya untuk mengajukan ke logistik
+      GET_USED_GRUP_IDS: `${API_BASE_URLS.TRACEABILITY}/logistik/used-grup-ids`,
+    },
+
+    // --- PABRIK POV ---
+    PABRIK: {
+      // SUDAH [PATCH] Mengkonfirmasi truk Logistik telah tiba di Pabrik
+      TERIMA_PESANAN: (pengirimanId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/pabrik-terima`,
+
+      // SUDAH [GET] Melihat ringkasan daftar truk yang sedang menuju pabrik
+      GET_MONITORING: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/monitoring`,
+
+      // [BARU] [GET] Klik Detail -> Muntahkan seluruh metadata Traceability Node
+      GET_TRACEABILITY_NODE: (pengirimanId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/traceability/${pengirimanId}`,
+
+      PEMERIKSAAN: {
+        // POST: Digunakan saat pabrik submit form (PENTING: Gunakan FormData karena ada UploadFile nota)
+        SUBMIT: (pengirimanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/pemeriksaan-tbs`,
+        // GET: Untuk melihat detail 1 hasil pemeriksaan
+        GET_DETAIL: (pengirimanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/pemeriksaan-tbs`,
+        // GET: Untuk Dashboard tabel rekapitulasi semua truk masuk hari itu
+        DASHBOARD: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/dashboard-pemeriksaan`,
+      },
+
+      // MANAJEMEN STOK RAM ---
+      STOK_RAM: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/stok-ram`,
+
+      //  SIKLUS PRODUKSI ---
+      PRODUKSI: {
+        MULAI: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/produksi/mulai`,
+        SELESAI: (siklusId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/produksi/${siklusId}/selesai`,
+        GET_LIST: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/produksi/list`,
+      },
+    },
+
+    //  PUBLIK POV ---
+    KODE_PRODUKSI_PUBLIK: {
+      // Endpoint pelacakan pohon barcode CPO tanpa Auth
+      SCAN_TRACEABILITY: (kodeResi) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/traceability/scan/${kodeResi}`,
     },
   },
 };
@@ -366,6 +492,7 @@ export const getFileUrl = (path = null, service = "USER") => {
   let baseUrl = API_BASE_URLS.USER;
   if (service === "FARM") baseUrl = API_BASE_URLS.FARM;
   if (service === "ISPO") baseUrl = API_BASE_URLS.ISPO;
+  if (service === "TRACEABILITY") baseUrl = API_BASE_URLS.TRACEABILITY;
 
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return `${baseUrl}${cleanPath}`;

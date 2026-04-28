@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_ENDPOINTS } from "../../../config/constants";
-import { toast } from "react-hot-toast";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { API_ENDPOINTS, NOTIF_MESSAGES } from "../../../config/constants";
+import { Loader2, ArrowLeft, Info, CheckCircle2 } from "lucide-react";
 
 export default function LuasLahan() {
   const navigate = useNavigate();
 
   // === STATE UTAMA ===
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [processId, setProcessId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -146,7 +145,7 @@ export default function LuasLahan() {
             return updatedForm;
           });
 
-          toast.success("Melanjutkan draft pendaftaran sebelumnya.");
+          alert("Melanjutkan draft pendaftaran sebelumnya.");
         }
       } catch (error) {
         if (error.response?.status !== 404) {
@@ -165,9 +164,9 @@ export default function LuasLahan() {
   // === SUBMIT STEP 1 ===
   const submitStep1 = async () => {
     if (!form.jenisPelakuUsaha)
-      return toast.error("Pilih jenis pelaku usaha terlebih dahulu!");
+      return alert("Pilih jenis pelaku usaha terlebih dahulu!");
     if (form.membukaLahan === null)
-      return toast.error("Pilih jawaban membuka lahan terlebih dahulu!");
+      return alert("Pilih jawaban membuka lahan terlebih dahulu!");
 
     setIsLoading(true);
     try {
@@ -194,7 +193,7 @@ export default function LuasLahan() {
       setStep(2);
     } catch (error) {
       console.error(error);
-      toast.error("Gagal menyimpan Step 1");
+      setErrorMsg(NOTIF_MESSAGES.UPDATE_FAILED || "Gagal menyimpan Step 1");
     } finally {
       setIsLoading(false);
     }
@@ -203,20 +202,19 @@ export default function LuasLahan() {
   // === SUBMIT STEP 2 & 3 ===
   const submitStep2And3 = async () => {
     if (form.sertifikatTanah === null)
-      return toast.error("Pilih status kepemilikan!");
+      return alert("Pilih status kepemilikan!");
     if (form.sertifikatTanah === true && !form.jenisSertifikat)
-      return toast.error("Pilih jenis sertifikat!");
+      return alert("Pilih jenis sertifikat!");
 
-    // PERBAIKAN FATAL 1: Menggunakan TitleCase "Bukti Lainnya" persis dengan Enum JenisSertifikatTanah di Pydantic BE
     if (
       form.sertifikatTanah === true &&
       form.jenisSertifikat === "Bukti Lainnya" &&
       !form.jenisLainnya.trim()
     )
-      return toast.error("Harap sebutkan jenis sertifikat lainnya!");
+      return alert("Harap sebutkan jenis sertifikat lainnya!");
 
     if (form.sertifikatTanah === false && form.sedangMengurus === null)
-      return toast.error("Jawab status kepengurusan dokumen!");
+      return alert("Jawab status kepengurusan dokumen!");
 
     setIsLoading(true);
     setErrorMsg("");
@@ -259,11 +257,11 @@ export default function LuasLahan() {
         const pesanISPO =
           "Maaf, lahan Anda tidak memenuhi standar ISPO karena tidak memiliki dokumen sah dan tidak dalam proses pengurusan. Proses pendaftaran lahan dihentikan. Anda akan dialihkan ke Dashboard Utama...";
         setErrorMsg(pesanISPO);
-        toast.error("Gagal Memenuhi Persyaratan ISPO", { duration: 10000 });
+        alert("Gagal Memenuhi Persyaratan ISPO");
         setTimeout(() => navigate("/petani/dashboard"), 10000);
       } else {
         console.error(error);
-        toast.error(error.message || "Terjadi kesalahan pada server");
+        setErrorMsg(error.message || "Terjadi kesalahan pada server");
       }
     } finally {
       setIsLoading(false);
@@ -276,15 +274,13 @@ export default function LuasLahan() {
       form.sertifikatTanah === true &&
       form.files.kepemilikan_tanah_sah.status !== "success"
     ) {
-      return toast.error("Mohon upload sertifikat tanah terlebih dahulu.");
+      return alert("Mohon upload sertifikat tanah terlebih dahulu.");
     }
     if (
       form.sedangMengurus === true &&
       form.files.proses_kepengurusan_tanah.status !== "success"
     ) {
-      return toast.error(
-        "Mohon upload bukti pengurusan dokumen terlebih dahulu.",
-      );
+      return alert("Mohon upload bukti pengurusan dokumen terlebih dahulu.");
     }
     setStep(4);
   };
@@ -299,7 +295,7 @@ export default function LuasLahan() {
       !form.tahunPembukaan ||
       !isSengketaValid
     ) {
-      return toast.error("Harap lengkapi semua field yang wajib diisi!");
+      return alert("Harap lengkapi semua field yang wajib diisi!");
     }
 
     const luasLahanBersih = form.luasLahan.toString().replace(",", ".");
@@ -307,14 +303,14 @@ export default function LuasLahan() {
     const tahunParse = parseInt(form.tahunPembukaan);
 
     if (isNaN(luasParse) || luasParse <= 0)
-      return toast.error(
+      return alert(
         "Penulisan Luas lahan tidak valid! Harus berupa angka murni (misal: 3.5).",
       );
     if (isNaN(tahunParse) || tahunParse < 1900 || tahunParse > 2100)
-      return toast.error("Tahun pembukaan tidak valid!");
+      return alert("Tahun pembukaan tidak valid!");
 
     if (form.jenisPelakuUsaha === "PEKEBUN" && luasParse > 25) {
-      return toast.error(
+      return alert(
         "Luas lahan melebihi 25 Ha. Sesuai Permentan NO.98/2013, mohon mendaftar sebagai Perusahaan jika memiliki lahan lebih dari 25 Ha.",
       );
     }
@@ -356,7 +352,7 @@ export default function LuasLahan() {
         setErrorMsg(error.message);
       } else {
         console.error(error);
-        toast.error(
+        setErrorMsg(
           error.message ||
             "Data tidak valid secara sistem. Cek kembali input Anda.",
         );
@@ -370,7 +366,7 @@ export default function LuasLahan() {
   const submitFinal = async () => {
     if (form.sengketa === true) {
       if (form.files.sengketa_lahan.status !== "success") {
-        return toast.error("Wajib upload Bukti Sengketa.");
+        return alert("Wajib upload Bukti Sengketa.");
       }
     }
 
@@ -378,20 +374,20 @@ export default function LuasLahan() {
       form.jenisPelakuUsaha === "PEKEBUN" &&
       form.files.stdb.status !== "success"
     ) {
-      return toast.error("Wajib upload STDB (Khusus Petani Swadaya).");
+      return alert("Wajib upload STDB (Khusus Petani Swadaya).");
     }
     if (
       form.jenisPelakuUsaha === "PERUSAHAAN" &&
       form.files.iup_hgu.status !== "success"
     ) {
-      return toast.error("Wajib upload IUP/HGU (Khusus Perusahaan).");
+      return alert("Wajib upload IUP/HGU (Khusus Perusahaan).");
     }
     if (form.files.sppl.status !== "success")
-      return toast.error("Wajib upload SPPL.");
+      return alert("Wajib upload SPPL.");
 
     if (form.membukaLahan === true) {
       if (form.files.pembukaan_lahan_video.status !== "success") {
-        return toast.error("Wajib upload bukti/video pembukaan lahan.");
+        return alert("Wajib upload bukti/video pembukaan lahan.");
       }
     }
 
@@ -402,15 +398,17 @@ export default function LuasLahan() {
         body: JSON.stringify({}),
       });
 
-      toast.success("Proses pendaftaran lahan berhasil disimpan!", {
-        duration: 5000,
-        style: { padding: "16px" },
-      });
-
-      setTimeout(() => navigate("/petani/dashboard"), 5000);
+      alert(
+        NOTIF_MESSAGES.SAVE_SUCCESS ||
+          "Proses pendaftaran lahan berhasil disimpan!",
+      );
+      navigate("/petani/dashboard");
     } catch (error) {
       console.error(error);
-      toast.error("Gagal finalisasi data. Server mengalami gangguan.");
+      setErrorMsg(
+        NOTIF_MESSAGES.UPDATE_FAILED ||
+          "Gagal finalisasi data. Server mengalami gangguan.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -418,7 +416,7 @@ export default function LuasLahan() {
 
   // === FUNGSI UPLOAD ===
   const handleUpload = async (type, file) => {
-    if (!processId) return toast.error("ID Proses tidak ditemukan.");
+    if (!processId) return alert("ID Proses tidak ditemukan.");
     if (!file) return;
 
     // Filter Ekstensi & Ukuran File
@@ -430,8 +428,8 @@ export default function LuasLahan() {
       "image/png",
     ];
     if (!allowedTypes.includes(file.type)) {
-      return toast.error(
-        `Tipe file tidak diizinkan. Hanya PDF, JPG, PNG, atau Video (MP4/AVI).`,
+      return alert(
+        `Tipe file tidak diizinkan. Hanya PDF, JPG, PNG, atau Video (MP4).`,
       );
     }
 
@@ -440,7 +438,7 @@ export default function LuasLahan() {
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
     if (file.size > maxSizeBytes) {
-      return toast.error(`Ukuran file maksimal ${maxSizeMB}MB!`);
+      return alert(`Ukuran file maksimal ${maxSizeMB}MB!`);
     }
     setForm((prev) => ({
       ...prev,
@@ -469,14 +467,14 @@ export default function LuasLahan() {
           [type]: { status: "success", name: file.name },
         },
       }));
-      toast.success(`Upload berhasil`);
+      alert(`Upload berhasil`);
     } catch (error) {
       console.error(error);
       setForm((prev) => ({
         ...prev,
         files: { ...prev.files, [type]: { status: "failed", name: null } },
       }));
-      toast.error("Gagal upload file.");
+      alert("Gagal upload file.");
     }
   };
 
@@ -541,31 +539,133 @@ export default function LuasLahan() {
       </div>
 
       <div className="max-w-3xl mx-auto p-4 sm:p-6 bg-white shadow-md sm:shadow-lg rounded-xl border border-gray-100 mb-8">
-        {/* --- PROGRESS BAR STEPPER --- */}
-        <div className="relative flex justify-between items-center mb-8 px-2 sm:px-6">
-          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-0.5 sm:h-1 bg-gray-200 z-0 rounded-full"></div>
-          {[1, 2, 3, 4, 5].map((s) => (
-            <div key={s} className="relative z-10 flex flex-col items-center">
-              <div
-                className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full text-xs sm:text-sm font-bold transition-all duration-300 shadow-sm ${step >= s ? "bg-[#B5302D] text-white ring-2 sm:ring-4 ring-red-50" : "bg-white text-gray-400 border-2 border-gray-200"}`}
-              >
-                {s}
-              </div>
+        {step > 0 && (
+          <>
+            {/* --- PROGRESS BAR STEPPER --- */}
+            <div className="relative flex justify-between items-center mb-8 px-2 sm:px-6">
+              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-0.5 sm:h-1 bg-gray-200 z-0 rounded-full"></div>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <div
+                  key={s}
+                  className="relative z-10 flex flex-col items-center"
+                >
+                  <div
+                    className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full text-xs sm:text-sm font-bold transition-all duration-300 shadow-sm ${step >= s ? "bg-[#B5302D] text-white ring-2 sm:ring-4 ring-red-50" : "bg-white text-gray-400 border-2 border-gray-200"}`}
+                  >
+                    {s}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <h2 className="text-lg sm:text-xl font-bold text-center text-[#B5302D] mb-6 px-2">
-          {step === 1 && "Detail Profil dan Pendaftaran Lahan"}
-          {step === 2 && "Status Kepemilikan Lahan"}
-          {step === 3 && "Upload Dokumen Kepemilikan"}
-          {step === 4 && "Detail Data Lahan"}
-          {step === 5 && "Upload Dokumen Pendukung"}
-        </h2>
+            <h2 className="text-lg sm:text-xl font-bold text-center text-[#B5302D] mb-6 px-2">
+              {step === 1 && "Detail Profil dan Pendaftaran Lahan"}
+              {step === 2 && "Status Kepemilikan Lahan"}
+              {step === 3 && "Upload Dokumen Kepemilikan"}
+              {step === 4 && "Detail Data Lahan"}
+              {step === 5 && "Upload Dokumen Pendukung"}
+            </h2>
+          </>
+        )}
 
         {errorMsg && (
           <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-3 sm:p-4 rounded-lg mb-6 text-xs sm:text-sm shadow-sm">
             <strong className="block mb-1">Perhatian:</strong> {errorMsg}
+          </div>
+        )}
+
+        {/* --- STEP 0: PERSIAPAN BERKAS --- */}
+        {step === 0 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+            <div className="text-center space-y-2 mb-8">
+              <div className="inline-flex justify-center items-center w-16 h-16 bg-red-50 rounded-full mb-2">
+                <Info className="w-8 h-8 text-[#B5302D]" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
+                Persiapan Pendaftaran Lahan
+              </h2>
+              <p className="text-sm text-gray-500 max-w-lg mx-auto">
+                Agar proses pengisian berjalan lancar, mohon pastikan Anda telah
+                menyiapkan dokumen dalam format PDF/Foto/Video dari
+                berkas-berkas berikut:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Dokumen Wajib */}
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <h3 className="font-bold text-gray-800 text-sm">
+                    Dokumen Utama (Wajib)
+                  </h3>
+                </div>
+                <ul className="space-y-3 text-xs sm:text-sm text-gray-600 ml-7 list-disc">
+                  <li>
+                    Sertifikat Tanah (SHM, Girik, Akta, dll) <br />
+                    <span className="text-[10px] text-gray-400">
+                      Atau bukti surat pengurusan jika sedang diurus.
+                    </span>
+                  </li>
+                  <li>
+                    Surat Izin Usaha Perkebunan (IUP/HGU) <br />
+                    <span className="text-[10px] text-gray-400">
+                      Untuk pelaku usaha sawit skala perusahaan.
+                    </span>
+                  </li>
+                  <li>Surat Pernyataan Pengelolaan Lingkungan (SPPL)</li>
+                </ul>
+              </div>
+
+              {/* Dokumen Kondisional */}
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-5 h-5 text-[#EF8523]" />
+                  <h3 className="font-bold text-gray-800 text-sm">
+                    Dokumen Tambahan
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-500 mb-3 ml-7 italic">
+                  Hanya disiapkan jika kondisi di bawah ini sesuai dengan lahan
+                  Anda:
+                </p>
+                <ul className="space-y-3 text-xs sm:text-sm text-gray-700 ml-7 list-disc">
+                  <li>
+                    <span className="font-semibold">Video Pembukaan Lahan</span>{" "}
+                    <br />
+                    <span className="text-[10px] text-gray-500">
+                      Hanya jika Anda{" "}
+                      <span className="font-bold text-orange-600">
+                        sedang membuka lahan baru
+                      </span>{" "}
+                      saat ini.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="font-semibold">
+                      Bukti Penyelesaian Sengketa
+                    </span>{" "}
+                    <br />
+                    <span className="text-[10px] text-gray-500">
+                      Hanya jika lahan sedang dalam{" "}
+                      <span className="font-bold text-orange-600">
+                        status sengketa
+                      </span>
+                      .
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-100">
+              <button
+                onClick={() => setStep(1)}
+                className="bg-[#B5302D] text-white px-5 py-3 rounded-xl w-full flex justify-center items-center font-bold text-sm shadow-md hover:bg-[#9a2826] transition-all duration-200"
+              >
+                Saya Sudah Siap, Mulai Isi Data
+              </button>
+            </div>
           </div>
         )}
 

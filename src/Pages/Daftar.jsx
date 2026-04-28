@@ -434,7 +434,7 @@ export default function Daftar() {
             </div>
           )}
 
-{/* ====== NOTIFIKASI PROFESIONAL (Pindah ke atas tombol) ====== */}
+          {/* ====== NOTIFIKASI PROFESIONAL (Pindah ke atas tombol) ====== */}
           {notif && (
             <div
               className={`mt-4 p-3 sm:p-4 rounded-xl border flex items-start gap-3 animate-fade-in ${

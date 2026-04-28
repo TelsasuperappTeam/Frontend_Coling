@@ -9,30 +9,6 @@ import {
 // Pastikan getFileUrl di-export dari constants.js
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 
-/* ===================== MOCK DATA (STATIC) ===================== */
-const MOCK_DOKUMEN_SERTIFIKASI = [
-  {
-    id: 1,
-    nama: "Pak Budi Santoso",
-    kebun: "Kebun Dhimas",
-    jenisDok: "Surat Hak Milik (SHM)",
-    prinsip: "Prinsip 1 (Legalitas)",
-    file: "shm_budi.pdf",
-    catatan: "-",
-    status: "pending",
-  },
-  {
-    id: 2,
-    nama: "Pak Joko Widodo",
-    kebun: "Kebun Makmur Sejahtera",
-    jenisDok: "Bukti Pembelian Bibit",
-    prinsip: "Prinsip 4 (Good Agriculture)",
-    file: "nota_bibit.pdf",
-    catatan: "Foto kurang jelas",
-    status: "pending",
-  },
-];
-
 const KemitraanPetani = () => {
   // State data dinamis untuk Validasi
   const [pendingPanen, setPendingPanen] = useState([]);
@@ -272,76 +248,7 @@ const KemitraanPetani = () => {
 
       {/* --- CONTENT AREA --- */}
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-        {/* RENCANA PANEN */}
-        <SectionCard title="Daftar Rencana Panen Mandor">
-          <p className="text-xs text-gray-500 mb-6 -mt-4">
-            Daftar pengajuan rencana panen mandor kebun.
-          </p>
-
-          {loading ? (
-            <div className="text-center py-10 text-gray-400 text-xs">
-              Memuat data...
-            </div>
-          ) : pendingPanen.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-xs">
-              Tidak ada rencana panen dari mandor.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              {pendingPanen.map((item) => (
-                <ValidationCard
-                  key={item.id}
-                  title={item.nama_blok || `Unit ${item.id}`}
-                  kebunName={item.nama_kebun || "Kebun Relasi"}
-                >
-                  <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
-                    <DetailRow label="Nama Mandor" value={item.nama_petani} />
-
-                    <DetailRow
-                      label="Siklus Panen Ke"
-                      value={item.nomor_siklus || "-"}
-                    />
-
-                    <DetailRow
-                      label="Tanggal Rencana"
-                      value={item.tanggal_rencana_panen}
-                    />
-                    <DetailRow label="Usia Tanaman" value={item.usia_tanaman} />
-                    <DetailRow
-                      label="Luas Panen (Ha)"
-                      value={item.luas_lahan_dipanen}
-                    />
-                    <DetailRow
-                      label="Jenis Sawit"
-                      value={item.jenis_sawit || "-"}
-                    />
-                    <DetailRow
-                      label="Varietas (jika tenera)"
-                      value={item.nama_varietas || "-"}
-                    />
-                    {item.catatan_penolakan && (
-                      <div className="mt-3 pt-2 border-t border-dashed border-gray-200">
-                        <p className="font-bold text-red-500 mb-1">
-                          Catatan Penolakan Sebelumnya:
-                        </p>
-                        <p className="text-gray-600 pl-1 italic">
-                          "{item.catatan_penolakan}"
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="pt-2 mt-2 border-t border-gray-100 flex justify-between font-bold text-[#B5302D]">
-                      <span>Estimasi TBS:</span>
-                      <span>{item.estimasi_total_tbs_kg} Kg</span>
-                    </div>
-                  </div>
-                </ValidationCard>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-
-        {/* RENCANA TANAM */}
+                {/* RENCANA TANAM */}
         <SectionCard title="Daftar Rencana Tanam Mandor">
           <p className="text-xs text-gray-500 mb-6 -mt-4">
             Daftar pengajuan rencana replanting atau tanam baru (Blok Lahan).
@@ -361,7 +268,6 @@ const KemitraanPetani = () => {
                 <ValidationCard
                   key={item.id}
                   title={item.nama_unit || `Blok #${item.id}`}
-                  kebunName={item.nama_kebun || "Kebun Relasi"}
                 >
                   <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
                     <DetailRow
@@ -499,52 +405,74 @@ const KemitraanPetani = () => {
           )}
         </SectionCard>
 
-        {/* DOKUMEN SERTIFIKASI */}
-        <SectionCard title="Daftar Dokumen Sertifikasi Mandor">
+        {/* RENCANA PANEN */}
+        <SectionCard title="Daftar Rencana Panen Mandor">
           <p className="text-xs text-gray-500 mb-6 -mt-4">
-            Tabel dokumen sertifikasi dari mandor.
+            Daftar pengajuan rencana panen mandor kebun.
           </p>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                  <th className="p-4 font-bold rounded-tl-xl">No</th>
-                  <th className="p-4 font-bold">Nama Mandor</th>
-                  <th className="p-4 font-bold border-l border-orange-400">
-                    Kebun Relasi
-                  </th>
-                  <th className="p-4 font-bold">Jenis Dokumen</th>
-                  <th className="p-4 font-bold">Prinsip ISPO</th>
-                  <th className="p-4 font-bold">File Dokumen</th>
-                  <th className="p-4 font-bold rounded-tr-xl">Catatan</th>
-                </tr>
-              </thead>
-              <tbody className="text-xs text-gray-700 bg-white">
-                {MOCK_DOKUMEN_SERTIFIKASI.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
-                  >
-                    <td className="p-4 font-bold text-center">{index + 1}</td>
-                    <td className="p-4 font-bold">{item.nama}</td>
-                    <td className="p-4 font-medium text-gray-800">
-                      {item.kebun}
-                    </td>
-                    <td className="p-4 font-medium">{item.jenisDok}</td>
-                    <td className="p-4 text-gray-500">{item.prinsip}</td>
-                    <td className="p-4">
-                      <button className="flex items-center gap-1 text-blue-600 hover:underline">
-                        <FileText className="w-3 h-3" /> Lihat
-                      </button>
-                    </td>
-                    <td className="p-4 italic text-gray-400">{item.catatan}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {loading ? (
+            <div className="text-center py-10 text-gray-400 text-xs">
+              Memuat data...
+            </div>
+          ) : pendingPanen.length === 0 ? (
+            <div className="text-center py-10 text-gray-400 text-xs">
+              Tidak ada rencana panen dari mandor.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              {pendingPanen.map((item) => (
+                <ValidationCard
+                  key={item.id}
+                  title={item.nama_blok || `Unit ${item.id}`}
+                >
+                  <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
+                    <DetailRow label="Nama Mandor" value={item.nama_petani} />
+
+                    <DetailRow
+                      label="Siklus Panen Ke"
+                      value={item.nomor_siklus || "-"}
+                    />
+
+                    <DetailRow
+                      label="Tanggal Rencana"
+                      value={item.tanggal_rencana_panen}
+                    />
+                    <DetailRow label="Usia Tanaman" value={item.usia_tanaman} />
+                    <DetailRow
+                      label="Luas Panen (Ha)"
+                      value={item.luas_lahan_dipanen}
+                    />
+                    <DetailRow
+                      label="Jenis Sawit"
+                      value={item.jenis_sawit || "-"}
+                    />
+                    <DetailRow
+                      label="Varietas (jika tenera)"
+                      value={item.nama_varietas || "-"}
+                    />
+                    {item.catatan_penolakan && (
+                      <div className="mt-3 pt-2 border-t border-dashed border-gray-200">
+                        <p className="font-bold text-red-500 mb-1">
+                          Catatan Penolakan Sebelumnya:
+                        </p>
+                        <p className="text-gray-600 pl-1 italic">
+                          "{item.catatan_penolakan}"
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="pt-2 mt-2 border-t border-gray-100 flex justify-between font-bold text-[#B5302D]">
+                      <span>Estimasi TBS:</span>
+                      <span>{item.estimasi_total_tbs_kg} Kg</span>
+                    </div>
+                  </div>
+                </ValidationCard>
+              ))}
+            </div>
+          )}
         </SectionCard>
+
       </div>
     </div>
   );

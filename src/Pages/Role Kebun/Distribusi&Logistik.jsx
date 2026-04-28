@@ -2,121 +2,111 @@ import React, { useState } from "react";
 import {
   Truck,
   MapPin,
-  ChevronRight,
   Search,
-  Users,
-  Globe,
-  Clock,
   CheckCircle2,
-  XCircle,
   ArrowRight,
-  Package,
   ArrowLeft,
-  Filter,
   User,
-  MoreHorizontal,
+  Phone,
+  ChevronDown,
+  Save,
+  Calendar,
+  Hash,
+  CheckCircle,
+  ChevronUp,
 } from "lucide-react";
-
-/* ===================== MOCK DATA ===================== */
-
-// Tawaran Masuk (Logistik menawarkan jasa ke Kebun)
-const MOCK_INCOMING_OFFERS = [
-  {
-    id: 1,
-    logistikName: "Logistik Dimas Jaya",
-    rating: 4.8,
-    armada: "Truk Colt Diesel",
-    kapasitas: "6-8 Ton",
-    harga: 22000, // per ton/km (contoh)
-    estimasiJemput: "Besok, 08:00 WIB",
-    tujuan: "PT. Sawit Makmur",
-  },
-  {
-    id: 2,
-    logistikName: "CV. Angkut Sawit",
-    rating: 4.5,
-    armada: "Fuso",
-    kapasitas: "10-12 Ton",
-    harga: 20000,
-    estimasiJemput: "Besok, 10:00 WIB",
-    tujuan: "PT. Pabrik Agro",
-  },
-];
-
-// Data Logistik untuk Close Market (Direktori)
-const MOCK_LOGISTICS_DIRECTORY = [
-  {
-    id: 101,
-    name: "PT. Logistik Cepat",
-    rating: 4.9,
-    armada: 12,
-    status: "Tersedia",
-  },
-  {
-    id: 102,
-    name: "CV. Maju Jalan",
-    rating: 4.7,
-    armada: 5,
-    status: "Tersedia",
-  },
-  {
-    id: 103,
-    name: "Trans Sawit Express",
-    rating: 4.5,
-    armada: 8,
-    status: "Sibuk",
-  },
-];
-
-// Progres Pengajuan (History)
-const MOCK_PROGRESS = [
-  {
-    id: "TRX-001",
-    tujuan: "PT. Sawit Makmur",
-    metode: "Open Market",
-    tglAjuan: "24 Sep 2025",
-    muatan: "6 Ton",
-    status: "pending_logistik", // pending_logistik, on_process, done, rejected
-    logistik: "-",
-  },
-  {
-    id: "TRX-002",
-    tujuan: "PT. Pabrik Agro",
-    metode: "Close Market",
-    tglAjuan: "22 Sep 2025",
-    muatan: "8 Ton",
-    status: "on_process",
-    logistik: "Logistik Dimas Jaya",
-  },
-  {
-    id: "TRX-003",
-    tujuan: "PT. Sawit Makmur",
-    metode: "Close Market",
-    tglAjuan: "20 Sep 2025",
-    muatan: "5 Ton",
-    status: "done",
-    logistik: "CV. Angkut Sawit",
-  },
-];
+import { API_ENDPOINTS } from "../../config/constants.js";
 
 const DistribusiLogistik = () => {
-  // State Management: Mengatur navigasi Tab (Pencarian/Progres) dan View Mode (Main/Form)
-  const [activeTab, setActiveTab] = useState("pencarian"); 
-  const [viewMode, setViewMode] = useState("main"); 
+  const [activeTab, setActiveTab] = useState("pencarian");
+  const [viewMode, setViewMode] = useState("main");
   const [selectedLogistik, setSelectedLogistik] = useState(null);
 
-  /* --- HANDLERS (Fungsi Logika Navigasi) --- */
-  
-  // Mengaktifkan mode formulir Open Market
-  const handleOpenMarket = () => setViewMode("open_market_form");
-  
-  // Mengaktifkan mode list untuk memilih mitra (Close Market)
-  const handleCloseMarket = () => setViewMode("close_market_list");
+  // State BE tetap dipertahankan
+  const [mitraLogistik, setMitraLogistik] = useState([]);
+  const [isLoadingMitra, setIsLoadingMitra] = useState(false);
+
+  // --- STATE UNTUK TAB PROGRES PENGAJUAN ---
+  const [progresPengiriman, setProgresPengiriman] = useState([]);
+  const [isLoadingProgres, setIsLoadingProgres] = useState(false);
+
+  // Fetch data progres saat tab berpindah ke "progres"
+  React.useEffect(() => {
+    if (activeTab === "progres") {
+      fetchProgresPengiriman();
+    }
+  }, [activeTab]);
+
+  const fetchProgresPengiriman = async () => {
+    setIsLoadingProgres(true);
+    try {
+      const token = localStorage.getItem("token");
+      const urlBase = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST;
+
+      // Memanggil dua data sekaligus (Yang sedang berjalan & Histori Selesai/Ditolak)
+      const [resAktif, resHistori] = await Promise.all([
+        fetch(`${urlBase}?is_history=false`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${urlBase}?is_history=true`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      let dataAktif = [];
+      let dataHistori = [];
+
+      if (resAktif.ok) dataAktif = await resAktif.json();
+      if (resHistori.ok) dataHistori = await resHistori.json();
+
+      // Gabungkan data dan urutkan berdasarkan ID terbaru (menurun)
+      const combinedData = [...dataAktif, ...dataHistori].sort(
+        (a, b) => b.id - a.id,
+      );
+
+      console.log("=== CEK DATA SELURUH PROGRES DARI BE ===", combinedData);
+      setProgresPengiriman(combinedData);
+    } catch (error) {
+      console.error("Gagal fetch progres pengiriman:", error);
+    } finally {
+      setIsLoadingProgres(false);
+    }
+  };
+
+  // Fetch data list logistik saat komponen dimuat
+  React.useEffect(() => {
+    const fetchMitra = async () => {
+      setIsLoadingMitra(true);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(
+          API_ENDPOINTS.TRACEABILITY.KEBUN.GET_MITRA_LOGISTIK,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log("=== CEK DATA DARI BE (GET_MITRA_LOGISTIK) ===", data);
+
+          setMitraLogistik(data);
+        } else {
+          console.log("=== BE MENGEMBALIKAN ERROR STATUS ===", res.status);
+        }
+      } catch (error) {
+        console.error("Gagal fetch mitra logistik:", error);
+      } finally {
+        setIsLoadingMitra(false);
+      }
+    };
+    fetchMitra();
+  }, []);
 
   // Memilih logistik spesifik dan lanjut ke formulir
   const handleSelectLogistik = (logistik) => {
     setSelectedLogistik(logistik);
-    setViewMode("close_market_form");
+    setViewMode("form"); // Langsung ke form
   };
 
   // Kembali ke tampilan utama & reset seleksi
@@ -127,20 +117,16 @@ const DistribusiLogistik = () => {
 
   // Helper dinamis untuk menentukan Judul SectionCard berdasarkan viewMode & activeTab
   const getSectionTitle = () => {
-    if (viewMode === "open_market_form") return "Pengajuan Open Market";
-    if (viewMode === "close_market_list") return "Pilih Mitra Logistik";
-    if (viewMode === "close_market_form") return "Pengajuan Close Market";
-    
-    // Jika di View Main, judul tergantung Tab yang aktif
+    if (viewMode === "form") return "Pengajuan Jasa Logistik";
     return activeTab === "pencarian"
-      ? "Manajemen Pencarian Logistik"
+      ? "Cari Jasa Logistik Pengiriman TBS Anda"
       : "Status Pengiriman & Progres";
   };
 
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
       {/* --- HEADER --- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-10">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-8">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <Truck className="w-8 h-8 text-[#B5302D]" />
@@ -166,7 +152,7 @@ const DistribusiLogistik = () => {
                   : "text-gray-500"
               }`}
             >
-              <Search className="w-3.5 h-3.5" /> Mencari Pengiriman
+              <Search className="w-3.5 h-3.5" /> Mencari Logistik
             </button>
             <button
               onClick={() => setActiveTab("progres")}
@@ -176,11 +162,14 @@ const DistribusiLogistik = () => {
                   : "text-gray-500"
               }`}
             >
-              <Clock className="w-3.5 h-3.5" /> Progres Pengajuan
+              <Truck className="w-3.5 h-3.5" /> Status Pengiriman
             </button>
           </div>
         )}
       </div>
+
+      {/* --- GARIS PEMBATAS --- */}
+      <hr className="border-gray-200 mb-8" />
 
       {/* --- CONTENT AREA (Wrapped in SectionCard) --- */}
       <SectionCard title={getSectionTitle()}>
@@ -189,95 +178,103 @@ const DistribusiLogistik = () => {
           <div className="animate-in fade-in slide-in-from-bottom-2">
             {/* TAB 1 MENCARI PENGIRIMAN */}
             {activeTab === "pencarian" && (
-              <div className="space-y-10">
-                {/* SECTION A Validasi Permintaan (Tawaran Masuk) */}
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-orange-500" />{" "}
-                        Validasi Permintaan Masuk
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Pihak logistik menawarkan jasa pengiriman untuk panen
-                        Anda.
-                      </p>
-                    </div>
-                    <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[10px] font-bold">
-                      {MOCK_INCOMING_OFFERS.length} Tawaran
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {MOCK_INCOMING_OFFERS.map((offer) => (
-                      <IncomingOfferCard key={offer.id} offer={offer} />
-                    ))}
-                  </div>
-                </section>
-
-                <div className="border-t border-gray-100"></div>
-
-                {/* SECTION B Cari Jasa (Actions) */}
-                <section>
-                  <div className="mb-6">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-                      <Search className="w-5 h-5 text-[#B5302D]" /> Cari Jasa
-                      Pengiriman Baru
-                    </h3>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
                     <p className="text-xs text-gray-500 mt-1">
-                      Buat pengajuan baru jika tidak ada tawaran yang cocok.
+                      Halaman ini baru bisa dilakukan setelah pabrik menerima pengajuan penjualan TBS Anda. Silahkan pilih mitra logistik yang tersedia untuk mengirimkan TBS
+                      Anda ke pabrik.
                     </p>
                   </div>
+                  <span className="bg-red-100 text-[#B5302D] px-3 py-1 rounded-full text-[10px] font-bold">
+                    {mitraLogistik.length} Mitra Tersedia
+                  </span>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Card Open Market */}
-                    <div
-                      onClick={handleOpenMarket}
-                      className="group cursor-pointer bg-gradient-to-br from-blue-50 to-white border border-blue-100 hover:border-blue-300 rounded-[24px] p-6 transition-all hover:shadow-lg hover:shadow-blue-50 relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 rounded-full blur-3xl -mr-10 -mt-10 opacity-50"></div>
-                      <div className="relative z-10">
-                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-sm text-blue-600">
-                          <Globe className="w-6 h-6" />
-                        </div>
-                        <h4 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
-                          Open Market
-                        </h4>
-                        <p className="text-xs text-gray-500 leading-relaxed mb-4">
-                          Kirim permintaan ke <b>seluruh jaringan logistik</b>{" "}
-                          yang tersedia. Dapatkan penawaran kompetitif dari
-                          berbagai mitra.
-                        </p>
-                        <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
-                          Buat Permintaan <ArrowRight className="w-4 h-4" />
-                        </span>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {isLoadingMitra ? (
+                    <p className="text-center text-xs text-gray-400 py-6 col-span-full">
+                      Memuat daftar logistik...
+                    </p>
+                  ) : mitraLogistik.length === 0 ? (
+                    <p className="text-center text-xs text-gray-400 py-6 col-span-full">
+                      Belum ada mitra logistik yang tersedia saat ini.
+                    </p>
+                  ) : (
+                    mitraLogistik.map((mitra) => (
+                      <div
+                        key={mitra.logistik_user_id}
+                        className="relative bg-white rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md hover:border-[#B5302D] transition-all p-5 overflow-hidden group flex flex-col justify-between"
+                      >
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                    {/* Card Close Market */}
-                    <div
-                      onClick={handleCloseMarket}
-                      className="group cursor-pointer bg-gradient-to-br from-purple-50 to-white border border-purple-100 hover:border-purple-300 rounded-[24px] p-6 transition-all hover:shadow-lg hover:shadow-purple-50 relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-purple-100 rounded-full blur-3xl -mr-10 -mt-10 opacity-50"></div>
-                      <div className="relative z-10">
-                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-sm text-purple-600">
-                          <Users className="w-6 h-6" />
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-bold text-gray-900 line-clamp-1">
+                              {mitra.nama_logistik}
+                            </h4>
+                            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-md font-bold shrink-0">
+                              {mitra.total_armada_ready} Armada Ready
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 mb-4">
+                            <p className="text-[11px] text-gray-500 flex items-start gap-2">
+                              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                              <span className="line-clamp-2">
+                                {mitra.alamat_logistik}
+                              </span>
+                            </p>
+                            {/* No HP Logistik */}
+                            <p className="text-[11px] text-gray-500 flex items-start gap-2">
+                              <Phone className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                              <span>
+                                {mitra.no_hp_logistik || "Belum ada nomor HP"}
+                              </span>
+                            </p>
+                          </div>
+
+                          {/* List Akomodasi (Diambil dari array list_akomodasi BE) */}
+                          <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">
+                              Estimasi Harga & Kapasitas
+                            </p>
+                            {mitra.list_akomodasi &&
+                            mitra.list_akomodasi.length > 0 ? (
+                              mitra.list_akomodasi
+                                .slice(0, 2)
+                                .map((akomodasi, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex justify-between items-center text-[11px]"
+                                  >
+                                    <span className="font-medium text-gray-700">
+                                      {akomodasi.jenis_kendaraan} (
+                                      {akomodasi.kapasitas_range} Kg)
+                                    </span>
+                                    <span className="font-bold text-[#B5302D]">
+                                      {akomodasi.harga_range}
+                                    </span>
+                                  </div>
+                                ))
+                            ) : (
+                              <p className="text-[11px] text-gray-400 italic">
+                                Data harga belum diatur mitra.
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <h4 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600 transition-colors">
-                          Close Market
-                        </h4>
-                        <p className="text-xs text-gray-500 leading-relaxed mb-4">
-                          Pilih <b>mitra logistik spesifik</b> yang sudah Anda
-                          kenal atau percayai untuk menangani pengiriman ini.
-                        </p>
-                        <span className="text-xs font-bold text-purple-600 flex items-center gap-1">
-                          Pilih Mitra <ArrowRight className="w-4 h-4" />
-                        </span>
+
+                        <button
+                          onClick={() => handleSelectLogistik(mitra)}
+                          className="mt-5 w-full px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 group-hover:bg-[#B5302D] group-hover:text-white text-xs font-bold transition-all flex justify-center items-center gap-2"
+                        >
+                          Pilih Mitra Ini <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                </section>
+                    ))
+                  )}
+                </div>
               </div>
             )}
 
@@ -288,105 +285,55 @@ const DistribusiLogistik = () => {
                   <div className="text-xs text-gray-500">
                     Pantau pergerakan dan status pengajuan armada Anda.
                   </div>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100">
-                    <Filter className="w-3.5 h-3.5" /> Filter Status
-                  </button>
                 </div>
 
                 <div className="space-y-4">
-                  {MOCK_PROGRESS.map((item) => (
-                    <ProgressItem key={item.id} item={item} />
-                  ))}
+                  {isLoadingProgres ? (
+                    <p className="text-center text-xs text-gray-400 py-6">
+                      Memuat daftar progres pengiriman...
+                    </p>
+                  ) : progresPengiriman.length === 0 ? (
+                    <p className="text-center text-xs text-gray-400 py-6">
+                      Belum ada riwayat atau progres pengajuan armada.
+                    </p>
+                  ) : (
+                    progresPengiriman.map((item) => (
+                      <ProgressItem key={item.id} item={item} />
+                    ))
+                  )}
                 </div>
               </div>
             )}
           </div>
         ) : (
-          /* --- VIEW: SUB-PAGES / FORMS --- */
+          /* --- VIEW: FORM PENGAJUAN --- */
           <div className="animate-in fade-in slide-in-from-right-4">
             <button
               onClick={handleBackToMain}
               className="mb-6 flex items-center gap-2 text-gray-500 hover:text-[#B5302D] text-xs font-bold transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" /> Kembali
+              <ArrowLeft className="w-4 h-4" /> Kembali ke Daftar Mitra
             </button>
 
-            {/* FORM OPEN MARKET */}
-            {viewMode === "open_market_form" && (
+            {viewMode === "form" && selectedLogistik && (
               <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-8">
-                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Globe className="w-6 h-6" />
+                  <div className="w-12 h-12 bg-red-50 text-[#B5302D] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Truck className="w-6 h-6" />
                   </div>
-                  {/* Judul utama sudah ada di SectionCard, deskripsi tetap ditampilkan */}
                   <p className="text-xs text-gray-500">
-                    Permintaan akan disiarkan ke semua mitra logistik.
-                  </p>
-                </div>
-                <FormPengajuan onSubmit={handleBackToMain} />
-              </div>
-            )}
-
-            {/* LIST CLOSE MARKET (Pilih Vendor) */}
-            {viewMode === "close_market_list" && (
-              <div className="max-w-3xl mx-auto">
-                <div className="mb-6">
-                  {/* Judul utama dihandle SectionCard */}
-                  <p className="text-xs text-gray-500">
-                    Pilih salah satu mitra untuk diajukan permintaan pengiriman.
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  {MOCK_LOGISTICS_DIRECTORY.map((mitra) => (
-                    <div
-                      key={mitra.id}
-                      onClick={() => handleSelectLogistik(mitra)}
-                      className="flex items-center justify-between p-4 rounded-2xl border border-gray-200 hover:border-[#B5302D] hover:bg-red-50 cursor-pointer transition-all group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500 group-hover:bg-white group-hover:text-[#B5302D]">
-                          {mitra.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-gray-900">
-                            {mitra.name}
-                          </h4>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded flex items-center gap-1">
-                              ★ {mitra.rating}
-                            </span>
-                            <span className="text-[10px] text-gray-500">
-                              {mitra.armada} Armada Ready
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#B5302D]" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* FORM CLOSE MARKET */}
-            {viewMode === "close_market_form" && selectedLogistik && (
-              <div className="max-w-2xl mx-auto">
-                <div className="text-center mb-8">
-                  <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-6 h-6" />
-                  </div>
-                  {/* Judul utama dihandle SectionCard */}
-                  <p className="text-xs text-gray-500">
-                    Mengajukan permintaan khusus kepada{" "}
-                    <span className="font-bold text-gray-800">
-                      {selectedLogistik.name}
+                    Anda sedang mengajukan permintaan armada kepada mitra{" "}
+                    <span className="font-bold text-gray-800 text-sm block mt-1">
+                      {selectedLogistik.nama_logistik}
                     </span>
-                    .
                   </p>
                 </div>
+
+                {/* FormPengajuan akan melakukan Fetch & Filter secara mandiri */}
                 <FormPengajuan
                   onSubmit={handleBackToMain}
-                  targetName={selectedLogistik.name}
+                  targetName={selectedLogistik?.nama_logistik}
+                  targetId={selectedLogistik?.logistik_user_id}
                 />
               </div>
             )}
@@ -405,7 +352,7 @@ const DistribusiLogistik = () => {
  * Dilengkapi dengan dekorasi gradient di bagian atas dan judul dinamis.
  */
 const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden hover:shadow-md transition-all">
     {/* Decorative Header Line */}
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
 
@@ -421,28 +368,12 @@ const IncomingOfferCard = ({ offer }) => (
   <MainCard>
     <div className="flex flex-col sm:flex-row gap-4 justify-between">
       <div className="space-y-3 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100">
-            TAWARAN MASUK
-          </span>
-          <span className="text-[10px] text-gray-400">
-            • {offer.estimasiJemput}
-          </span>
-        </div>
         <div>
           <h4 className="text-sm font-bold text-gray-900">
             {offer.logistikName}
           </h4>
           <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
             <Truck className="w-3 h-3" /> {offer.armada} ({offer.kapasitas})
-          </p>
-        </div>
-        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-          <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
-            Tujuan Pengiriman
-          </p>
-          <p className="text-xs font-bold text-gray-800 flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-[#B5302D]" /> {offer.tujuan}
           </p>
         </div>
       </div>
@@ -458,9 +389,6 @@ const IncomingOfferCard = ({ offer }) => (
           <p className="text-[9px] text-gray-400">per ton/km</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <button className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-red-500 hover:bg-red-50 text-[10px] font-bold transition-all">
-            <XCircle className="w-4 h-4 mx-auto" />
-          </button>
           <button className="flex-[2] px-4 py-2 rounded-xl bg-green-600 text-white shadow-lg shadow-green-100 hover:bg-green-700 text-[10px] font-bold transition-all">
             Terima
           </button>
@@ -472,202 +400,686 @@ const IncomingOfferCard = ({ offer }) => (
 
 // Item Progres Pengiriman
 const ProgressItem = ({ item }) => {
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "pending_logistik":
-        return "bg-yellow-50 text-yellow-700 border-yellow-100";
-      case "on_process":
-        return "bg-blue-50 text-blue-700 border-blue-100";
-      case "done":
-        return "bg-green-50 text-green-700 border-green-100";
-      default:
-        return "bg-gray-50 text-gray-600";
-    }
-  };
+  const [isExpanded, setIsExpanded] = useState(false); // State untuk buka/tutup rincian khusus di kartu ini
 
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case "pending_logistik":
-        return "Menunggu Konfirmasi";
-      case "on_process":
-        return "Dalam Perjalanan";
-      case "done":
-        return "Selesai";
-      default:
-        return status;
+  // Normalisasi status dari BE
+  const statusPermintaan = (item.status_permintaan || "menunggu").toLowerCase();
+  const rawProgress = item.progress_db || "menunggu_pengiriman";
+  const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
+
+  // Penentuan Label Status
+  let colorClass = "bg-gray-50 text-gray-600 border-gray-100";
+  let label = "Menunggu";
+
+  if (statusPermintaan === "menunggu") {
+    colorClass = "bg-yellow-50 text-yellow-700 border-yellow-100";
+    label = "Menunggu Konfirmasi Mitra";
+  } else if (statusPermintaan === "ditolak") {
+    colorClass = "bg-red-50 text-red-700 border-red-100";
+    label = "Ditolak Mitra";
+  } else if (statusPermintaan === "diterima") {
+    if (pDB === "terima") {
+      colorClass = "bg-green-50 text-green-700 border-green-100";
+      label = "Tiba di Pabrik / Selesai";
+    } else {
+      colorClass = "bg-blue-50 text-blue-700 border-blue-100";
+      label = item.progress_publik || "Dalam Perjalanan";
     }
-  };
+  }
+
+  // Jika ditolak, jangan tampilkan rute pelacakan, cukup card simpel
+  if (statusPermintaan === "ditolak") {
+    return (
+      <MainCard>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              {item.kode_resi || `REQ-${item.id}`}
+            </span>
+            <h4 className="text-sm font-bold text-gray-900 mt-1 line-clamp-1">
+              Ke: {item.alamat_pengiriman_pabrik}
+            </h4>
+            <p className="text-xs text-red-500 mt-2 italic">
+              Alasan Ditolak: {item.catatan_penolakan || "Tidak ada alasan"}
+            </p>
+          </div>
+          <span
+            className={`px-4 py-2 rounded-full text-xs font-bold border text-center ${colorClass}`}
+          >
+            {label}
+          </span>
+        </div>
+      </MainCard>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
-      {/* Left Info */}
-      <div className="flex items-start gap-4">
-        <div
-          className={`p-3 rounded-2xl ${
-            item.metode === "Open Market"
-              ? "bg-blue-50 text-blue-600"
-              : "bg-purple-50 text-purple-600"
-          }`}
-        >
-          {item.metode === "Open Market" ? (
-            <Globe className="w-5 h-5" />
-          ) : (
-            <Users className="w-5 h-5" />
-          )}
-        </div>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase">
-              {item.id}
-            </span>
-            <span className="text-[10px] text-gray-300">•</span>
-            <span className="text-[10px] font-bold text-gray-500">
-              {item.tglAjuan}
-            </span>
-          </div>
-          <h4 className="text-sm font-bold text-gray-900 mb-0.5">
-            {item.tujuan}
-          </h4>
-          <p className="text-xs text-gray-500">
-            Muatan:{" "}
-            <span className="font-bold text-gray-800">{item.muatan}</span>
-          </p>
-        </div>
-      </div>
+    <MainCard>
+      {/* --- BAGIAN RINGKAS (HEADER) --- */}
+      <div
+        className="flex flex-col md:flex-row justify-between gap-0 sm:gap-4 cursor-pointer w-full"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex-1 w-full">
+          {/* Baris 1: Nama Kebun & Nomor Resi */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100 pb-4">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2 sm:p-2.5 bg-red-50 rounded-xl border border-red-100 shrink-0 mt-1 sm:mt-0">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#B5302D]" />
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                  Asal Kebun
+                </p>
+                <p className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
+                  {item.nama_gapoktan || "Data Kebun Anda"}
+                </p>
+              </div>
+            </div>
 
-      {/* Middle Info (Driver/Logistics) */}
-      <div className="flex-1 md:px-8">
-        {item.logistik !== "-" ? (
-          <div className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <User className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-xs font-bold text-gray-700">
-                {item.logistik}
-              </span>
+            <div className="flex items-center sm:block justify-between bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none w-full sm:w-auto mt-1 sm:mt-0">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:mb-1">
+                No. Resi
+              </p>
+              <p className="text-xs sm:text-sm font-mono font-bold text-gray-700 bg-white sm:bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                {item.kode_resi || "Menunggu Resi"}
+              </p>
             </div>
           </div>
-        ) : (
-          <div className="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-100 border-dashed text-center">
-            <span className="text-[10px] font-bold text-yellow-700 italic">
-              Sedang mencari armada...
-            </span>
+
+          {/* Baris 2: Alamat & Tanggal */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mt-4">
+            <div className="col-span-2 sm:col-span-1 md:col-span-3 lg:col-span-1">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Lokasi Penjemputan
+              </p>
+              <p className="text-xs sm:text-sm font-medium text-gray-700 leading-relaxed line-clamp-2">
+                {item.alamat_pickup_teks || "-"}
+              </p>
+            </div>
+
+            <div className="col-span-1">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Est Tiba di Pabrik
+              </p>
+              <p className="text-xs sm:text-sm font-bold text-blue-600 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                {item.tanggal_permintaan_sampai || "-"}
+              </p>
+            </div>
+
+            <div className="col-span-1">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Biaya Kirim
+              </p>
+              <p className="text-xs sm:text-sm font-bold text-green-500">
+                Rp {(item.biaya_final || 0).toLocaleString("id-ID")}
+              </p>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* KANAN: STATUS & TOMBOL RINCIAN */}
+        <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
+          <span
+            className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto ${colorClass}`}
+          >
+            {statusPermintaan === "diterima" && (
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            )}
+            {label}
+          </span>
+
+          <div className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm w-full md:w-auto">
+            <span>{isExpanded ? "Tutup Rincian" : "Lihat Rincian"}</span>
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-[#B5302D]" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Right Info (Status) */}
-      <div className="flex items-center justify-between md:justify-end gap-3 min-w-[160px]">
-        <span
-          className={`px-3 py-1.5 rounded-full text-[10px] font-bold border ${getStatusColor(
-            item.status
-          )}`}
+      {/* --- BAGIAN DETAIL (DROPDOWN/ACCORDION) --- */}
+      {isExpanded && statusPermintaan === "diterima" && (
+        <div className="mt-5 sm:mt-8 pt-5 sm:pt-8 border-t border-gray-100 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-top-2">
+          {/* Stepper Pelacakan */}
+          <div className="bg-gray-50 p-5 sm:p-6 rounded-[20px] sm:rounded-[25px] border border-gray-200">
+            <p className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase mb-6 sm:mb-8 tracking-widest text-center">
+              Proses Pelacakan Armada
+            </p>
+            <div className="flex justify-between items-center max-w-3xl mx-auto relative px-2 sm:px-4">
+              <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -translate-y-1/2 z-0 rounded-full"></div>
+              <StatusStep label="Menunggu" active={true} />
+              <StatusStep
+                label="Menjemput"
+                active={["mengirim", "menuju_pabrik", "terima"].includes(pDB)}
+              />
+              <StatusStep
+                label="Perjalanan"
+                active={["menuju_pabrik", "terima"].includes(pDB)}
+              />
+              <StatusStep label="Selesai" active={pDB === "terima"} />
+            </div>
+          </div>
+
+          {/* GRID DETAIL INFORMASI LENGKAP */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {/* 1. Info Transaksi */}
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                <Hash className="w-4 h-4" /> Informasi Transaksi
+              </h4>
+              <div className="flex-1 flex flex-col justify-center gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">No Resi:</span>
+                  <span className="font-bold font-mono text-gray-700">
+                    {item.kode_resi || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Tanggal Kirim:</span>
+                  <span className="font-bold text-right">
+                    {item.tanggal_keberangkatan || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Tanggal Tiba:</span>
+                  <span className="font-bold text-right">
+                    {item.tanggal_permintaan_sampai || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Muatan (Est):</span>
+                  <span className="font-bold text-right">
+                    {item.estimasi_total_tbs_grup_kg
+                      ? `${(item.estimasi_total_tbs_grup_kg / 1000).toFixed(2)} Ton`
+                      : "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-3 mt-1 border-t border-gray-50">
+                  <span className="text-gray-500">Biaya Pengiriman:</span>
+                  <span className="font-extrabold text-[#B5302D] text-sm">
+                    Rp {(item.biaya_final || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Armada & Supir */}
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                <Truck className="w-4 h-4" /> Armada & Supir
+              </h4>
+              <div className="flex-1 flex flex-col gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                  <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
+                    <User className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 truncate">
+                      {item.kru?.nama_supir || "-"}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5 truncate">
+                      <Phone className="w-3 h-3 shrink-0" />{" "}
+                      {item.kru?.nomor_telepon || "-"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-2.5 pt-1">
+                  <p className="text-gray-500">Kendaraan</p>
+                  <p className="font-semibold text-right">
+                    {item.kendaraan?.jenis_kendaraan_nama || "-"}
+                  </p>
+
+                  <p className="text-gray-500">Kapasitas</p>
+                  <p className="font-semibold text-right">
+                    {item.kendaraan?.kapasitas_angkut_kg
+                      ? `${item.kendaraan.kapasitas_angkut_kg.toLocaleString("id-ID")} Kg`
+                      : "-"}
+                  </p>
+
+                  <p className="text-gray-500">Biaya / KM</p>
+                  <p className="font-semibold text-right">
+                    {item.kendaraan?.biaya_per_km
+                      ? `Rp ${item.kendaraan.biaya_per_km.toLocaleString("id-ID")}`
+                      : "-"}
+                  </p>
+
+                  <p className="text-gray-500 pt-2 border-t border-gray-50">
+                    Tipe
+                  </p>
+                  <p className="font-semibold text-right pt-2 border-t border-gray-50">
+                    {item.kendaraan?.nama_kendaraan || "-"}
+                  </p>
+
+                  <p className="text-gray-500">Plat</p>
+                  <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
+                    {item.kendaraan?.plat_kendaraan || "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Rute & Estimasi */}
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                <MapPin className="w-4 h-4" /> Rute & Estimasi
+              </h4>
+              <div className="flex-1 flex flex-col justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                <div className="flex flex-col gap-4">
+                  <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
+                    <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-orange-400 border-2 border-white" />
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                      Dari: Kebun
+                    </p>
+                    <p className="font-medium text-gray-700 leading-snug">
+                      {item.alamat_pickup_teks || "-"}
+                    </p>
+                  </div>
+                  <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
+                    <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-[#B5302D] border-2 border-white" />
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                      Ke: Pabrik
+                    </p>
+                    <p className="font-medium text-gray-700 leading-snug">
+                      {item.alamat_pengiriman_pabrik || "-"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-0.5">
+                      Est. Jarak
+                    </p>
+                    <p className="font-bold text-gray-900">
+                      {item.estimasi_jarak_km
+                        ? `${item.estimasi_jarak_km} KM`
+                        : "-"}
+                    </p>
+                  </div>
+                  <div
+                    className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center ${pDB === "terima" ? "bg-green-50 text-green-600 border border-green-100" : "bg-orange-50 text-[#EF8523] border border-orange-100"}`}
+                  >
+                    {item.progress_publik || label}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tombol Tutup Rincian Bawah */}
+          <div className="flex justify-end pt-5 sm:pt-6 mt-2 border-t border-gray-100">
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="w-full sm:w-auto px-8 py-3 bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-300 transition-all"
+            >
+              Tutup Rincian
+            </button>
+          </div>
+        </div>
+      )}
+    </MainCard>
+  );
+};
+
+// Form Component (Shared & Terhubung API)
+const FormPengajuan = ({ onSubmit, targetName, targetId }) => {
+  const [formData, setFormData] = useState({
+    grup_penjualan_id: "",
+    tanggal_permintaan_sampai: "",
+    catatan_logistik: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // STATE UNTUK DROPDOWN & DETAIL GRUP
+  const [dropdownGrup, setDropdownGrup] = useState([]);
+  const [isLoadingGrup, setIsLoadingGrup] = useState(false);
+  const [showDetailGrup, setShowDetailGrup] = useState(false); // Toggle untuk buka/tutup detail
+
+  // FETCH DATA GRUP SAAT FORM DIBUKA (DENGAN FILTER DOUBLE BOOKING DARI BE)
+  React.useEffect(() => {
+    const fetchGrupSiapKirim = async () => {
+      setIsLoadingGrup(true);
+      try {
+        const token = localStorage.getItem("token");
+
+        // Panggil 2 API sekaligus secara paralel
+        const [resGrup, resUsedIds] = await Promise.all([
+          // 1. Tarik semua grup siap kirim dari Farm Service
+          fetch(API_ENDPOINTS.FARM.MARKETPLACE.GET_DROPDOWN_SIAP_KIRIM, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          // 2. Tarik daftar ID Grup yang sudah dipakai dari Traceability Service
+          fetch(API_ENDPOINTS.TRACEABILITY.KEBUN.GET_USED_GRUP_IDS, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        let dataGrup = [];
+        let dataUsedIds = [];
+
+        if (resGrup.ok) {
+          dataGrup = await resGrup.json();
+          console.log("=== SEMUA GRUP SIAP KIRIM (FARM) ===", dataGrup);
+        } else {
+          console.log("=== BE ERROR GET GRUP ===", resGrup.status);
+        }
+
+        if (resUsedIds.ok) {
+          dataUsedIds = await resUsedIds.json();
+          console.log("=== ID GRUP TERPAKAI (TRACEABILITY) ===", dataUsedIds);
+        }
+
+        // LOGIKA FILTER: Singkirkan grup yang ID-nya ada di dalam dataUsedIds
+        const grupTersedia = dataGrup.filter(
+          (grup) => !dataUsedIds.includes(grup.id),
+        );
+
+        // Masukkan grup yang sudah bersih dari double-booking ke dalam dropdown
+        setDropdownGrup(grupTersedia);
+      } catch (error) {
+        console.error("Gagal load dropdown grup:", error);
+      } finally {
+        setIsLoadingGrup(false);
+      }
+    };
+
+    fetchGrupSiapKirim();
+  }, []);
+
+  const handleSubmitData = async () => {
+    // Validasi data sesuai BE
+    if (!formData.grup_penjualan_id || !formData.tanggal_permintaan_sampai) {
+      return alert("Pilih Grup Penjualan dan Tanggal Permintaan Sampai!");
+    }
+
+    if (!targetId) {
+      return alert("Mitra logistik belum dipilih!");
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        API_ENDPOINTS.TRACEABILITY.KEBUN.AJUKAN_PENGIRIMAN(targetId),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            grup_penjualan_id: parseInt(formData.grup_penjualan_id),
+            tanggal_permintaan_sampai: formData.tanggal_permintaan_sampai,
+            catatan_logistik: formData.catatan_logistik || null,
+          }),
+        },
+      );
+
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(
+          data.detail || data.message || "Gagal mengirim pengajuan",
+        );
+
+      alert(data.message || "Pengajuan pengiriman berhasil dikirim!");
+      onSubmit(); // Kembali ke halaman list pencarian utama
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Mencari data lengkap dari grup yang sedang dipilih
+  const selectedGrupData = dropdownGrup.find(
+    (grup) => grup.id === parseInt(formData.grup_penjualan_id),
+  );
+
+  return (
+    <div className="space-y-6">
+      {targetName && (
+        <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 text-purple-600" />
+          <p className="text-xs text-purple-800">
+            Anda mengajukan kepada:{" "}
+            <span className="font-bold">{targetName}</span>
+          </p>
+        </div>
+      )}
+
+      {/* Input Form Sesuai BE (Hanya 2 Input Wajib, sisanya otomatis ditarik BE) */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="space-y-2">
+          <label className="text-[11px] font-bold text-gray-500 uppercase">
+            Pilih Grup Panen
+          </label>
+          <div className="relative">
+            <select
+              value={formData.grup_penjualan_id}
+              onChange={(e) => {
+                setFormData({ ...formData, grup_penjualan_id: e.target.value });
+                setShowDetailGrup(true); // Otomatis buka detail saat grup dipilih
+              }}
+              disabled={isLoadingGrup || dropdownGrup.length === 0}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none appearance-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <option value="" disabled>
+                {isLoadingGrup
+                  ? "Memuat data grup panen..."
+                  : dropdownGrup.length === 0
+                    ? "Semua grup sudah diajukan pengiriman"
+                    : "Pilih Grup Panen..."}
+              </option>
+              {dropdownGrup.map((grup) => (
+                <option key={grup.id} value={grup.id}>
+                  {grup.nama_grup} ({grup.estimasi_total_tbs_grup_kg || 0} Kg)
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-4 top-4 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+
+          {/* --- TOMBOL DAN PANEL DETAIL GRUP --- */}
+          {selectedGrupData && (
+            <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+              <button
+                type="button"
+                onClick={() => setShowDetailGrup(!showDetailGrup)}
+                className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
+              >
+                {showDetailGrup ? "Tutup Detail Grup" : "Lihat Detail Grup"}
+              </button>
+
+              {showDetailGrup && (
+                <div className="mt-3 bg-blue-50/50 border border-blue-100 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-xs">
+                  {/* Kolom 1: Identitas & Spesifikasi */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[10px] text-gray-800 font-bold uppercase mb-0.5">
+                        Informasi Kebun :
+                      </p>
+                      <p className="text-gray-800 font-semibold">
+                        {selectedGrupData.nama_kebun}
+                      </p>
+                      <p className="text-gray-600 flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3" />{" "}
+                        {selectedGrupData.no_hp_kebun || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-800 font-bold uppercase mb-0.5">
+                        Spesifikasi Panen :
+                      </p>
+                      <p className="text-gray-800">
+                        <span className="font-medium text-gray-600">
+                          Jenis dan Varietas:
+                        </span>{" "}
+                        {selectedGrupData.jenis_varietas_gabungan}
+                      </p>
+                      <p className="text-gray-800">
+                        <span className="font-medium text-gray-600">
+                          Usia Pohon:
+                        </span>{" "}
+                        {selectedGrupData.usia_pohon_range}
+                      </p>
+                      <p className="text-gray-800">
+                        <span className="font-medium text-gray-600">
+                          Tgl Panen:
+                        </span>{" "}
+                        {selectedGrupData.tanggal_rencana_panen}
+                      </p>
+                      <p className="text-gray-800">
+                        <span className="font-medium text-gray-600">
+                          Total GrupTBS :
+                        </span>{" "}
+                        <span className="font-bold text-[#B5302D]">
+                          {selectedGrupData.estimasi_total_tbs_grup_kg} Kg
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Kolom 2: Muatan, Logistik & Catatan */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[10px] text-gray-800 font-bold uppercase mb-0.5">
+                        Informasi Pengiriman :
+                      </p>
+                      <p className="text-gray-800">
+                        <span className="font-medium text-gray-600">
+                          Estimasi Jarak:
+                        </span>{" "}
+                        {selectedGrupData.estimasi_jarak_km} Km
+                      </p>
+                      <p className="text-gray-800">
+                        <span className="font-medium text-gray-600">
+                          Alamat Penjemputan:
+                        </span>
+                        <br />
+                        {selectedGrupData.alamat_pickup_teks}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-800 font-bold uppercase mb-0.5">
+                        Catatan :
+                      </p>
+                      <p
+                        className="text-gray-800 line-clamp-2"
+                        title={selectedGrupData.catatan_kebun}
+                      >
+                        <span className="font-medium text-gray-600">
+                          Catatan Kebun:
+                        </span>{" "}
+                        {selectedGrupData.catatan_kebun || "-"}
+                      </p>
+                      <p
+                        className="text-gray-800 line-clamp-2"
+                        title={selectedGrupData.catatan_dari_pabrik}
+                      >
+                        <span className="font-medium text-gray-600">
+                          Catatan dari Pabrik:
+                        </span>{" "}
+                        {selectedGrupData.catatan_dari_pabrik || "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[11px] font-bold text-gray-500 uppercase">
+            Tgl. Harus Sampai di Pabrik
+          </label>
+          <input
+            type="date"
+            value={formData.tanggal_permintaan_sampai}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                tanggal_permintaan_sampai: e.target.value,
+              })
+            }
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Catatan Tambahan */}
+      <div className="space-y-2 pt-2">
+        <label className="text-[11px] font-bold text-gray-500 uppercase">
+          Catatan Tambahan untuk Logistik
+        </label>
+        <textarea
+          value={formData.catatan_logistik}
+          onChange={(e) =>
+            setFormData({ ...formData, catatan_logistik: e.target.value })
+          }
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none min-h-[100px]"
+          placeholder="Contoh: Tolong bawa terpal tambahan karena musim hujan..."
+        ></textarea>
+      </div>
+
+      {/* Tombol Aksi */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+        <button
+          onClick={onSubmit}
+          className="px-6 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-all"
         >
-          {getStatusLabel(item.status)}
-        </span>
-        <button className="text-gray-400 hover:text-[#B5302D]">
-          <MoreHorizontal className="w-5 h-5" />
+          Batal
+        </button>
+        <button
+          onClick={handleSubmitData}
+          disabled={isSubmitting}
+          className="px-8 py-2.5 bg-[#B5302D] text-white rounded-xl text-xs font-bold shadow-lg shadow-red-100 hover:bg-[#962624] transition-all flex items-center gap-2 disabled:opacity-70"
+        >
+          {isSubmitting ? (
+            "Mengirim..."
+          ) : (
+            <>
+              <Save className="w-4 h-4" /> Kirim Pengajuan
+            </>
+          )}
         </button>
       </div>
     </div>
   );
 };
 
-// Form Component (Shared)
-const FormPengajuan = ({ onSubmit, targetName }) => (
-  <div className="space-y-6">
-    {targetName && (
-      <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl flex items-center gap-3">
-        <CheckCircle2 className="w-5 h-5 text-purple-600" />
-        <p className="text-xs text-purple-800">
-          Anda mengajukan kepada:{" "}
-          <span className="font-bold">{targetName}</span>
-        </p>
-      </div>
-    )}
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-gray-500 uppercase">
-          Nama Grup Penjualan
-        </label>
-        <input
-          type="text"
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none"
-          defaultValue="Grup Tani Makmur A"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-gray-500 uppercase">
-          Pabrik Tujuan
-        </label>
-        <input
-          type="text"
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none"
-          defaultValue="PT. Sawit Makmur"
-        />
-      </div>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-gray-500 uppercase">
-          Tanggal Panen
-        </label>
-        <input
-          type="date"
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-gray-500 uppercase">
-          Tanggal Dijemput
-        </label>
-        <input
-          type="date"
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-gray-500 uppercase">
-          Est. Total (Kg)
-        </label>
-        <input
-          type="number"
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none"
-          placeholder="0"
-        />
-      </div>
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-[11px] font-bold text-gray-500 uppercase">
-        Catatan Tambahan
-      </label>
-      <textarea
-        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none min-h-[100px]"
-        placeholder="Instruksi penjemputan..."
-      ></textarea>
-    </div>
-
-    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-      <button
-        onClick={onSubmit}
-        className="px-6 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-all"
-      >
-        Batal
-      </button>
-      <button className="px-8 py-2.5 bg-[#B5302D] text-white rounded-xl text-xs font-bold shadow-lg shadow-red-100 hover:bg-[#962624] transition-all flex items-center gap-2">
-        <Package className="w-4 h-4" /> Kirim Pengajuan
-      </button>
-    </div>
-  </div>
-);
-
 // Wrapper Card Utama
 const MainCard = ({ children }) => (
   <div className="relative bg-white rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md transition-all p-5 overflow-hidden group">
     <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
     {children}
+  </div>
+);
+
+const StatusStep = ({ label, active }) => (
+  <div className="flex flex-col items-center justify-start gap-1.5 sm:gap-2 z-10 flex-1 px-1">
+    <div
+      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500 shrink-0 ${
+        active
+          ? "bg-green-600 border-green-600 text-white shadow-md scale-110"
+          : "bg-white border-gray-200 text-gray-300"
+      }`}
+    >
+      <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+    </div>
+
+    <span
+      className={`text-[9px] sm:text-xs font-medium sm:font-bold capitalize sm:uppercase text-center leading-tight tracking-tight break-words max-w-[65px] sm:max-w-none ${
+        active ? "text-gray-900" : "text-gray-400"
+      }`}
+    >
+      {label}
+    </span>
   </div>
 );
 
