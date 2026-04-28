@@ -542,7 +542,7 @@ const TransaksiTBS = () => {
 
               {isLoadingList ? (
                 <div className="text-center py-6 text-gray-500 text-sm">
-                  Memuat data rencana aktif...
+                  Memuat data...
                 </div>
               ) : kebutuhanAktif.length === 0 ? (
                 <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-xl border border-gray-200">
@@ -729,7 +729,7 @@ const TransaksiTBS = () => {
           <div className="space-y-3">
             {isLoadingPenawaran ? (
               <div className="text-center py-6 text-gray-500 text-sm">
-                Memuat data penawaran masuk...
+                Memuat Data...
               </div>
             ) : penawaranMasuk.length === 0 ? (
               <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-xl border border-gray-200">

@@ -266,7 +266,7 @@ export default function Produksi() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isLoading ? (
-              <p className="text-sm text-gray-400 col-span-2 text-center py-6">Memuat data siklus aktif...</p>
+              <p className="text-sm text-gray-400 col-span-2 text-center py-6">Memuat Data...</p>
             ) : siklusAktif.length === 0 ? (
               <p className="text-sm text-gray-400 col-span-2 text-center py-6 border border-dashed rounded-xl bg-gray-50">Tidak ada siklus produksi yang sedang berjalan.</p>
             ) : (
@@ -331,7 +331,7 @@ export default function Produksi() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isLoading ? (
-               <p className="text-sm text-gray-400 col-span-2 text-center py-6">Memuat riwayat...</p>
+               <p className="text-sm text-gray-400 col-span-2 text-center py-6">Memuat Data...</p>
             ) : riwayatProduksi.length === 0 ? (
                <p className="text-sm text-gray-400 col-span-2 text-center py-6 border border-dashed rounded-xl bg-gray-50">Belum ada riwayat produksi yang selesai.</p>
             ) : (

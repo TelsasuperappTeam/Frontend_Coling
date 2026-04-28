@@ -15,7 +15,8 @@ import {
   X,
   Upload,
   FileText,
-  History, // <-- Icon History ditambahkan
+  History,
+  Save,
 } from "lucide-react";
 
 import { API_ENDPOINTS } from "../../config/constants.js";
@@ -46,6 +47,12 @@ const PenerimaanTBS = () => {
     buah_terlalu_masak: "",
     buah_mentah: "",
     buah_busuk: "",
+    buah_hampir_masak: "",
+    tangkai_panjang: "",
+    potongan_lain_lain: "",
+    buah_kurang_dari_5_kg: "",
+    buah_sakit: "",
+    buah_basah: "",
     catatan: "",
   });
 
@@ -54,7 +61,7 @@ const PenerimaanTBS = () => {
   // ====================================================================
   // 1. FETCH DATA AKTIF (MONITORING)
   // ====================================================================
-const fetchShipments = useCallback(async () => {
+  const fetchShipments = useCallback(async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -67,7 +74,7 @@ const fetchShipments = useCallback(async () => {
 
       if (!response.ok)
         throw new Error("Gagal mengambil data monitoring pabrik");
-      
+
       const data = await response.json();
 
       // --- CONSOLE LOG RESPON BE DITAMBAHKAN DI SINI ---
@@ -91,7 +98,7 @@ const fetchShipments = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
       const token = localStorage.getItem("token");
-      const url = API_ENDPOINTS.TRACEABILITY.PABRIK.PEMERIKSAAN.DASHBOARD;
+      const url = `${API_ENDPOINTS.TRACEABILITY.PABRIK.GET_MONITORING}?is_history=true`;
 
       const response = await fetch(url, {
         method: "GET",
@@ -138,18 +145,16 @@ const fetchShipments = useCallback(async () => {
       });
 
       if (!res.ok) throw new Error("Gagal mengkonfirmasi penerimaan");
-
       alert(
         "Truk dikonfirmasi tiba! Silakan lanjutkan mengisi hasil Timbangan & Sortasi TBS.",
       );
 
-      // Update UI Lokal agar tidak perlu fetch ulang yang merefresh layar
-      setShipments((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, progress_db: "terima" } : item,
-        ),
-      );
-      openModalPemeriksaan(id); // Buka popup otomatis
+      // PENYESUAIAN SESUAI INSTRUKSI BE: Lakukan re-fetch data di tab aktif
+      // Karena BE sekarang menahan data truknya, truk tidak akan hilang dari layar.
+      fetchShipments();
+
+      // Tetap buka popup otomatis agar memanjakan user (UX Plus)
+      openModalPemeriksaan(id);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -193,6 +198,27 @@ const fetchShipments = useCallback(async () => {
       );
       form.append("buah_mentah", parseFloat(formDataPem.buah_mentah) || 0);
       form.append("buah_busuk", parseFloat(formDataPem.buah_busuk) || 0);
+
+      form.append(
+        "buah_hampir_masak",
+        parseFloat(formDataPem.buah_hampir_masak) || 0,
+      );
+      form.append(
+        "tangkai_panjang",
+        parseFloat(formDataPem.tangkai_panjang) || 0,
+      );
+      form.append(
+        "potongan_lain_lain",
+        parseFloat(formDataPem.potongan_lain_lain) || 0,
+      );
+      form.append(
+        "buah_kurang_dari_5_kg",
+        parseFloat(formDataPem.buah_kurang_dari_5_kg) || 0,
+      );
+      form.append("buah_sakit", parseFloat(formDataPem.buah_sakit) || 0);
+      form.append("buah_basah", parseFloat(formDataPem.buah_basah) || 0);
+      // -----------------------------------------
+
       if (formDataPem.catatan) form.append("catatan", formDataPem.catatan);
       if (fileNota) form.append("dokumen_nota", fileNota);
 
@@ -284,7 +310,7 @@ const fetchShipments = useCallback(async () => {
       >
         {currentLoading ? (
           <div className="text-center py-10 text-gray-400 text-sm">
-            Memuat data...
+            Memuat Data...
           </div>
         ) : currentData.length === 0 ? (
           <div className="text-center py-10 text-gray-400 text-sm">
@@ -602,8 +628,7 @@ const fetchShipments = useCallback(async () => {
                                   Tujuan: Pabrik
                                 </p>
                                 <p className="font-medium text-gray-700">
-                                  {item.alamat_pengiriman_pabrik
-}
+                                  {item.alamat_pengiriman_pabrik}
                                 </p>
                               </div>
                             </div>
@@ -647,7 +672,7 @@ const fetchShipments = useCallback(async () => {
       {/* MODAL FORM PEMERIKSAAN & TIMBANGAN */}
       {/* ================================================================= */}
       {showModalForm && (
-        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-red-50/50 rounded-t-2xl">
               <div>
@@ -697,7 +722,7 @@ const fetchShipments = useCallback(async () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Berat Tarra Truk (Kg) *
+                        Berat Tanpa Muatan (Kg) *
                       </label>
                       <input
                         type="number"
@@ -794,6 +819,115 @@ const fetchShipments = useCallback(async () => {
                         placeholder="0"
                       />
                     </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Hampir Masak
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.buah_hampir_masak}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            buah_hampir_masak: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Tangkai Panjang
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.tangkai_panjang}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            tangkai_panjang: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Tandan {"<"} 5 Kg
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.buah_kurang_dari_5_kg}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            buah_kurang_dari_5_kg: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Buah Sakit
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.buah_sakit}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            buah_sakit: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Buah Basah
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.buah_basah}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            buah_basah: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                        Potongan Lain
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        value={formDataPem.potongan_lain_lain}
+                        onChange={(e) =>
+                          setFormDataPem({
+                            ...formDataPem,
+                            potongan_lain_lain: e.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -805,22 +939,43 @@ const fetchShipments = useCallback(async () => {
                     <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
                       Upload Nota Timbangan (Opsional)
                     </label>
-                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-red-50 hover:border-[#B5302D] transition-colors">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                        <p className="text-xs text-gray-500 font-semibold">
-                          {fileNota
-                            ? fileNota.name
-                            : "Klik untuk unggah foto nota"}
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setFileNota(e.target.files[0])}
-                      />
-                    </label>
+
+                    {fileNota ? (
+                      /* --- TAMPILAN KETIKA FILE SUDAH DIUNGGAH (KECIL & RAPI) --- */
+                      <label className="flex items-center justify-between w-full px-4 py-3 border border-green-300 bg-green-50 rounded-xl cursor-pointer hover:bg-green-100 transition-colors">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                          <p className="text-xs text-green-800 font-bold truncate">
+                            {fileNota.name}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold text-green-700 bg-white border border-green-200 px-2 py-1 rounded-md shrink-0">
+                          Ubah File
+                        </span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*,.pdf"
+                          onChange={(e) => setFileNota(e.target.files[0])}
+                        />
+                      </label>
+                    ) : (
+                      /* --- TAMPILAN AWAL SEBELUM UPLOAD (BESAR) --- */
+                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-red-50 hover:border-[#B5302D] transition-colors">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                          <p className="text-xs text-gray-500 font-semibold">
+                            Klik untuk unggah foto nota
+                          </p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*,.pdf"
+                          onChange={(e) => setFileNota(e.target.files[0])}
+                        />
+                      </label>
+                    )}
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
@@ -852,11 +1007,15 @@ const fetchShipments = useCallback(async () => {
                 <button
                   type="submit"
                   disabled={isSubmittingForm}
-                  className="px-8 py-2.5 bg-[#B5302D] text-white rounded-xl text-xs font-bold shadow-lg shadow-red-100 hover:bg-[#962624] transition-all disabled:opacity-50"
+                  className="px-8 py-2.5 bg-[#B5302D] text-white rounded-xl text-xs font-bold shadow-lg shadow-red-100 hover:bg-[#962624] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isSubmittingForm
-                    ? "Menyimpan..."
-                    : "Simpan Hasil Pemeriksaan"}
+                  {isSubmittingForm ? (
+                    "Menyimpan..."
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" /> Simpan
+                    </>
+                  )}
                 </button>
               </div>
             </form>

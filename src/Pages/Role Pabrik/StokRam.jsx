@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Database, History, AlertCircle, Loader2 } from "lucide-react";
+import { Database, History, Loader2 } from "lucide-react";
 
-// PASTIKAN PATH IMPORT INI SESUAI DENGAN STRUKTUR FOLDER ANDA
 import { API_ENDPOINTS } from "../../config/constants.js";
 
 export default function StokRam() {
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // State untuk Data Kapasitas Atas
   const [kapasitas, setKapasitas] = useState({
     total: 0,
@@ -49,16 +48,18 @@ export default function StokRam() {
 
       // 2. Pemilahan Data Tabel (Aktif vs Histori)
       const listData = data.list_stok || [];
-      
+
       const formatWaktu = (isoString) => {
         const date = new Date(isoString);
-        return date.toLocaleString("id-ID", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        }).replace(/\./g, ':'); // mengubah 08.30 menjadi 08:30
+        return date
+          .toLocaleString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+          .replace(/\./g, ":"); // mengubah 08.30 menjadi 08:30
       };
 
       // MAPPING DATA AKTIF (Sisa stok > 0)
@@ -87,7 +88,6 @@ export default function StokRam() {
 
       setActiveStock(aktif);
       setHistoryStock(histori);
-
     } catch (error) {
       console.error("Error fetching Stok RAM:", error);
     } finally {
@@ -110,8 +110,12 @@ export default function StokRam() {
     "Status",
   ];
 
+  // Kalkulasi Persentase Kapasitas Terpakai
+  const persentaseTerpakai =
+    kapasitas.total > 0 ? (kapasitas.terpakai / kapasitas.total) * 100 : 0;
+
   return (
-    <div className="p-4 sm:p-10 bg-[#FFFDFB] min-h-screen text-gray-800 font-sans">
+    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
       {/* --- HEADER --- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-4">
@@ -122,14 +126,18 @@ export default function StokRam() {
             <h1 className="text-2xl font-bold text-[#B5302D]">Stok Ram</h1>
           </div>
         </div>
-        
+
         {/* Tombol Refresh Manual */}
-        <button 
+        <button
           onClick={fetchStokRam}
           disabled={isLoading}
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
         >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <History className="w-4 h-4" />}
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <History className="w-4 h-4" />
+          )}
           Refresh Stok
         </button>
       </div>
@@ -141,55 +149,91 @@ export default function StokRam() {
         <p className="text-gray-500 text-sm mb-4 leading-relaxed">
           Menampilkan stok TBS di RAM yang tercatat otomatis oleh sistem dan
           pabrik hanya dapat melihat saja, dikelola dengan metode FIFO (First
-          In, First Out) , dan tersimpan sebagai riwayat untuk audit.
+          In, First Out), dan tersimpan sebagai riwayat untuk audit.
         </p>
       </div>
 
       {isLoading && kapasitas.total === 0 ? (
-        <div className="flex justify-center items-center py-20 text-gray-400">
-          <Loader2 className="w-8 h-8 animate-spin mr-2" /> Memuat data Stok RAM...
-        </div>
+          <div className="text-center py-10 text-gray-400 text-sm">
+            Memuat data...
+          </div>
       ) : (
         <>
-          {/* --- STATS CARD SECTION --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-10">
-            <StatsCard title="Total Kapasitas Ram (Ton)" value={kapasitas.total.toLocaleString("id-ID")} />
-            <StatsCard
-              title="Kapasitas Ram Terpakai (Ton)"
-              value={kapasitas.terpakai.toLocaleString("id-ID")}
-              isHighlighted={true}
-            />
+          {/* --- SECTION CARD KAPASITAS --- */}
+          <div className="bg-white border border-gray-100 rounded-[24px] p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-300 mb-8 sm:mb-10">
+            
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
+              <div>
+                <h4 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                  Penggunaan Kapasitas RAM
+                </h4>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
+                    {kapasitas.terpakai.toLocaleString("id-ID")}
+                  </span>
+                  <span className="text-lg sm:text-xl font-medium text-gray-400">
+                    / {kapasitas.total.toLocaleString("id-ID")}
+                  </span>
+                  <span className="text-sm font-medium text-gray-400 ml-1">
+                    Ton
+                  </span>
+                </div>
+              </div>
+              <div className="text-left sm:text-right">
+                <span className="inline-flex items-center gap-1.5 bg-red-50/50 text-[#B5302D] border border-red-100/50 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold">
+                  {persentaseTerpakai.toFixed(1)}% Terisi
+                </span>
+              </div>
+            </div>
+
+            {/* Progress Bar Indikator (Lebih Ramping & Elegan) */}
+            <div className="w-full bg-gray-100 rounded-full h-2.5 sm:h-3 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-[#EF8523] to-[#B5302D] h-full rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${Math.min(persentaseTerpakai, 100)}%` }}
+              ></div>
+            </div>
+            
           </div>
 
           <div className="space-y-8 sm:space-y-10">
             {/* --- SECTION 1: MANAJEMEN STOK RAM (ACTIVE) --- */}
             <div className="space-y-3">
               <div className="px-1">
-                <h2 className="text-lg font-bold text-[#B5302D] flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
+                <h2 className="text-lg font-bold text-[#B5302D]">
                   Manajemen Stok Ram
                 </h2>
-                <p className="text-xs text-gray-400">
-                  Daftar stok ram yang saat ini masih aktif dan tersedia untuk diproduksi.
+                <p className="text-xs text-gray-400 mt-1">
+                  Daftar stok ram yang saat ini masih aktif dan tersedia untuk
+                  diproduksi.
                 </p>
               </div>
 
-              <TableSection columns={columns} data={activeStock} type="active" isLoading={isLoading} />
+              <TableSection
+                columns={columns}
+                data={activeStock}
+                type="active"
+                isLoading={isLoading}
+              />
             </div>
 
             {/* --- SECTION 2: RIWAYAT STOCK RAM (HISTORY) --- */}
             <div className="space-y-3">
               <div className="px-1">
-                <h2 className="text-lg font-bold text-[#B5302D] flex items-center gap-2">
-                  <History className="w-5 h-5" />
+                <h2 className="text-lg font-bold text-[#B5302D]">
                   Riwayat Stock Ram
                 </h2>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mt-1">
                   Log audit stok ram yang telah habis diproses (Selesai).
                 </p>
               </div>
 
-              <TableSection columns={columns} data={historyStock} type="history" isLoading={isLoading} />
+              <TableSection
+                columns={columns}
+                data={historyStock}
+                type="history"
+                isLoading={isLoading}
+              />
             </div>
           </div>
         </>
@@ -199,30 +243,6 @@ export default function StokRam() {
 }
 
 // ================= COMPONENT REUSABLE =================
-
-function StatsCard({ title, value, isHighlighted }) {
-  return (
-    <div
-      className={`border ${
-        isHighlighted
-          ? "border-green-300 bg-green-50"
-          : "border-orange-300 bg-orange-50"
-      } rounded-2xl p-5 sm:p-6 shadow-sm flex items-center justify-between`}
-    >
-      <div>
-        <h4 className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-          {title}
-        </h4>
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-            {value}
-          </span>
-          <span className="text-xs font-semibold text-gray-600">Ton</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function TableSection({ columns, data, type, isLoading }) {
   const isDataEmpty = data.length === 0;
@@ -246,14 +266,14 @@ function TableSection({ columns, data, type, isLoading }) {
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm">
             {isLoading ? (
-               <tr>
-               <td
-                 colSpan={columns.length}
-                 className="px-6 py-12 text-center text-gray-400 italic"
-               >
-                 Memperbarui data...
-               </td>
-             </tr>
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-6 py-12 text-center text-gray-400 italic"
+                >
+                  Memperbarui data...
+                </td>
+              </tr>
             ) : isDataEmpty ? (
               <tr>
                 <td
@@ -314,7 +334,7 @@ function TableSection({ columns, data, type, isLoading }) {
 function StatusBadge({ status, type }) {
   // Membersihkan underscore pada status agar lebih mudah dibaca (misal: MASIH_DIGUNAKAN jadi MASIH DIGUNAKAN)
   const cleanStatus = status.replace(/_/g, " ");
-  
+
   return (
     <span
       className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border whitespace-nowrap ${
