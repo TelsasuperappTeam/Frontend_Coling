@@ -62,9 +62,10 @@ export default function StokRam() {
           .replace(/\./g, ":"); // mengubah 08.30 menjadi 08:30
       };
 
-      // MAPPING DATA AKTIF (Sisa stok > 0)
+      // MAPPING DATA AKTIF (Sisa stok > 0) -> SORTING ASC (Terlama di Atas untuk FIFO)
       const aktif = listData
         .filter((item) => item.sisa_stok_tbs > 0)
+        .sort((a, b) => new Date(a.tanggal_masuk) - new Date(b.tanggal_masuk)) // Tambahan proteksi sorting
         .map((item) => ({
           id: item.id,
           waktu: formatWaktu(item.tanggal_masuk),
@@ -74,9 +75,10 @@ export default function StokRam() {
           status: item.status_stok || "TERSEDIA",
         }));
 
-      // MAPPING DATA HISTORI (Sisa stok <= 0)
+      // MAPPING DATA HISTORI (Sisa stok <= 0) -> SORTING DESC (Terbaru habis di Atas)
       const histori = listData
         .filter((item) => item.sisa_stok_tbs <= 0)
+        .sort((a, b) => new Date(b.tanggal_masuk) - new Date(a.tanggal_masuk)) // Tambahan proteksi sorting
         .map((item) => ({
           id: item.id,
           waktu: formatWaktu(item.tanggal_masuk),
@@ -117,13 +119,18 @@ export default function StokRam() {
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
       {/* --- HEADER --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-50 rounded-2xl shadow-sm">
-            <Database className="w-8 h-8 text-[#B5302D]" />
+      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
+            <Database className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#B5302D]">Stok Ram</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
+              Stok Ram
+            </h1>
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+              Pantau kapasitas dan daftar stok TBS yang tersedia untuk diproduksi.
+            </p>
           </div>
         </div>
 
@@ -131,7 +138,7 @@ export default function StokRam() {
         <button
           onClick={fetchStokRam}
           disabled={isLoading}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
+          className="w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 shrink-0"
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -154,46 +161,46 @@ export default function StokRam() {
       </div>
 
       {isLoading && kapasitas.total === 0 ? (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            Memuat data...
-          </div>
+        <div className="text-center py-10 text-gray-400 text-sm">
+          Memuat data...
+        </div>
       ) : (
         <>
           {/* --- SECTION CARD KAPASITAS --- */}
-          <div className="bg-white border border-gray-100 rounded-[24px] p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-300 mb-8 sm:mb-10">
-            
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
-              <div>
-                <h4 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">
-                  Penggunaan Kapasitas RAM
-                </h4>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
-                    {kapasitas.terpakai.toLocaleString("id-ID")}
-                  </span>
-                  <span className="text-lg sm:text-xl font-medium text-gray-400">
-                    / {kapasitas.total.toLocaleString("id-ID")}
-                  </span>
-                  <span className="text-sm font-medium text-gray-400 ml-1">
-                    Ton
-                  </span>
-                </div>
-              </div>
-              <div className="text-left sm:text-right">
-                <span className="inline-flex items-center gap-1.5 bg-red-50/50 text-[#B5302D] border border-red-100/50 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold">
-                  {persentaseTerpakai.toFixed(1)}% Terisi
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 mb-8 sm:mb-10 flex flex-col xl:flex-row items-center gap-4 sm:gap-6">
+            {/* Bagian Kiri: Teks & Angka (Semuanya 1 Baris) */}
+            <div className="flex flex-row items-center justify-between xl:justify-start w-full xl:w-auto shrink-0 xl:pr-4 xl:border-r border-gray-100 gap-3">
+              <h4 className="text-[10px] sm:text-xs font-bold text-black uppercase tracking-widest shrink-0">
+                Kapasitas RAM:
+              </h4>
+              <div className="flex items-baseline gap-1 shrink-0">
+                <span className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
+                  {kapasitas.terpakai.toLocaleString("id-ID")}
+                </span>
+                <span className="text-xs sm:text-sm font-medium text-gray-400">
+                  / {kapasitas.total.toLocaleString("id-ID")}
+                </span>
+                <span className="text-[10px] sm:text-xs font-medium text-gray-400 ml-0.5">
+                  Ton
                 </span>
               </div>
             </div>
 
-            {/* Progress Bar Indikator (Lebih Ramping & Elegan) */}
-            <div className="w-full bg-gray-100 rounded-full h-2.5 sm:h-3 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-[#EF8523] to-[#B5302D] h-full rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${Math.min(persentaseTerpakai, 100)}%` }}
-              ></div>
+            {/* Bagian Kanan: Progress Bar & Badge */}
+            <div className="flex-1 w-full flex items-center gap-3 sm:gap-4">
+              {/* Progress Bar Indikator */}
+              <div className="flex-1 bg-gray-100 rounded-full h-2 sm:h-2.5 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-[#EF8523] to-[#B5302D] h-full rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${Math.min(persentaseTerpakai, 100)}%` }}
+                ></div>
+              </div>
+
+              {/* Badge Persentase */}
+              <span className="shrink-0 inline-flex items-center bg-red-50 text-[#B5302D] border border-red-100 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-sm">
+                {persentaseTerpakai.toFixed(1)}% Terisi
+              </span>
             </div>
-            
           </div>
 
           <div className="space-y-8 sm:space-y-10">
@@ -280,7 +287,7 @@ function TableSection({ columns, data, type, isLoading }) {
                   colSpan={columns.length}
                   className="px-6 py-12 text-center text-gray-400 italic"
                 >
-                  Belum ada data tersedia di bagian ini.
+                  Belum ada data.
                 </td>
               </tr>
             ) : (

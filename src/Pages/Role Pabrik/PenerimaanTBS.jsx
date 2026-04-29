@@ -744,12 +744,12 @@ const PenerimaanTBS = () => {
 
                 <div className="space-y-4">
                   <h4 className="text-xs font-bold text-gray-800 uppercase border-b border-gray-100 pb-2">
-                    Potongan Sortasi / Kualitas (Kg)
+                    Potongan Sortasi / Kualitas (Kg) Dan Persentase (%){" "}
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Brondolan
+                        Brondolan %
                       </label>
                       <input
                         type="number"
@@ -767,7 +767,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Buah Mentah
+                        Buah Mentah %
                       </label>
                       <input
                         type="number"
@@ -785,7 +785,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Buah Busuk
+                        Buah Busuk %
                       </label>
                       <input
                         type="number"
@@ -803,7 +803,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Terlalu Masak
+                        Terlalu Masak %
                       </label>
                       <input
                         type="number"
@@ -822,7 +822,7 @@ const PenerimaanTBS = () => {
 
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Hampir Masak
+                        Hampir Masak %
                       </label>
                       <input
                         type="number"
@@ -840,7 +840,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Tangkai Panjang
+                        Tangkai Panjang %
                       </label>
                       <input
                         type="number"
@@ -858,7 +858,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Tandan {"<"} 5 Kg
+                        Tandan {"<"} 5 Kg %
                       </label>
                       <input
                         type="number"
@@ -876,7 +876,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Buah Sakit
+                        Buah Sakit %
                       </label>
                       <input
                         type="number"
@@ -894,7 +894,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Buah Basah
+                        Buah Basah %
                       </label>
                       <input
                         type="number"
@@ -912,7 +912,7 @@ const PenerimaanTBS = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
-                        Potongan Lain
+                        Potongan Lain %
                       </label>
                       <input
                         type="number"

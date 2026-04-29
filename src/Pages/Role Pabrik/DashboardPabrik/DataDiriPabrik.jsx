@@ -55,7 +55,6 @@ export default function DataDiriPabrik({
   const [formProfile, setFormProfile] = useState({
     alamat: "",
     jenis_produksi: "",
-    kapasitas_penyimpanan: "",
   });
 
   const [mapPos, setMapPos] = useState(null);
@@ -74,7 +73,6 @@ export default function DataDiriPabrik({
     alamat: false,
     koordinat: false,
     jenis_produksi: false,
-    kapasitas_penyimpanan: false,
   });
 
   // --- EFFECT: Load Data Awal (BAGIAN YANG DIPERBAIKI) ---
@@ -86,7 +84,6 @@ export default function DataDiriPabrik({
         // REVISI: Mengambil data dari 'alamat_pabrik' (bukan alamat_kebun)
         alamat: initialData.alamat_pabrik || initialData.alamat || "",
         jenis_produksi: initialData.jenis_produksi || "",
-        kapasitas_penyimpanan: initialData.kapasitas_penyimpanan || "",
       });
 
       // REVISI: Mengambil foto profil
@@ -215,15 +212,6 @@ export default function DataDiriPabrik({
 
       if (!lockedFields.jenis_produksi && formProfile.jenis_produksi) {
         formData.append("jenis_produksi", formProfile.jenis_produksi);
-      }
-      if (
-        !lockedFields.kapasitas_penyimpanan &&
-        formProfile.kapasitas_penyimpanan
-      ) {
-        formData.append(
-          "kapasitas_penyimpanan",
-          formProfile.kapasitas_penyimpanan
-        );
       }
 
       const response = await fetch(API_ENDPOINTS.USER.UPDATE_ME, {
@@ -555,50 +543,6 @@ export default function DataDiriPabrik({
               </p>
             )}
           </div>
-
-          {/* Input 2: Total Kapasitas Penyimpanan */}
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
-              <Warehouse size={18} className="text-[#B5302D]" />
-              Kapasitas Penyimpanan
-            </label>
-
-            <div className="relative group">
-              <input
-                type="number"
-                value={formProfile.kapasitas_penyimpanan}
-                disabled={lockedFields.kapasitas_penyimpanan}
-                onChange={(e) => {
-                  if (lockedFields.kapasitas_penyimpanan) {
-                    handleLockedClick("kapasitas_penyimpanan", "Kapasitas");
-                    return;
-                  }
-                  setFormProfile((s) => ({
-                    ...s,
-                    kapasitas_penyimpanan: e.target.value,
-                  }));
-                }}
-                placeholder={
-                  lockedFields.kapasitas_penyimpanan ? "0" : "kg"
-                }
-                className={`w-full border rounded-xl px-4 py-3 text-sm transition-all outline-none 
-                  ${
-                    lockedFields.kapasitas_penyimpanan
-                      ? "bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-white border-gray-200 focus:border-[#B5302D] focus:ring-4 focus:ring-red-50 text-gray-700 placeholder-gray-300 shadow-sm"
-                  }`}
-              />
-              <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                <span className="text-gray-400 text-xs font-semibold">Kg</span>
-              </div>
-            </div>
-            {(lockedFields.kapasitas_penyimpanan ||
-              warning.kapasitas_penyimpanan) && (
-              <p className="text-xs text-[#B5302D] font-medium flex items-center gap-1.5 ml-1 animate-fade-in">
-                <Lock size={12} /> Data tidak dapat diubah lagi.
-              </p>
-            )}
-          </div>
         </div>
       </div>
 
@@ -625,8 +569,7 @@ export default function DataDiriPabrik({
           {!lockedFields.foto ||
           !lockedFields.alamat ||
           !lockedFields.koordinat ||
-          !lockedFields.jenis_produksi ||
-          !lockedFields.kapasitas_penyimpanan ? (
+          !lockedFields.jenis_produksi  ? (
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}

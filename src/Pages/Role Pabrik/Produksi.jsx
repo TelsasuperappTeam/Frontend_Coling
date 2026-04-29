@@ -9,7 +9,7 @@ import {
   Calendar,
   RefreshCw,
   Loader2,
-  X
+  X,
 } from "lucide-react";
 
 // PASTIKAN PATH IMPORT INI SESUAI DENGAN STRUKTUR FOLDER ANDA
@@ -30,7 +30,7 @@ export default function Produksi() {
   // State Data Dinamis dari BE
   const [siklusAktif, setSiklusAktif] = useState([]);
   const [riwayatProduksi, setRiwayatProduksi] = useState([]);
-  
+
   // State Status Loading
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,20 +47,22 @@ export default function Produksi() {
     cangkang: "",
     serat: "",
     tandan_kosong: "",
-    pome: ""
+    pome: "",
   });
 
   // Helper Format Waktu (ISO -> DD/MM/YYYY, HH:mm)
   const formatWaktu = (isoString) => {
     if (!isoString) return "-";
     const date = new Date(isoString);
-    return date.toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    }).replace(/\./g, ':');
+    return date
+      .toLocaleString("id-ID", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+      .replace(/\./g, ":");
   };
 
   // ====================================================================
@@ -74,8 +76,12 @@ export default function Produksi() {
 
       // Jalankan 2 request secara paralel (Untuk data aktif & data riwayat)
       const [resAktif, resHistori] = await Promise.all([
-        fetch(`${urlBase}?is_history=false`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${urlBase}?is_history=true`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${urlBase}?is_history=false`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${urlBase}?is_history=true`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       if (resAktif.ok) {
@@ -89,7 +95,6 @@ export default function Produksi() {
         console.log("=== DATA RIWAYAT PRODUKSI (DARI BE) ===", dataHistori);
         setRiwayatProduksi(dataHistori);
       }
-
     } catch (error) {
       console.error("Error fetching siklus produksi:", error);
     } finally {
@@ -105,7 +110,11 @@ export default function Produksi() {
   // 2. FUNGSI MULAI SIKLUS PRODUKSI (POST)
   // ====================================================================
   const handleMulaiSiklus = async () => {
-    if (!jumlahTBS || isNaN(parseFloat(jumlahTBS)) || parseFloat(jumlahTBS) <= 0) {
+    if (
+      !jumlahTBS ||
+      isNaN(parseFloat(jumlahTBS)) ||
+      parseFloat(jumlahTBS) <= 0
+    ) {
       alert("Masukkan jumlah TBS yang valid (lebih dari 0)!");
       return;
     }
@@ -114,9 +123,9 @@ export default function Produksi() {
     try {
       const token = localStorage.getItem("token");
       const url = API_ENDPOINTS.TRACEABILITY.PABRIK.PRODUKSI.MULAI;
-      
+
       const payload = {
-        jumlah_tbs_digunakan: parseFloat(jumlahTBS)
+        jumlah_tbs_digunakan: parseFloat(jumlahTBS),
       };
 
       console.log("=== PAYLOAD MULAI SIKLUS ===", payload);
@@ -137,7 +146,11 @@ export default function Produksi() {
         setJumlahTBS("");
         fetchSiklusData(); // Refresh data layar
       } else {
-        const errMsg = data.detail ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)) : "Gagal memulai produksi.";
+        const errMsg = data.detail
+          ? typeof data.detail === "string"
+            ? data.detail
+            : JSON.stringify(data.detail)
+          : "Gagal memulai produksi.";
         alert("Gagal: " + errMsg);
       }
     } catch {
@@ -152,7 +165,14 @@ export default function Produksi() {
   // ====================================================================
   const openModalSelesai = (siklusId) => {
     setSelectedSiklusId(siklusId);
-    setHasilForm({ cpo: "", pko: "", cangkang: "", serat: "", tandan_kosong: "", pome: "" });
+    setHasilForm({
+      cpo: "",
+      pko: "",
+      cangkang: "",
+      serat: "",
+      tandan_kosong: "",
+      pome: "",
+    });
     setShowModal(true);
   };
 
@@ -160,8 +180,9 @@ export default function Produksi() {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      const url = API_ENDPOINTS.TRACEABILITY.PABRIK.PRODUKSI.SELESAI(selectedSiklusId);
-      
+      const url =
+        API_ENDPOINTS.TRACEABILITY.PABRIK.PRODUKSI.SELESAI(selectedSiklusId);
+
       const payload = {
         cpo: parseFloat(hasilForm.cpo) || 0.0,
         pko: parseFloat(hasilForm.pko) || 0.0,
@@ -189,7 +210,11 @@ export default function Produksi() {
         setShowModal(false);
         fetchSiklusData(); // Refresh data layar
       } else {
-        const errMsg = data.detail ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)) : "Gagal menyelesaikan produksi.";
+        const errMsg = data.detail
+          ? typeof data.detail === "string"
+            ? data.detail
+            : JSON.stringify(data.detail)
+          : "Gagal menyelesaikan produksi.";
         alert("Gagal: " + errMsg);
       }
     } catch {
@@ -207,13 +232,15 @@ export default function Produksi() {
           <Factory className="w-8 h-8 text-[#B5302D]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[#B5302D]">Manajemen Produksi</h1>
+          <h1 className="text-2xl font-bold text-[#B5302D]">
+            Manajemen Produksi
+          </h1>
           <p className="text-gray-500 text-sm mt-1">
             Kelola siklus pengolahan TBS menjadi CPO beserta turunannya.
           </p>
         </div>
       </div>
-      
+
       <hr className="border-gray-200 mb-8" />
 
       <div className="space-y-8">
@@ -239,7 +266,7 @@ export default function Produksi() {
                 onChange={(e) => setJumlahTBS(e.target.value)}
               />
             </div>
-            <button 
+            <button
               onClick={handleMulaiSiklus}
               disabled={isSubmitting}
               className="w-full md:w-auto px-8 py-3 bg-[#4A90E2] hover:bg-[#357ABD] text-white font-bold rounded-xl transition-colors whitespace-nowrap shadow-md disabled:opacity-50"
@@ -253,7 +280,9 @@ export default function Produksi() {
         <SectionCard
           title={
             <>
-              <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`}
+              />
               Siklus Produksi Berjalan
             </>
           }
@@ -266,9 +295,13 @@ export default function Produksi() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isLoading ? (
-              <p className="text-sm text-gray-400 col-span-2 text-center py-6">Memuat Data...</p>
+              <p className="text-sm text-gray-400 col-span-2 text-center py-6">
+                Memuat Data...
+              </p>
             ) : siklusAktif.length === 0 ? (
-              <p className="text-sm text-gray-400 col-span-2 text-center py-6 border border-dashed rounded-xl bg-gray-50">Tidak ada siklus produksi yang sedang berjalan.</p>
+              <p className="text-sm text-gray-400 col-span-2 text-center py-6 border border-dashed rounded-xl bg-gray-50">
+                Tidak ada siklus produksi yang sedang berjalan.
+              </p>
             ) : (
               siklusAktif.map((item) => (
                 <div
@@ -284,9 +317,9 @@ export default function Produksi() {
                         Sedang Berjalan
                       </span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => openModalSelesai(item.id)}
-                      className="px-4 py-2 text-xs font-bold text-[#B5302D] bg-red-50 border border-red-200 rounded-lg hover:bg-[#B5302D] hover:text-white transition-colors shadow-sm"
+                      className="w-full md:w-auto px-4 py-2 text-xs bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors whitespace-nowrap shadow-sm disabled:opacity-50"
                     >
                       Selesaikan Produksi
                     </button>
@@ -297,14 +330,16 @@ export default function Produksi() {
                       <span className="flex items-center gap-2 text-xs font-medium text-gray-500">
                         <Calendar className="w-3.5 h-3.5" /> Waktu Mulai
                       </span>
-                      <span className="font-semibold text-xs">{formatWaktu(item.waktu_mulai)}</span>
+                      <span className="font-semibold text-xs">
+                        {formatWaktu(item.waktu_mulai)}
+                      </span>
                     </div>
                     <div className="flex justify-between pt-1">
                       <span className="flex items-center gap-2 text-xs font-medium text-gray-500">
                         <Package className="w-3.5 h-3.5" /> TBS Diproses
                       </span>
                       <span className="font-bold text-[#B5302D]">
-                        {(item.jumlah_tbs).toLocaleString("id-ID")} Kg
+                        {item.jumlah_tbs.toLocaleString("id-ID")} Kg
                       </span>
                     </div>
                   </div>
@@ -331,9 +366,13 @@ export default function Produksi() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isLoading ? (
-               <p className="text-sm text-gray-400 col-span-2 text-center py-6">Memuat Data...</p>
+              <p className="text-sm text-gray-400 col-span-2 text-center py-6">
+                Memuat Data...
+              </p>
             ) : riwayatProduksi.length === 0 ? (
-               <p className="text-sm text-gray-400 col-span-2 text-center py-6 border border-dashed rounded-xl bg-gray-50">Belum ada riwayat produksi yang selesai.</p>
+              <p className="text-sm text-gray-400 col-span-2 text-center py-6 border border-dashed rounded-xl bg-gray-50">
+                Belum ada riwayat produksi yang selesai.
+              </p>
             ) : (
               riwayatProduksi.map((item) => (
                 <div
@@ -370,7 +409,7 @@ export default function Produksi() {
                         <Package className="w-3 h-3" /> Bahan Baku:
                       </span>
                       <span className="font-bold text-[#B5302D] text-right">
-                        {(item.jumlah_tbs).toLocaleString("id-ID")} Kg
+                        {item.jumlah_tbs.toLocaleString("id-ID")} Kg
                       </span>
                     </div>
 
@@ -378,7 +417,9 @@ export default function Produksi() {
                       <div className="flex items-center justify-between bg-blue-50/50 p-3 rounded-lg border border-blue-100 border-dashed group">
                         <div className="flex items-center gap-2">
                           <Barcode className="w-4 h-4 text-blue-400 group-hover:text-blue-600" />
-                          <span className="text-xs font-bold text-gray-500">Resi CPO:</span>
+                          <span className="text-xs font-bold text-gray-500">
+                            Resi CPO:
+                          </span>
                         </div>
                         <span className="font-mono text-[11px] font-bold text-blue-700 bg-white px-2 py-1 border border-blue-100 rounded">
                           {item.kode_resi_produksi || "Memproses..."}
@@ -397,16 +438,19 @@ export default function Produksi() {
       {/* MODAL FORM HASIL PRODUKSI (Ditampilkan saat klik Selesaikan) */}
       {/* ================================================================= */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col">
-            
             {/* Header Modal */}
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
-                <h3 className="text-lg font-bold text-[#B5302D]">Selesaikan Produksi</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Masukkan data timbangan akhir output produksi (dalam Kg).</p>
+                <h3 className="text-lg font-bold text-[#B5302D]">
+                  Selesaikan Produksi
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Masukkan data timbangan akhir output produksi (dalam Kg).
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowModal(false)}
                 className="p-1.5 bg-gray-200 text-gray-500 rounded-full hover:bg-red-100 hover:text-red-500 transition-colors"
               >
@@ -417,62 +461,89 @@ export default function Produksi() {
             {/* Body Form Modal */}
             <div className="p-6 grid grid-cols-2 gap-5 overflow-y-auto">
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Hasil CPO (Kg)</label>
-                <input 
-                  type="number" 
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">
+                  Hasil CPO (Kg)
+                </label>
+                <input
+                  type="number"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#B5302D] bg-yellow-50/30"
                   value={hasilForm.cpo}
-                  onChange={(e) => setHasilForm({...hasilForm, cpo: e.target.value})}
+                  onChange={(e) =>
+                    setHasilForm({ ...hasilForm, cpo: e.target.value })
+                  }
                   placeholder="0.0"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Hasil PKO (Kg)</label>
-                <input 
-                  type="number" 
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">
+                  Hasil PKO (Kg)
+                </label>
+                <input
+                  type="number"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#B5302D] bg-yellow-50/30"
                   value={hasilForm.pko}
-                  onChange={(e) => setHasilForm({...hasilForm, pko: e.target.value})}
+                  onChange={(e) =>
+                    setHasilForm({ ...hasilForm, pko: e.target.value })
+                  }
                   placeholder="0.0"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Cangkang (Kg)</label>
-                <input 
-                  type="number" 
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">
+                  Cangkang (Kg)
+                </label>
+                <input
+                  type="number"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#B5302D]"
                   value={hasilForm.cangkang}
-                  onChange={(e) => setHasilForm({...hasilForm, cangkang: e.target.value})}
+                  onChange={(e) =>
+                    setHasilForm({ ...hasilForm, cangkang: e.target.value })
+                  }
                   placeholder="0.0"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Serat (Kg)</label>
-                <input 
-                  type="number" 
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">
+                  Serat (Kg)
+                </label>
+                <input
+                  type="number"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#B5302D]"
                   value={hasilForm.serat}
-                  onChange={(e) => setHasilForm({...hasilForm, serat: e.target.value})}
+                  onChange={(e) =>
+                    setHasilForm({ ...hasilForm, serat: e.target.value })
+                  }
                   placeholder="0.0"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Tandan Kosong (Kg)</label>
-                <input 
-                  type="number" 
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">
+                  Tandan Kosong (Kg)
+                </label>
+                <input
+                  type="number"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#B5302D]"
                   value={hasilForm.tandan_kosong}
-                  onChange={(e) => setHasilForm({...hasilForm, tandan_kosong: e.target.value})}
+                  onChange={(e) =>
+                    setHasilForm({
+                      ...hasilForm,
+                      tandan_kosong: e.target.value,
+                    })
+                  }
                   placeholder="0.0"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Limbah POME (Kg)</label>
-                <input 
-                  type="number" 
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">
+                  Limbah POME (Kg)
+                </label>
+                <input
+                  type="number"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#B5302D]"
                   value={hasilForm.pome}
-                  onChange={(e) => setHasilForm({...hasilForm, pome: e.target.value})}
+                  onChange={(e) =>
+                    setHasilForm({ ...hasilForm, pome: e.target.value })
+                  }
                   placeholder="0.0"
                 />
               </div>
@@ -480,22 +551,25 @@ export default function Produksi() {
 
             {/* Footer Modal */}
             <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
-              <button 
+              <button
                 onClick={() => setShowModal(false)}
                 className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-100 transition-colors"
               >
                 Batal
               </button>
-              <button 
+              <button
                 onClick={handleSelesaikanSiklus}
                 disabled={isSubmitting}
                 className="px-8 py-2.5 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
                 Simpan & Generate Resi CPO
               </button>
             </div>
-
           </div>
         </div>
       )}

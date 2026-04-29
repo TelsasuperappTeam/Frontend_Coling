@@ -477,7 +477,7 @@ export const API_ENDPOINTS = {
     KODE_PRODUKSI_PUBLIK: {
       // Endpoint pelacakan pohon barcode CPO tanpa Auth
       SCAN_TRACEABILITY: (kodeResi) =>
-        `${API_BASE_URLS.TRACEABILITY}/logistik/traceability/scan/${kodeResi}`,
+        `${API_BASE_URLS.TRACEABILITY}/traceability/scan/${kodeResi}`,
     },
   },
 };

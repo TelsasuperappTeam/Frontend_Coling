@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Memperbaiki error di tampilan pabrik, dan tampilannya di sesuaikan kembali terhadap desain awal"
+git commit -m "Memperbaiki logika di pabrik, karna ada yang tidak sesuai. kemudian publik sudah dapat akses asal usul tbs"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"

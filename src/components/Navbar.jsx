@@ -1,8 +1,7 @@
-// Import beberapa hook dan komponen penting dari React dan React Router
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { HashLink } from "react-router-hash-link"; // untuk navigasi ke bagian tertentu di halaman
-import { X } from "lucide-react"; // ikon tanda silang (buat tombol close menu)
+import { HashLink } from "react-router-hash-link";
+import { X, Menu, Home, Info, Star } from "lucide-react";
 
 // Komponen utama Navbar
 const Navbar = () => {
@@ -38,23 +37,27 @@ const Navbar = () => {
 
   // kalau navbar discroll, tambahkan efek shadow
   const scrollActive = scrolled
-    ? "shadow-[0_2px_5px_rgba(0,0,0,0.1)]"
+    ? "shadow-md bg-opacity-95 backdrop-blur-sm"
     : "";
 
-  // fungsi untuk menentukan gaya link (warna teks) di mode desktop
+  // =========================================================================
+  // FUNGSI GAYA (STYLE) NAVBAR - DIPERBARUI UNTUK KONTRAS YANG JELAS
+  // =========================================================================
+  
+  // fungsi untuk menentukan gaya link (warna teks & layout) di mode desktop
   const getLinkClass = (name) =>
-    `transition-colors duration-200 ${
+    `flex items-center gap-1.5 transition-all duration-300 text-sm lg:text-base px-3 py-1.5 rounded-full ${
       activeSection === name
-        ? "text-[#B5302D] font-semibold" // warna merah untuk menu aktif
-        : "text-white hover:text-[#B5302D]" // warna putih dan berubah merah saat dihover
+        ? "bg-white/25 text-white font-extrabold shadow-sm border border-white/40" // AKTIF: Glassmorphism Putih (Sangat Jelas)
+        : "text-white/80 hover:bg-white/15 hover:text-white font-medium" // TIDAK AKTIF: Putih pudar, hover transparan
     }`;
 
   // fungsi untuk menentukan gaya link di mode mobile
   const getMobileLinkClass = (name) =>
-    `block py-1 transition-colors duration-200 ${
+    `flex items-center gap-2.5 w-full px-4 py-3 transition-all duration-200 rounded-xl ${
       activeSection === name
-        ? "text-[#B5302D] font-semibold"
-        : "text-white hover:text-[#B5302D]"
+        ? "bg-white/25 text-white font-extrabold shadow-sm border border-white/40" // AKTIF: Glassmorphism Putih
+        : "text-white/80 hover:bg-white/10 hover:text-white font-medium" // TIDAK AKTIF
     }`;
 
   return (
@@ -71,32 +74,32 @@ const Navbar = () => {
             {/* Tombol menu untuk tampilan mobile */}
             <button
               onClick={handleClick} // klik buat toggle menu
-              className="text-2xl lg:hidden block cursor-pointer bg-transparent border-0 text-white"
+              className="text-2xl lg:hidden flex items-center justify-center cursor-pointer bg-transparent border-0 text-white hover:text-gray-200 transition-colors"
               aria-label="Toggle menu"
             >
-              {/* kalau show = true tampil ikon X, kalau false tampil ikon hamburger */}
-              {show ? <X size={24} /> : <i className="ri-align-justify text-2xl" />}
+              {/* Menggunakan Lucide Icon (Menu & X) agar lebih tajam dan seragam */}
+              {show ? <X size={26} strokeWidth={2.5} /> : <Menu size={26} strokeWidth={2.5} />}
             </button>
 
             {/* Logo aplikasi TSA */}
             <div className="flex items-center gap-2">
               <img src="/LogoTSA.png" alt="Logo" className="h-6 w-auto sm:h-7" />
-              <h1 className="text-m sm:text-sm lg:text-base font-bold text-white whitespace-nowrap">
+              <h1 className="text-lg sm:text-xl lg:text-xl font-bold text-white whitespace-nowrap tracking-tight">
                 PalmaOne-08
               </h1>
             </div>
           </div>
 
           {/* Menu tengah (tampil hanya di desktop) */}
-          <ul className="hidden lg:flex flex-1 justify-center items-center space-x-8 font-medium">
+          <ul className="hidden lg:flex flex-1 justify-center items-center space-x-4 font-medium">
             <li>
-              {/* HashLink dipakai biar bisa scroll halus ke bagian tertentu */}
               <HashLink
                 smooth
                 to="/#beranda"
                 onClick={() => setActiveSection("beranda")}
                 className={getLinkClass("beranda")}
               >
+                <Home className="w-4 h-4 mb-0.5" />
                 Beranda
               </HashLink>
             </li>
@@ -107,6 +110,7 @@ const Navbar = () => {
                 onClick={() => setActiveSection("tentang")}
                 className={getLinkClass("tentang")}
               >
+                <Info className="w-4 h-4 mb-0.5" />
                 Tentang Kami
               </HashLink>
             </li>
@@ -117,6 +121,7 @@ const Navbar = () => {
                 onClick={() => setActiveSection("fitur")}
                 className={getLinkClass("fitur")}
               >
+                <Star className="w-4 h-4 mb-0.5" />
                 Fitur Kami
               </HashLink>
             </li>
@@ -126,7 +131,7 @@ const Navbar = () => {
           <div className="flex items-center gap-3 sm:gap-5">
             <Link
               to="/masuk" // arahkan ke halaman login
-              className="bg-[#B5302D] hover:bg-[#992824] text-white text-sm sm:text-base font-medium rounded-md px-4 py-1.5 shadow-md transition-all duration-200"
+              className="bg-white text-[#B5302D] hover:bg-gray-100 text-sm sm:text-base font-extrabold rounded-full px-6 py-2 shadow-md transition-all duration-300 transform hover:-translate-y-0.5"
             >
               Masuk
             </Link>
@@ -136,13 +141,13 @@ const Navbar = () => {
 
       {/* Menu versi mobile (muncul kalau tombol hamburger diklik) */}
       <div
-        className={`lg:hidden overflow-hidden transition-all duration-300 ${
-          show ? "max-h-[420px] py-1.5" : "max-h-0"
+        className={`lg:hidden overflow-hidden transition-all duration-300 shadow-xl ${
+          show ? "max-h-[420px] py-4 opacity-100" : "max-h-0 opacity-0"
         } bg-gradient-to-r from-[#EF8523] to-[#f19d5c]`}
       >
-        <ul className="flex flex-col items-start space-y-[2px] font-medium px-4 text-sm">
+        <ul className="flex flex-col items-start space-y-2 font-medium px-4 text-sm">
           {/* Setiap link di mobile menu juga nutup menunya setelah diklik */}
-          <li>
+          <li className="w-full">
             <HashLink
               smooth
               to="/#beranda"
@@ -152,10 +157,11 @@ const Navbar = () => {
               }}
               className={getMobileLinkClass("beranda")}
             >
+              <Home className="w-5 h-5" />
               Beranda
             </HashLink>
           </li>
-          <li>
+          <li className="w-full">
             <HashLink
               smooth
               to="/#tentang-kami"
@@ -165,10 +171,11 @@ const Navbar = () => {
               }}
               className={getMobileLinkClass("tentang")}
             >
+              <Info className="w-5 h-5" />
               Tentang Kami
             </HashLink>
           </li>
-          <li>
+          <li className="w-full">
             <HashLink
               smooth
               to="/#fitur-kami"
@@ -178,6 +185,7 @@ const Navbar = () => {
               }}
               className={getMobileLinkClass("fitur")}
             >
+              <Star className="w-5 h-5" />
               Fitur Kami
             </HashLink>
           </li>
@@ -187,5 +195,4 @@ const Navbar = () => {
   );
 };
 
-// Jangan lupa export biar bisa dipakai di komponen lain
 export default Navbar;

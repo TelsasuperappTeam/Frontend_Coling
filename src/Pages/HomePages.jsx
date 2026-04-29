@@ -25,7 +25,8 @@ import {
   Truck,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  X,
 } from "lucide-react";
 
 import { API_ENDPOINTS } from "../config/constants";
@@ -75,7 +76,7 @@ const HomePages = () => {
   const [isLoadingTrack, setIsLoadingTrack] = useState(false);
   const [trackError, setTrackError] = useState("");
 
-  // --- FUNGSI SUBMIT DINAMIS KE BACKEND ---
+// --- FUNGSI SUBMIT DINAMIS KE BACKEND ---
   const handleCheckCodeSubmit = async (e) => {
     e.preventDefault();
     if (!productionCode.trim()) return;
@@ -90,12 +91,17 @@ const HomePages = () => {
       const response = await fetch(url);
       const data = await response.json();
 
+      // ---> TAMBAHKAN CONSOLE LOG DI SINI <---
+      console.log("=== DATA MENTAH TRACEABILITY (DARI BE) ===", data);
+
       if (response.ok) {
         setTraceResult(data);
       } else {
         setTrackError(data.detail || "Kode Produksi tidak ditemukan dalam sistem.");
       }
-    } catch {
+    } catch (error) { // Menangkap parameter error
+      // ---> CONSOLE LOG ERROR JARINGAN <---
+      console.error("=== ERROR FETCH TRACEABILITY ===", error);
       setTrackError("Terjadi kesalahan jaringan. Gagal menghubungi server.");
     } finally {
       setIsLoadingTrack(false);
@@ -162,7 +168,7 @@ const HomePages = () => {
           <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
             <div className="flex flex-col justify-center text-left">
               <div className="md:hidden flex items-center justify-center relative my-4">
-                <div className="absolute w-full h-full bg-linear-to-br from-orange-400 to-red-500 rounded-full -bottom-8 -right-8 blur-3xl opacity-20" />
+                <div className="absolute w-full h-full bg-linear-to-br from-orange-400 to-red-500 rounded-full -bottom-8 -right-8 opacity-20" />
                 <img
                   src={FiturImage}
                   alt="Fitur Unggulan PalmaOne-08"
@@ -332,47 +338,151 @@ const HomePages = () => {
             </div>
           )}
 
-          {/* --- TAMPILAN HASIL PELACAKAN --- */}
+{/* ================================================================= */}
+          {/* --- MODAL POP-UP HASIL PELACAKAN (UKURAN MELAYANG & SCROLL) --- */}
+          {/* ================================================================= */}
           {traceResult && (
-            <div className="mt-8 max-w-2xl mx-auto p-6 md:p-8 bg-white border border-green-200 shadow-lg rounded-3xl text-left animate-in fade-in slide-in-from-bottom-4">
-              
-              <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-                <div className="p-2 bg-green-100 rounded-full shrink-0">
-                  <CheckCircle2 className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h4 className="text-lg md:text-xl font-bold text-gray-900">Produk Terverifikasi Valid</h4>
-                  <p className="text-xs sm:text-sm text-gray-500">Tercatat resmi dalam sistem Traceability PalmaOne-08</p>
+            <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-5 sm:p-8 animate-in fade-in">
+              <div className="relative w-full max-w-3xl bg-white border border-green-200 shadow-2xl rounded-[24px] sm:rounded-[32px] text-left flex flex-col max-h-[75vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-4">
+                
+                {/* TOMBOL TUTUP (X) */}
+                <button 
+                  onClick={() => setTraceResult(null)}
+                  className="absolute -top-3 -right-3 sm:top-5 sm:right-5 p-2 bg-white hover:bg-red-100 hover:text-red-600 rounded-full transition-colors z-[70] shadow-md border border-gray-200"
+                  title="Tutup Hasil"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+
+                {/* KONTEN BISA DI-SCROLL */}
+                <div className="p-5 sm:p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 rounded-[24px] sm:rounded-[32px]">
+                  
+                  {/* HEADER: STATUS VALID */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 mb-6 sm:mb-8 border-b border-gray-100 pb-4 sm:pb-5 pt-2 sm:pt-0 pr-4 sm:pr-10">
+                    <div className="p-2 sm:p-3 bg-green-100 rounded-full shrink-0 shadow-sm border border-green-200 w-fit">
+                      <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg sm:text-xl md:text-2xl font-extrabold text-green-800 tracking-tight">Produk Terverifikasi Valid</h4>
+                      <p className="text-[11px] sm:text-sm text-gray-500 font-medium mt-0.5 sm:mt-1 leading-relaxed">
+                        Tercatat resmi dengan metode <span className="font-bold text-gray-700">Traceability Blockchain</span> di Platform ISPO PalmaOne-08
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-6 sm:space-y-8">
+                    
+                    {/* KATEGORI 1: INFORMASI PRODUKSI */}
+                    <div>
+                      <h5 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3 sm:mb-4">1. Ringkasan Produksi Pabrik</h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+                        <div className="bg-gray-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-100">
+                          <p className="text-gray-500 text-[9px] sm:text-[10px] md:text-xs uppercase font-bold mb-1.5 tracking-wider">Kode Resi Produksi</p>
+                          <p className="font-mono font-bold text-[#B5302D] text-xs sm:text-sm break-all bg-red-50 inline-block px-2 py-0.5 rounded border border-red-100">
+                            {traceResult.kode_resi_produksi || productionCode}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-100">
+                          <p className="text-gray-500 text-[9px] sm:text-[10px] md:text-xs uppercase font-bold mb-1.5 tracking-wider">Total TBS Diolah</p>
+                          <p className="font-black text-gray-900 text-base sm:text-lg">
+                            {(traceResult.total_tbs_diolah_kg || 0).toLocaleString("id-ID")} <span className="text-[10px] sm:text-xs font-semibold text-gray-500">Kg</span>
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-100">
+                          <p className="text-gray-500 text-[9px] sm:text-[10px] md:text-xs uppercase font-bold mb-1.5 tracking-wider">Waktu Selesai Produksi</p>
+                          <p className="font-bold text-gray-900 text-xs sm:text-sm">
+                            {traceResult.waktu_produksi_selesai 
+                              ? new Date(traceResult.waktu_produksi_selesai).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KATEGORI 2: HASIL OLAHAN PRODUKSI */}
+                    <div>
+                      <h5 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3 sm:mb-4">2. Komposisi Hasil Olahan (Output)</h5>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                        {[
+                          { label: "CPO", value: traceResult.hasil_cpo_kg, color: "text-[#EF8523]" },
+                          { label: "PKO", value: traceResult.hasil_pko_kg, color: "text-[#EF8523]" },
+                          { label: "Cangkang", value: traceResult.hasil_cangkang_kg, color: "text-gray-700" },
+                          { label: "Serat", value: traceResult.hasil_serat_kg, color: "text-gray-700" },
+                          { label: "T. Kosong", value: traceResult.hasil_tandan_kosong_kg, color: "text-gray-700" },
+                          { label: "POME", value: traceResult.hasil_pome_kg, color: "text-gray-700" },
+                        ].map((item, idx) => (
+                          <div key={idx} className="bg-white border border-gray-200 p-2 sm:p-3 rounded-lg sm:rounded-xl text-center shadow-sm hover:shadow-md transition-shadow">
+                            <p className="text-gray-400 text-[8px] sm:text-[9px] uppercase font-bold mb-1 tracking-widest">{item.label}</p>
+                            <p className={`font-black text-xs sm:text-sm md:text-base ${item.color}`}>
+                              {(item.value || 0).toLocaleString("id-ID")} <span className="text-[8px] sm:text-[9px] font-semibold text-gray-400">Kg</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* KATEGORI 3: ASAL USUL RANTAI PASOK (KEBUN / HULU) */}
+                    <div>
+                      <h5 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3 sm:mb-4">3. Asal Usul Rantai Pasok (Hulu)</h5>
+                      
+                      <div className="space-y-3 sm:space-y-4 pr-1 sm:pr-2">
+                        {traceResult.rantai_pasok_hulu && traceResult.rantai_pasok_hulu.length > 0 ? (
+                          traceResult.rantai_pasok_hulu.map((hulu, idx) => (
+                            <div key={idx} className="bg-gradient-to-br from-green-50 to-emerald-50/30 border border-green-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 shadow-sm">
+                              
+                              {/* Nama Kebun & Porsi Sumbangan */}
+                              <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 border-b border-green-100/60 pb-3 sm:pb-4">
+                                <div className="w-full sm:w-auto">
+                                  <p className="text-[9px] sm:text-[10px] font-bold text-green-600 uppercase tracking-widest mb-0.5">Pemasok {idx + 1}</p>
+                                  <p className="text-xs sm:text-sm md:text-base font-bold text-gray-900 leading-tight">
+                                    {hulu.metadata_kebun_dan_petani?.nama_kebun || hulu.metadata_kebun_dan_petani?.nama_gapoktan || "Data Kebun Tidak Terdata"}
+                                  </p>
+                                </div>
+                                <div className="w-full sm:w-auto mt-1 sm:mt-0 bg-white border border-green-100 px-3 py-2 sm:py-1.5 rounded-lg shadow-sm flex justify-between sm:block items-center sm:text-right">
+                                  <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest sm:mb-0.5">TBS Disumbangkan</p>
+                                  <p className="text-xs sm:text-sm font-black text-green-700">
+                                    {(hulu.jumlah_tbs_digunakan_kg || 0).toLocaleString("id-ID")} <span className="text-[10px] sm:text-xs font-bold text-green-600/70">Kg</span>
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Detail Lokasi & Tanggal */}
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                                <div className="col-span-2 sm:col-span-1">
+                                  <p className="text-[8px] sm:text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 sm:mb-1">Lokasi Kebun</p>
+                                  <p className="text-[10px] sm:text-xs font-semibold text-gray-700 leading-snug line-clamp-2">
+                                    {hulu.metadata_kebun_dan_petani?.alamat_pickup_teks || "-"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[8px] sm:text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 sm:mb-1">Tanggal Panen</p>
+                                  <p className="text-[10px] sm:text-xs font-bold text-gray-800">
+                                    {hulu.metadata_kebun_dan_petani?.tanggal_rencana_panen || "-"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[8px] sm:text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 sm:mb-1">Masuk Pabrik</p>
+                                  <p className="text-[10px] sm:text-xs font-bold text-gray-800">
+                                    {hulu.tanggal_masuk_pabrik 
+                                      ? new Date(hulu.tanggal_masuk_pabrik).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                                      : "-"}
+                                  </p>
+                                </div>
+                              </div>
+
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <p className="text-xs sm:text-sm text-gray-500 font-medium">Data asal usul kebun belum terekam dalam database.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                  <p className="text-gray-500 text-[10px] md:text-xs uppercase font-bold mb-1 tracking-wider">Kode Resi Produksi</p>
-                  <p className="font-mono font-bold text-gray-900 text-sm md:text-base break-words">
-                    {traceResult.kode_resi_produksi || productionCode}
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                  <p className="text-gray-500 text-[10px] md:text-xs uppercase font-bold mb-1 tracking-wider">Total Olahan (CPO)</p>
-                  <p className="font-bold text-green-600 text-sm md:text-base">
-                    {(traceResult.hasil_cpo_kg || 0).toLocaleString("id-ID")} Kg
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 sm:col-span-2">
-                  <p className="text-gray-500 text-[10px] md:text-xs uppercase font-bold mb-1 tracking-wider">Waktu Selesai Produksi</p>
-                  <p className="font-bold text-gray-900 text-sm md:text-base">
-                    {traceResult.waktu_produksi_selesai 
-                      ? new Date(traceResult.waktu_produksi_selesai).toLocaleString("id-ID", {
-                          dateStyle: "full", timeStyle: "long"
-                        })
-                      : "-"}
-                  </p>
-                </div>
-              </div>
-
             </div>
           )}
 
