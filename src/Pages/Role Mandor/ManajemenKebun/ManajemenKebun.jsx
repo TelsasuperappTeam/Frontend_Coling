@@ -59,7 +59,7 @@ export default function ManajemenKebun() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6 sm:mb-8">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
-            <Trees className="text-[#B5302D]" size={28} />
+            <Sprout className="text-[#B5302D]" size={28} />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
@@ -90,7 +90,7 @@ export default function ManajemenKebun() {
           {
             id: "budidaya",
             label: "Budidaya & Monitoring",
-            icon: <Sprout size={20} />,
+            icon: <Trees size={20} />,
           },
         ].map((tab) => (
           <button

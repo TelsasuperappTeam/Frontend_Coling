@@ -16,17 +16,17 @@ import { ROLES } from "./config/constants";
 import VerifikasiOTP from "./components/VerifikasiOTP";
 import LupaKataSandi from "./Pages/LupaKataSandi";
 
-// --- TAMBAHAN IMPORT TOASTER ---
+// --- IMPORT TOASTER GLOBAL ---
 import { Toaster } from "react-hot-toast";
 
-// Import routes per role (Sesuai struktur folder terbaru)
+// Import routes per role
 import AdminRoutes from "./Routes/AdminRoutes";
 import KebunRoutes from "./Routes/KebunRoutes";
-import MandorRoutes from "./Routes/MandorRoutes"; // Untuk ROLES.MANDOR ("petani")
+import MandorRoutes from "./Routes/MandorRoutes";
 import PabrikRoutes from "./Routes/PabrikRoutes";
-import TransportRoutes from "./Routes/TransportRoutes"; // Untuk ROLES.TRANSPORT ("transport")
-import EstateManagerRoutes from "./Routes/EstateManagerRoutes"; // Untuk ROLES.ESTATE_MANAGER
-import GMDistrikRoutes from "./Routes/GMDistrikRoutes"; // Untuk ROLES.GENERAL_MANAGER_DISTRIK
+import TransportRoutes from "./Routes/TransportRoutes";
+import EstateManagerRoutes from "./Routes/EstateManagerRoutes";
+import GMDistrikRoutes from "./Routes/GMDistrikRoutes";
 
 function App() {
   return (
@@ -44,9 +44,9 @@ function AppContent() {
     `/${ROLES.ADMIN}`,
     `/${ROLES.MANDOR}`,
     `/${ROLES.KEBUN}`,
-    `/${ROLES.ESTATE_MANAGER}`,         // Mengarah ke path "estate manager"
-    `/${ROLES.GENERAL_MANAGER_DISTRIK}`, // Mengarah ke path "general manager distrik"
-    `/${ROLES.TRANSPORT}`,              // Mengarah ke path "transport"
+    `/${ROLES.ESTATE_MANAGER}`,
+    `/${ROLES.GENERAL_MANAGER_DISTRIK}`,
+    `/${ROLES.TRANSPORT}`,
     `/${ROLES.PABRIK}`,
   ];
 
@@ -67,8 +67,15 @@ function AppContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      {/* --- TAMBAHAN KOMPONEN TOASTER --- */}
-      <Toaster position="top-center" reverseOrder={false} />
+      {/* --- KOMPONEN TOASTER AKTIF DI SELURUH APLIKASI --- */}
+      <Toaster 
+        position="top-center" 
+        reverseOrder={false} 
+        toastOptions={{
+          // Jarak toast dari atas layar
+          style: { marginTop: '10px' }
+        }} 
+      />
 
       {showNavbar && <Navbar />}
 

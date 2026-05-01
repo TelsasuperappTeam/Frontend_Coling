@@ -56,6 +56,7 @@ const KemitraanPetani = () => {
         { headers },
       );
       const dataPanen = await resPanen.json();
+      console.log("Data BE - Rencana Panen Pending:", dataPanen); // <-- CONSOLE LOG DITAMBAHKAN
 
       // (SESUAI BE MAHAR): FETCH RENCANA TANAM (BLOK) PENDING
       const resTanam = await fetch(
@@ -63,6 +64,7 @@ const KemitraanPetani = () => {
         { headers },
       );
       const dataTanam = await resTanam.json();
+      console.log("Data BE - Rencana Tanam (Blok) Pending:", dataTanam); // <-- CONSOLE LOG DITAMBAHKAN
 
       // (SESUAI BE MAHAR): FETCH PENDING DOKUMEN ISPO
       const resDokumen = await fetch(
@@ -70,6 +72,7 @@ const KemitraanPetani = () => {
         { headers },
       );
       const dataDokumen = await resDokumen.json();
+      console.log("Data BE - Dokumen ISPO Pending:", dataDokumen); // <-- CONSOLE LOG DITAMBAHKAN
 
       if (Array.isArray(dataPanen)) setPendingPanen(dataPanen);
       if (Array.isArray(dataTanam)) setPendingTanam(dataTanam);
@@ -253,7 +256,7 @@ const KemitraanPetani = () => {
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             {activeTab === "validasi" ? (
-              <ShieldCheck className="w-8 h-8 text-[#B5302D]" />
+              <Users className="w-8 h-8 text-[#B5302D]" />
             ) : (
               <Users className="w-8 h-8 text-[#B5302D]" />
             )}

@@ -1,3 +1,4 @@
+import { showToast } from "../utils/notif";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -7,7 +8,9 @@ import {
   Loader2,
   ChevronDown,
 } from "lucide-react";
-import { API_ENDPOINTS, NOTIF_MESSAGES } from "../config/constants"; // Pastikan NOTIF_MESSAGES sudah ada di constants.js Anda
+import { API_ENDPOINTS, NOTIF_MESSAGES } from "../config/constants";
+
+
 
 // ======================= ROLE PENGGUNA =======================
 const ROLES = {
@@ -21,7 +24,6 @@ const ROLES = {
 
 export default function Daftar() {
   const [role, setRole] = useState("");
-  const [notif, setNotif] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     nama: "",
@@ -62,28 +64,25 @@ export default function Daftar() {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
-    setNotif("");
 
     // --- Validasi Manual Frontend ---
     if (form.password !== form.confirmPassword) {
-      setNotif(NOTIF_MESSAGES.PASSWORD_NOT_MATCH);
+      showToast.error(NOTIF_MESSAGES.PASSWORD_NOT_MATCH);
       setIsSubmitting(false);
       return;
     }
     if (!isStrongPassword(form.password)) {
-      setNotif(
-        "Kata sandi harus minimal 8 karakter dan berisi huruf serta angka.",
-      );
+      showToast.error("Kata sandi harus minimal 8 karakter dan berisi huruf serta angka.");
       setIsSubmitting(false);
       return;
     }
     if (!isValidEmail(form.email)) {
-      setNotif("Format email tidak valid.");
+      showToast.error("Format email tidak valid.");
       setIsSubmitting(false);
       return;
     }
     if (role && !isValidPhone(form.phone)) {
-      setNotif("Nomor handphone harus terdiri dari 9–13 digit angka.");
+      showToast.error("Nomor handphone harus terdiri dari 9–13 digit angka.");
       setIsSubmitting(false);
       return;
     }
@@ -125,7 +124,6 @@ export default function Daftar() {
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
         if (res.status === 422 && errorData.detail) {
-          console.error("Validasi Backend Gagal:", errorData.detail);
           const msg = Array.isArray(errorData.detail)
             ? `${errorData.detail[0].loc[1]}: ${errorData.detail[0].msg}`
             : "Data yang dikirim tidak valid.";
@@ -143,22 +141,21 @@ export default function Daftar() {
       } catch {
         data = { message: "Pendaftaran berhasil." };
       }
-      console.log("Register Response:", data);
 
       // REQUEST OTP MANUAL
       try {
-        console.log("Mencoba trigger OTP ke:", API_ENDPOINTS.AUTH.OTP_REQUEST);
+        //console.log("Mencoba trigger OTP ke:", API_ENDPOINTS.AUTH.OTP_REQUEST);
         await fetch(API_ENDPOINTS.AUTH.OTP_REQUEST, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: form.email }),
         });
-        console.log("Request OTP terkirim (Cek email spam/inbox).");
-      } catch (otpError) {
-        console.warn("Gagal trigger OTP otomatis:", otpError);
+        //console.log("Request OTP terkirim (Cek email spam/inbox).");
+      } catch {
+        //console.warn("Gagal trigger OTP otomatis:", otpError);
       }
 
-      setNotif(data.message || NOTIF_MESSAGES.REGISTER_SUCCESS);
+      showToast.success(data.message || NOTIF_MESSAGES.REGISTER_SUCCESS);
 
       // Redirect ke OTP
       setTimeout(
@@ -166,8 +163,7 @@ export default function Daftar() {
         2000,
       );
     } catch (error) {
-      console.error(error);
-      setNotif(error.message || "Terjadi kesalahan saat pendaftaran.");
+      showToast.error(error.message || "Terjadi kesalahan saat pendaftaran.");
     } finally {
       setIsSubmitting(false);
     }
@@ -431,32 +427,6 @@ export default function Daftar() {
                   />
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ====== NOTIFIKASI PROFESIONAL (Pindah ke atas tombol) ====== */}
-          {notif && (
-            <div
-              className={`mt-4 p-3 sm:p-4 rounded-xl border flex items-start gap-3 animate-fade-in ${
-                notif.toLowerCase().includes("berhasil")
-                  ? "bg-green-50 border-green-200"
-                  : "bg-red-50 border-red-200"
-              }`}
-            >
-              {notif.toLowerCase().includes("berhasil") ? (
-                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-              )}
-              <p
-                className={`text-xs sm:text-sm font-medium leading-relaxed ${
-                  notif.toLowerCase().includes("berhasil")
-                    ? "text-green-700"
-                    : "text-red-700"
-                }`}
-              >
-                {notif}
-              </p>
             </div>
           )}
 

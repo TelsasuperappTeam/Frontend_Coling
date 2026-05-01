@@ -17,9 +17,10 @@ import {
   FileText,
   History,
   Save,
+  CheckSquare,
 } from "lucide-react";
 
-import { API_ENDPOINTS } from "../../config/constants.js";
+import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 
 const PenerimaanTBS = () => {
   // --- STATE TAB (Aktif vs Histori) ---
@@ -261,11 +262,11 @@ const PenerimaanTBS = () => {
       <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
-            <PackageCheck className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
+            <CheckSquare className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
-              Penerimaan TBS
+              Transaksi TBS
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
               Pantau kedatangan armada dan rekapitulasi timbangan TBS.
@@ -283,7 +284,7 @@ const PenerimaanTBS = () => {
                 : "text-gray-500"
             }`}
           >
-            <Truck className="w-4 h-4" /> Truk Masuk (Aktif)
+            <Truck className="w-4 h-4" /> Transaksi Aktif
           </button>
           <button
             onClick={() => setActiveTab("riwayat")}
@@ -447,17 +448,17 @@ const PenerimaanTBS = () => {
                                   handleTerimaPesanan(item.id);
                                 }}
                                 disabled={loadingTerimaId === item.id}
-                                className="w-full sm:w-auto bg-orange-500 text-white px-8 py-3.5 rounded-xl text-xs sm:text-sm font-bold shadow-lg hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                                className="w-[90%] sm:w-auto mx-auto bg-orange-500 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-bold shadow-md hover:bg-orange-600 hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
                               >
                                 {loadingTerimaId === item.id ? (
                                   <>
-                                    <Clock className="w-4 h-4 animate-spin-slow" />{" "}
+                                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin-slow" />{" "}
                                     Memproses...
                                   </>
                                 ) : (
                                   <>
-                                    <CheckCircle2 className="w-4 h-4" />{" "}
-                                    Konfirmasi Truk Telah Tiba
+                                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
+                                    Konfirmasi Truk Tiba
                                   </>
                                 )}
                               </button>
@@ -484,58 +485,97 @@ const PenerimaanTBS = () => {
                           </div>
                         )}
 
-                        {/* --- INFO HASIL TIMBANGAN MUNCUL JIKA DI TAB RIWAYAT --- */}
+{/* --- INFO HASIL TIMBANGAN MUNCUL JIKA DI TAB RIWAYAT --- */}
                         {!isAktif && item.pemeriksaan && (
-                          <div className="mt-8 bg-green-50 border border-green-200 rounded-xl p-4 sm:p-5 animate-in fade-in">
-                            <h4 className="text-xs font-bold text-green-800 uppercase border-b border-green-200/50 pb-2 mb-3">
-                              Hasil Timbangan & Pemeriksaan
-                            </h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <div>
-                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
-                                  Berat Bruto
-                                </p>
-                                <p className="text-sm font-bold text-green-900">
-                                  {item.pemeriksaan.bruto.toLocaleString(
-                                    "id-ID",
-                                  )}{" "}
-                                  Kg
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
-                                  Potongan
-                                </p>
-                                <p className="text-sm font-bold text-green-900">
-                                  {item.pemeriksaan.total_potongan.toLocaleString(
-                                    "id-ID",
-                                  )}{" "}
-                                  Kg
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
-                                  Netto Akhir
-                                </p>
-                                <p className="text-sm font-extrabold text-green-900">
-                                  {item.pemeriksaan.netto.toLocaleString(
-                                    "id-ID",
-                                  )}{" "}
-                                  Kg
+                          <div className="mt-5 bg-green-50/40 border border-green-200 rounded-xl p-3 sm:p-4 animate-in fade-in shadow-sm">
+                            
+                            {/* HEADER - Dikecilkan ukurannya */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-green-200/50 pb-2.5 mb-3 gap-2">
+                              <h4 className="text-[11px] sm:text-xs font-extrabold text-green-800 uppercase flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> 
+                                <span>Hasil Pemeriksaan</span>
+                              </h4>
+                              {/* Harga Snapshot */}
+                              {item.pemeriksaan.harga_beli_per_kg_snapshot > 0 && (
+                                <span className="bg-green-100 text-green-800 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded border border-green-200 w-fit">
+                                  Dasar: Rp {item.pemeriksaan.harga_beli_per_kg_snapshot.toLocaleString("id-ID")} / Kg
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* LIST BARIS KE BAWAH (Lebih ramping & tidak ada kotak besar) */}
+                            <div className="flex flex-col gap-1.5">
+                              
+                              {/* Baris 1: Berat Bruto */}
+                              <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-100">
+                                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Berat Bruto</p>
+                                <p className="text-xs sm:text-sm font-black text-gray-900">
+                                  {item.pemeriksaan.bruto?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-gray-400">Kg</span>
                                 </p>
                               </div>
-                              <div className="md:text-right">
-                                <p className="text-[10px] text-green-700/70 font-bold uppercase">
-                                  Total Harga
+
+                              {/* Baris 2: Tot Potongan */}
+                              <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-100">
+                                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Tot. Potongan</p>
+                                <p className="text-xs sm:text-sm font-black text-red-600">
+                                  {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-red-400">Kg</span>
                                 </p>
-                                <p className="text-sm font-extrabold text-green-900 bg-white inline-block px-2 py-1 rounded border border-green-200">
-                                  Rp{" "}
-                                  {item.pemeriksaan.harga_final?.toLocaleString(
-                                    "id-ID",
-                                  )}
+                              </div>
+
+                              {/* Baris 3: Netto Bersih */}
+                              <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-green-200 ring-1 ring-green-50 shadow-sm">
+                                <p className="text-[9px] sm:text-[10px] text-green-700 font-bold uppercase tracking-wider">Netto Bersih</p>
+                                <p className="text-sm sm:text-base font-black text-green-700">
+                                  {item.pemeriksaan.final_weigh?.toLocaleString("id-ID") || item.pemeriksaan.netto?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-green-600/70">Kg</span>
+                                </p>
+                              </div>
+
+                              {/* Baris 4: Total Harga Final (Warna Hijau) */}
+                              <div className="flex justify-between items-center bg-gradient-to-r from-green-600 to-emerald-700 px-3 py-2.5 rounded-lg shadow-sm text-white mt-1">
+                                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-green-100">Total Harga</p>
+                                <p className="text-sm sm:text-base font-black tracking-tight">
+                                  <span className="text-[9px] font-medium mr-1">Rp</span> 
+                                  {item.pemeriksaan.harga_final?.toLocaleString("id-ID") || 0}
                                 </p>
                               </div>
                             </div>
+
+                            {/* --- CATATAN & DOKUMEN (Disusun vertikal sangat tipis) --- */}
+                            {(item.pemeriksaan.catatan || item.pemeriksaan.dokumen_nota_url) && (
+                              <div className="mt-3 flex flex-col gap-2 border-t border-green-200/50 pt-3">
+                                {/* Catatan */}
+                                {item.pemeriksaan.catatan && (
+                                  <div className="bg-white/60 p-2.5 rounded-lg border border-green-100">
+                                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                      <FileText className="w-3 h-3 shrink-0" /> Catatan
+                                    </p>
+                                    <p className="text-[10px] sm:text-[11px] text-gray-700 font-medium italic leading-snug">
+                                      "{item.pemeriksaan.catatan}"
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Dokumen Nota */}
+                                {item.pemeriksaan.dokumen_nota_url && (
+                                  <div className="bg-white/60 p-2.5 rounded-lg border border-green-100 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <Upload className="w-3 h-3 text-gray-500 shrink-0" />
+                                      <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider truncate">
+                                        Nota Timbangan
+                                      </p>
+                                    </div>
+                                    <a 
+                                      href={getFileUrl(item.pemeriksaan.dokumen_nota_url, "TRACEABILITY")} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="flex items-center bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-100 hover:bg-blue-100 transition-colors shrink-0"
+                                    >
+                                      <span className="text-[9px] font-bold whitespace-nowrap">Lihat Nota &rarr;</span>
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

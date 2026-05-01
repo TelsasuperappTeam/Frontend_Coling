@@ -15,6 +15,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 
+import { showToast, confirmDialog } from "../../utils/notif";
+
 // PASTIKAN PATH IMPORT INI SESUAI DENGAN STRUKTUR FOLDER ANDA
 import { API_ENDPOINTS } from "../../config/constants.js";
 
@@ -53,6 +55,7 @@ const Pengiriman = () => {
       setShipments(filteredData);
     } catch (error) {
       console.error("Error fetching shipments:", error);
+      showToast.error("Gagal memuat data pengiriman.");
     } finally {
       setIsLoading(false);
     }
@@ -62,23 +65,35 @@ const Pengiriman = () => {
     fetchShipments();
   }, [fetchShipments]);
 
-  // --- UPDATE PROGRESS (PATCH) ---
+// --- UPDATE PROGRESS (PATCH) ---
   const handleUpdateStatus = async (id, currentProgressDB) => {
     let nextProgress = "";
+    let pesanKonfirmasi = "";
 
     // LOGIKA MAJU (TIDAK BISA MUNDUR)
     if (currentProgressDB === "menunggu_pengiriman") {
       nextProgress = "mengirim";
+      pesanKonfirmasi = "Apakah armada sudah mulai menjemput TBS di Kebun?";
     } else if (currentProgressDB === "mengirim") {
       nextProgress = "menuju_pabrik";
+      pesanKonfirmasi = "Apakah armada sudah mulai jalan menuju Pabrik?";
     } else {
-      return; // Cegah aksi jika status sudah menuju_pabrik atau terima
+      return;
     }
+
+    const isSetuju = await confirmDialog({
+      title: "Konfirmasi Update Status",
+      text: pesanKonfirmasi,
+      confirmText: "Ya, Update!",
+      isDanger: false
+    });
+
+    // Jika user klik "Batal/Cancel", hentikan fungsi
+    if (!isSetuju) return;
 
     try {
       const token = localStorage.getItem("token");
-      const url =
-        API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.UPDATE_PROGRESS(id);
+      const url = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.UPDATE_PROGRESS(id);
 
       const res = await fetch(url, {
         method: "PATCH",
@@ -86,21 +101,19 @@ const Pengiriman = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // Mengirimkan payload sesuai instruksi BE
         body: JSON.stringify({ progress_baru: nextProgress }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(
-          data.detail || data.message || "Gagal mengupdate progress",
-        );
+        throw new Error(data.detail || data.message || "Gagal mengupdate progress");
       }
 
-      alert("Progress berhasil diperbarui!");
+      showToast.success("Progress armada berhasil diperbarui!");
       fetchShipments(); // Refresh data otomatis setelah sukses
+
     } catch (error) {
-      alert(error.message);
+      showToast.error(error.message || "Terjadi kesalahan pada sistem.");
     }
   };
 
@@ -117,7 +130,7 @@ const Pengiriman = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
-            <Truck className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
+            <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
@@ -144,7 +157,7 @@ const Pengiriman = () => {
                 activeTab === "pantau" ? "animate-pulse" : ""
               }`}
             />
-            Pantau <span className="hidden sm:inline">Pengiriman</span>
+            Status <span className="hidden sm:inline">Pengiriman</span>
           </button>
           <button
             onClick={() => setActiveTab("riwayat")}

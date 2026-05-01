@@ -10,9 +10,10 @@ import {
   ChevronDown,
   Save,
   Loader2,
-  ClipboardList,
+  Tractor,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/constants.js";
+import { showToast, confirmDialog } from "../../utils/notif";
 
 export default function Armada() {
   const [popupType, setPopupType] = useState(null);
@@ -112,7 +113,7 @@ export default function Armada() {
   const tableConfig = {
     kendaraan: {
       title: "Manajemen Kendaraan",
-      icon: <Truck className="w-5 h-5" />,
+      icon: <Tractor className="w-5 h-5" />,
       color: "#B5302D",
       fields: [
         {
@@ -183,7 +184,7 @@ export default function Armada() {
     },
   };
 
-  // --- FUNGSI SIMPAN (POST / PATCH) ---
+// --- FUNGSI SIMPAN (POST / PATCH) ---
   const handleSave = async () => {
     if (!popupType) return;
     setIsLoading(true);
@@ -233,13 +234,15 @@ export default function Armada() {
 
       if (!res.ok) throw new Error("Gagal menyimpan data ke database.");
 
-      alert(
-        isEdit ? "Data berhasil diperbarui!" : "Data berhasil ditambahkan!",
+      // GANTI ALERT JADI SHOWTOAST SUCCESS (Tanpa konfirmasi ganda)
+      showToast.success(
+        isEdit ? "Data berhasil diperbarui!" : "Data berhasil ditambahkan!"
       );
+      
       handleClosePopup();
-      fetchArmadaData(); // Refresh tabel
+      fetchArmadaData();
     } catch (error) {
-      alert(error.message);
+      showToast.error(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -247,8 +250,15 @@ export default function Armada() {
 
   // --- FUNGSI HAPUS (DELETE) ---
   const handleDelete = async (type, id) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus data ${type} ini?`))
-      return;
+    const isSetuju = await confirmDialog({
+      title: "Yakin Hapus Data?",
+      text: `Apakah Anda yakin ingin menghapus data ${type} ini?`,
+      confirmText: "Ya, Hapus!",
+      isDanger: true 
+    });
+
+    // Jika user klik Batal, hentikan fungsi
+    if (!isSetuju) return;
 
     setIsLoading(true);
     try {
@@ -266,10 +276,10 @@ export default function Armada() {
       if (!res.ok)
         throw new Error("Gagal menghapus data. Mungkin data sedang digunakan.");
 
-      alert("Data berhasil dihapus.");
+      showToast.success("Data berhasil dihapus.");
       fetchArmadaData();
     } catch (error) {
-      alert(error.message);
+      showToast.error(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -295,9 +305,11 @@ export default function Armada() {
       });
 
       if (!res.ok) throw new Error("Gagal mengubah kondisi kendaraan.");
+      
       fetchArmadaData();
+      showToast.success("Kondisi kendaraan berhasil diubah.");
     } catch (error) {
-      alert(error.message);
+      showToast.error(error.message);
     }
   };
 
@@ -306,7 +318,7 @@ export default function Armada() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-7">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
-            <ClipboardList className="w-8 h-8 text-[#B5302D]" />
+            <Truck className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#B5302D]">

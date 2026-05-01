@@ -10,6 +10,7 @@ import {
   AlertCircle,
   KeyRound,
 } from "lucide-react";
+import { showToast } from "../utils/notif";
 
 export default function LupaKataSandi() {
   const [searchParams] = useSearchParams();
@@ -34,7 +35,6 @@ export default function LupaKataSandi() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   // --- EFFECT: DETEKSI LINK DARI EMAIL ---
   useEffect(() => {
@@ -53,23 +53,21 @@ export default function LupaKataSandi() {
   // --- HANDLER: KIRIM LINK RESET (STEP 1) ---
   const handleRequestLink = async (e) => {
     e.preventDefault();
-    if (!email) return setError("Email wajib diisi.");
+    // GANTI: setError jadi showToast.error
+    if (!email) return showToast.error("Email wajib diisi.");
 
     setLoading(true);
-    setError("");
+    // showToast.loading opsional di sini, tapi bagus untuk UX
+    const loadingId = showToast.loading("Sedang memproses...");
 
     try {
-      // PERHATIAN: Pastikan endpoint ini ada di backend Anda
-      // Biasanya: /auth/forgot-password
       const response = await fetch(
-        `${
-          API_ENDPOINTS.AUTH.BASE || "http://10.102.174.243:8001"
-        }/auth/forgot-password`,
+        `${API_ENDPOINTS.AUTH.BASE || "http://10.102.174.243:8001"}/auth/forgot-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -77,9 +75,12 @@ export default function LupaKataSandi() {
         throw new Error(data.detail || "Gagal mengirim link verifikasi.");
       }
 
-      setStep(2); // Pindah ke notifikasi sukses
+      showToast.dismiss(loadingId); // Tutup loading
+      showToast.success("Berhasil! Silakan cek email Anda."); // Tambahkan sukses
+      setStep(2);
     } catch (err) {
-      setError(err.message);
+      showToast.dismiss(loadingId);
+      showToast.error(err.message); // GANTI: tampilkan error di Toast
     } finally {
       setLoading(false);
     }
@@ -88,28 +89,21 @@ export default function LupaKataSandi() {
   // --- HANDLER: SIMPAN PASSWORD BARU (STEP 3) ---
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setError("");
 
-    // 1. Validasi Kekuatan Password
     if (!isStrongPassword(form.password)) {
-      setError("Password terlalu lemah. Ikuti panduan di bawah.");
-      return;
+      return showToast.error("Password terlalu lemah."); // GANTI
     }
 
-    // 2. Validasi Match
     if (form.password !== form.confirmPassword) {
-      setError("Konfirmasi kata sandi tidak cocok.");
-      return;
+      return showToast.error("Konfirmasi kata sandi tidak cocok."); // GANTI
     }
 
     setLoading(true);
+    const loadingId = showToast.loading("Memperbarui kata sandi...");
+
     try {
-      // PERHATIAN: Pastikan endpoint ini ada di backend Anda
-      // Biasanya: /auth/reset-password
       const response = await fetch(
-        `${
-          API_ENDPOINTS.AUTH.BASE || "http://10.102.174.243:8001"
-        }/auth/reset-password`,
+        `${API_ENDPOINTS.AUTH.BASE || "http://10.102.174.243:8001"}/auth/reset-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -118,19 +112,20 @@ export default function LupaKataSandi() {
             email: email,
             new_password: form.password,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(
-          data.detail || "Gagal mengubah kata sandi. Token mungkin kadaluarsa."
-        );
+        throw new Error(data.detail || "Token mungkin kadaluarsa.");
       }
 
-      setStep(4); // Pindah ke sukses ganti password
+      showToast.dismiss(loadingId);
+      showToast.success("Kata sandi berhasil diperbarui!"); // Tambahkan notif sukses
+      setStep(4);
     } catch (err) {
-      setError(err.message);
+      showToast.dismiss(loadingId);
+      showToast.error(err.message); // Tampilkan error di Toast
     } finally {
       setLoading(false);
     }
@@ -153,31 +148,24 @@ export default function LupaKataSandi() {
             {step === 1
               ? "Lupa Kata Sandi"
               : step === 2
-              ? "Cek Email Anda"
-              : step === 3
-              ? "Buat Kata Sandi Baru"
-              : "Berhasil!"}
+                ? "Cek Email Anda"
+                : step === 3
+                  ? "Buat Kata Sandi Baru"
+                  : "Berhasil!"}
           </h2>
           <p className="text-white/80 text-xs mt-1">
             {step === 1
               ? "Masukkan email untuk mereset akun Anda."
               : step === 2
-              ? "Tautan verifikasi telah dikirim."
-              : step === 3
-              ? "Pastikan kata sandi aman dan unik."
-              : "Kata sandi Anda telah diperbarui."}
+                ? "Tautan verifikasi telah dikirim."
+                : step === 3
+                  ? "Pastikan kata sandi aman dan unik."
+                  : "Kata sandi Anda telah diperbarui."}
           </p>
         </div>
 
         {/* BODY CONTENT */}
         <div className="p-8">
-          {/* ERROR ALERT */}
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
 
           {/* === STEP 1: INPUT EMAIL === */}
           {step === 1 && (

@@ -1,33 +1,32 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertCircle, Loader2 } from "lucide-react";
 import { getRoleRedirectPath } from "../utils/roleRedirect";
 import { API_ENDPOINTS, ROLES, NOTIF_MESSAGES } from "../config/constants";
 import { jwtDecode } from "jwt-decode";
+import { showToast } from "../utils/notif";
 
 // ===================== KOMPONEN LOGIN =====================
 export default function Masuk() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
 
   // ===================== HANDLE LOGIN =====================
   const handleLogin = async (e) => {
     e.preventDefault();
-    setErrorMessage(""); // Tambahan: Reset error setiap kali tombol masuk ditekan
 
+    // GANTI: Gunakan showToast.error bukan setErrorMessage
     if (!email || !password) {
-      // Menggunakan NOTIF_MESSAGES atau teks default
-      setErrorMessage(
-        NOTIF_MESSAGES?.REQUIRED_FIELDS || "Email dan kata sandi wajib diisi!",
-      );
+      showToast.error("Email dan kata sandi wajib diisi!");
       return;
     }
 
     setLoading(true);
+    // GANTI: Munculkan loading toast di tengah layar
+    const loadingId = showToast.loading("Sedang memverifikasi akun Anda...");
+
     try {
       const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: "POST",
@@ -38,59 +37,49 @@ export default function Masuk() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data?.detail ||
-            NOTIF_MESSAGES?.LOGIN_FAILED ||
-            "Email atau password salah!",
-        );
+        throw new Error(data?.detail || "Email atau password salah!");
       }
 
-      // 1. AMBIL TOKEN
       const token = data.access_token || data.token || data.data?.access_token;
+      if (!token) throw new Error("Token tidak ditemukan dalam server!");
 
-      if (!token) {
-        throw new Error("Token tidak ditemukan dalam server!");
-      }
-
-      // 2. DECODE TOKEN UNTUK DAPAT ROLE
       let userRole = null;
       try {
         const decoded = jwtDecode(token);
         userRole = decoded.role || decoded.roles || decoded.user_role;
-      } catch (decodeError) {
-        console.error("Gagal decode token:", decodeError);
+      } catch {
+        //console.error("Gagal membaca token:", decodeError);
         throw new Error("Token rusak atau tidak valid.");
       }
 
-      // 3. VALIDASI ROLE
-      if (!userRole) {
-        throw new Error("Role pengguna tidak ditemukan di dalam sistem!");
-      }
+      if (!userRole) throw new Error("Role pengguna tidak ditemukan!");
 
       const normalizedRole = userRole.toLowerCase();
 
-      // 4. SIMPAN KE LOCALSTORAGE
       localStorage.setItem("token", token);
       localStorage.setItem("role", normalizedRole);
       localStorage.setItem("userRole", normalizedRole);
 
-      // 5. REDIRECT BERDASARKAN ROLE
       const targetPath = getRoleRedirectPath(normalizedRole);
 
       if (targetPath && targetPath !== "/") {
-        navigate(targetPath, { replace: true });
+        // GANTI: Hentikan loading, dan beri notif sukses!
+        showToast.dismiss(loadingId);
+        showToast.success("Login berhasil! Mengalihkan halaman...");
+
+        // Sedikit delay agar user sempat melihat pesan sukses sebelum dilempar
+        setTimeout(() => {
+          navigate(targetPath, { replace: true });
+        }, 1000);
       } else {
-        console.error(`❌ Role '${normalizedRole}' tidak terdaftar!`);
-        // Ganti alert dengan setErrorMessage
-        setErrorMessage(
-          NOTIF_MESSAGES?.INVALID_ROLE ||
-            `Role '${normalizedRole}' tidak valid, silahkan hubungi admin.`,
+        throw new Error(
+          `Role '${normalizedRole}' tidak terdaftar! Silakan hubungi admin.`,
         );
       }
     } catch (err) {
-      console.error("Login error:", err);
-      // Ganti alert dengan setErrorMessage
-      setErrorMessage(err.message);
+      // GANTI: Hentikan loading, munculkan error
+      showToast.dismiss(loadingId);
+      showToast.error(err.message || "Terjadi kesalahan sistem.");
     } finally {
       setLoading(false);
     }
@@ -160,19 +149,6 @@ export default function Masuk() {
             </Link>
           </div>
 
-          {/* ====== PINDAH KE SINI: NOTIFIKASI ERROR PROFESIONAL ====== */}
-          {errorMessage && (
-            <div className="mb-2 p-3 sm:p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 animate-fade-in">
-              {/* === GANTI SVG DENGAN ICON LUCIDE === */}
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-
-              <p className="text-red-700 text-xs sm:text-sm font-medium leading-relaxed">
-                {errorMessage}
-              </p>
-            </div>
-          )}
-
-          {/* Tombol Masuk dengan LOADING SPINNER */}
           <button
             type="submit"
             disabled={loading}
@@ -185,15 +161,7 @@ export default function Masuk() {
               } 
               active:scale-95 transform transition-all duration-150 shadow-[0_6px_18px_rgba(181,46,45,0.18)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#B5302D] flex items-center justify-center`}
           >
-            {loading ? (
-              // Tampilan Loading Memutar menggunakan Lucide-React
-              <div className="flex items-center gap-2">
-                <Loader2 className="animate-spin h-5 w-5 text-white" />
-                <span>Memproses...</span>
-              </div>
-            ) : (
-              "Masuk"
-            )}
+            Masuk
           </button>
         </form>
 

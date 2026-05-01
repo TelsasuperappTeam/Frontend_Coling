@@ -17,6 +17,7 @@ import DistribusiLogistik from "../Pages/Role Kebun/Distribusi&Logistik";
 import InventarisKebun from "../Pages/Role Kebun/InventarisKebun";
 import KemitraanPetani from "../Pages/Role Kebun/KemitraanPetani";
 import Operasional from "../Pages/Role Kebun/Operasional";
+import RiwayatTransaksi from "../Pages/Role Kebun/RiwayatTransaksi";
 
 const KebunRoutes = () => {
   return (
@@ -81,6 +82,15 @@ const KebunRoutes = () => {
           element={
             <PrivateRoute allowedRoles={[ROLES.KEBUN]}>
               <Operasional />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="riwayattransaksi" 
+          element={
+            <PrivateRoute allowedRoles={[ROLES.KEBUN]}>
+              <RiwayatTransaksi />
             </PrivateRoute>
           }
         />

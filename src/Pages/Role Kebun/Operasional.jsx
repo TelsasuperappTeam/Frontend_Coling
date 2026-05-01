@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  ClipboardList,
   ShoppingCart,
   Users,
   Plus,
@@ -691,7 +692,7 @@ const Operasional = () => {
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             {activeTab === "transaksi" ? (
-              <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
+              <ClipboardList className="w-8 h-8 text-[#B5302D]" />
             ) : (
               <Users className="w-8 h-8 text-[#B5302D]" />
             )}

@@ -397,28 +397,29 @@ export const API_ENDPOINTS = {
         DELETE: (kruId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/kru/${kruId}`,
       },
+      
       // --- DROPDOWN TERSEDIA ---
       DROPDOWN: {
-        // [GET] Daftar supir status TERSEDIA
+        // DONE! [GET] Daftar supir status TERSEDIA
         KRU: `${API_BASE_URLS.TRACEABILITY}/logistik/dropdown/kru`,
-        // SUDAH [GET] Daftar kendaraan status TERSEDIA
+        // DONE! [GET] Daftar kendaraan status TERSEDIA
         KENDARAAN: `${API_BASE_URLS.TRACEABILITY}/logistik/dropdown/kendaraan`,
       },
 
       // --- MANAGEMENT PENGIRIMAN ---
       MANAGEMENT: {
-        // [GET] Daftar pengiriman (ALL ROLES: logistik, kebun, pabrik)
+        // DONE ![GET] Daftar pengiriman (ALL ROLES: logistik, kebun, pabrik)
         GET_LIST: `${API_BASE_URLS.TRACEABILITY}/logistik/management`,
 
-        // [POST] Terima pengajuan, tugaskan armada, generate resi otomatis
+        // DONE! [POST] Terima pengajuan, tugaskan armada, generate resi otomatis
         TERIMA_TUGASKAN: (pengirimanId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/terima-tugaskan`,
 
-        // [PATCH] Tolak pengajuan pengiriman
+        // DONE! [PATCH] Tolak pengajuan pengiriman
         TOLAK: (pengirimanId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/tolak`,
 
-        // [PATCH] Update progress pengiriman (Mengirim -> Menuju Pabrik -> Terima)
+        // DONE! [PATCH] Update progress pengiriman (Mengirim -> Menuju Pabrik -> Terima)
         UPDATE_PROGRESS: (pengirimanId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/progress`,
       },
@@ -426,14 +427,14 @@ export const API_ENDPOINTS = {
 
     // --- KEBUN POV ---
     KEBUN: {
-      // [POST] Submit form pengajuan pengiriman ke Mitra Logistik pilihan
+      // DONE![POST] Submit form pengajuan pengiriman ke Mitra Logistik pilihan
       AJUKAN_PENGIRIMAN: (logistikUserId) =>
         `${API_BASE_URLS.TRACEABILITY}/logistik/pengiriman/ajukan/${logistikUserId}`,
 
-      // SUDAH [GET] Melihat daftar Mitra Logistik yang tersedia di platform (beserta resume armada)
+      // DONE! [GET] Melihat daftar Mitra Logistik yang tersedia di platform (beserta resume armada)
       GET_MITRA_LOGISTIK: `${API_BASE_URLS.TRACEABILITY}/logistik/mitra-logistik`,
       
-      // Dropdown Grup ID yang pernah dipakai sebelumnya untuk mengajukan ke logistik
+      // DONE! Dropdown Grup ID yang pernah dipakai sebelumnya untuk mengajukan ke logistik
       GET_USED_GRUP_IDS: `${API_BASE_URLS.TRACEABILITY}/logistik/used-grup-ids`,
     },
 
@@ -450,21 +451,21 @@ export const API_ENDPOINTS = {
       GET_TRACEABILITY_NODE: (pengirimanId) =>
         `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/traceability/${pengirimanId}`,
 
-      PEMERIKSAAN: {
-        // POST: Digunakan saat pabrik submit form (PENTING: Gunakan FormData karena ada UploadFile nota)
+      PEMERIKSAAN: { 
+        // DONE! POST: Digunakan saat pabrik submit form (PENTING: Gunakan FormData karena ada UploadFile nota)
         SUBMIT: (pengirimanId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/pemeriksaan-tbs`,
-        // GET: Untuk melihat detail 1 hasil pemeriksaan
+        // DONE! GET: Untuk melihat detail 1 hasil pemeriksaan
         GET_DETAIL: (pengirimanId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/pemeriksaan-tbs`,
-        // GET: Untuk Dashboard tabel rekapitulasi semua truk masuk hari itu
+        // DONE! GET: Untuk Dashboard tabel rekapitulasi semua truk masuk hari itu
         DASHBOARD: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/dashboard-pemeriksaan`,
       },
 
-      // MANAJEMEN STOK RAM ---
+      // MANAJEMEN STOK RAM --- (DONE SEMUA)
       STOK_RAM: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/stok-ram`,
 
-      //  SIKLUS PRODUKSI ---
+      //  SIKLUS PRODUKSI --- (DONE SEMUA)
       PRODUKSI: {
         MULAI: `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/produksi/mulai`,
         SELESAI: (siklusId) =>
@@ -475,7 +476,7 @@ export const API_ENDPOINTS = {
 
     //  PUBLIK POV ---
     KODE_PRODUKSI_PUBLIK: {
-      // Endpoint pelacakan pohon barcode CPO tanpa Auth
+      // DONE! Endpoint pelacakan pohon barcode CPO tanpa Auth
       SCAN_TRACEABILITY: (kodeResi) =>
         `${API_BASE_URLS.TRACEABILITY}/traceability/scan/${kodeResi}`,
     },

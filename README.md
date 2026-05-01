@@ -19,11 +19,15 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Memperbaiki logika di pabrik, karna ada yang tidak sesuai. kemudian publik sudah dapat akses asal usul tbs"
+git commit -m "Lanjut dari masukkan setelah kunjungan, memperbaiki tampilan FE supaya fleksibel dan petani paham menggunakan TELSA"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"
 Jika menggunakan lokal maka "npm run dev:local"
+
+jika BE mau akses punya FE maka "FE di terminal harus" = npm run dev -- --host
+
+
 
 4. git remote add origin https://github.com/telsasuperapp-team/TSA-Team.git
 5. git branch -M main

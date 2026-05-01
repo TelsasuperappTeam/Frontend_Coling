@@ -12,6 +12,7 @@ import {
   PencilLine,
   Loader2,
   XCircle,
+  ShoppingCart,
 } from "lucide-react";
 // Pastikan path API_ENDPOINTS Anda benar
 import { API_ENDPOINTS, NOTIF_MESSAGES } from "../../config/constants";
@@ -343,7 +344,7 @@ const TransaksiTBS = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
-            <ClipboardList className="text-[#B5302D]" size={28} />
+            <ShoppingCart className="text-[#B5302D]" size={28} />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">

@@ -13,6 +13,7 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../../config/constants";
+import { showToast } from "../../../utils/notif";
 
 // --- Konfigurasi Leaflet Icon ---
 import markerIconUrl from "leaflet/dist/images/marker-icon.png";
@@ -59,7 +60,6 @@ export default function DataDiriTransport({
   const [showMapModal, setShowMapModal] = useState(false);
 
   // State Notifikasi & Warning Lock
-  const [notification, setNotification] = useState({ type: "", message: "" });
   const [warning, setWarning] = useState({
     foto: false,
     alamat: false,
@@ -77,24 +77,17 @@ export default function DataDiriTransport({
 
   // Handler Notifikasi Lock (Text Merah + Toast)
   const handleLockedClick = (fieldKey, label) => {
-    // 1. Munculkan text merah di bawah input
     setWarning((prev) => ({ ...prev, [fieldKey]: true }));
 
-    // 2. Munculkan toast notifikasi di atas
-    setNotification({
-      type: "info",
-      message: `Data ${label} sudah tersimpan dan terkunci otomatis.`,
-    });
+    // GANTI JADI SHOWTOAST
+    showToast.error(`Data ${label} sudah tersimpan dan terkunci otomatis.`);
 
-    // Reset notifikasi setelah 3 detik
     setTimeout(() => {
-      setNotification({ type: "", message: "" });
       setWarning((prev) => ({ ...prev, [fieldKey]: false }));
     }, 3000);
   };
 
   const handleFileChange = (e) => {
-    // Cek apakah field terkunci
     if (lockedFields.foto) {
       handleLockedClick("foto", "Foto Profil");
       return;
@@ -103,37 +96,27 @@ export default function DataDiriTransport({
     const file = e.target.files?.[0];
 
     if (file) {
-      // VALIDASI UKURAN FILE (Maksimal 2 MB)
-      // 2 MB = 2 * 1024 * 1024 bytes = 2,097,152 bytes
-      const MAX_SIZE = 2 * 1024 * 1024;
+      const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
       if (file.size > MAX_SIZE) {
-        // Reset input file agar user tahu file tidak terpilih
         e.target.value = null;
-
-        // Tampilkan notifikasi error
-        setNotification({
-          type: "error",
-          message:
-            "Ukuran foto terlalu besar! Harap upload foto di bawah 2 MB.",
-        });
-        return; // Hentikan proses, jangan setPreviewFoto
+        // GANTI JADI SHOWTOAST
+        showToast.error(
+          "Ukuran foto terlalu besar! Harap upload foto di bawah 2 MB.",
+        );
+        return;
       }
 
-      // Jika Lolos Validasi
       setFileFoto(file);
       setPreviewFoto(URL.createObjectURL(file));
-
-      // Bersihkan notifikasi error jika sebelumnya ada
-      setNotification({ type: "", message: "" });
     }
   };
 
-
   // --- SAVE DATA (PUT) ---
   const handleSubmit = async () => {
-    setNotification({ type: "", message: "" });
     setIsSubmitting(true);
+    // Munculkan notifikasi loading di atas
+    showToast.loading("Sedang menyimpan data diri...");
 
     try {
       const token =
@@ -157,24 +140,21 @@ export default function DataDiriTransport({
       try {
         responseData = responseText ? JSON.parse(responseText) : {};
       } catch (parseError) {
-        // Kita gunakan variable 'parseError' agar tidak dianggap unused oleh linter
-        console.warn(
-          "JSON Parse Error (Response mungkin bukan JSON):",
-          parseError
-        );
+        console.warn("JSON Parse Error:", parseError);
         responseData = { detail: responseText || "Error Server" };
       }
 
       if (!response.ok)
         throw new Error(responseData.detail || "Gagal update data.");
 
+      showToast.success("Data diri berhasil diperbarui!"); // TOAST SUKSES
       onSave(true);
     } catch (err) {
-      setNotification({ type: "error", message: err.message });
+      showToast.error(err.message); // TOAST ERROR
+    } finally {
       setIsSubmitting(false);
     }
   };
-
 
   return (
     <div className="bg-white rounded-3xl overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh] w-full">
@@ -199,22 +179,6 @@ export default function DataDiriTransport({
 
       {/* BODY SCROLLABLE */}
       <div className="p-6 overflow-y-auto space-y-8 bg-gray-50/50">
-        {/* NOTIFIKASI GLOBAL */}
-        {notification.message && (
-          <div
-            className={`flex items-start gap-3 p-4 rounded-xl text-sm font-medium animate-fade-in mb-4 border ${
-              notification.type === "error"
-                ? "bg-red-50 text-red-700 border-red-200"
-                : notification.type === "success"
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-blue-50 text-blue-700 border-blue-200"
-            }`}
-          >
-            <Info size={18} className="shrink-0 mt-0.5" />
-            <span>{notification.message}</span>
-          </div>
-        )}
-
         {/* 1. BAGIAN FOTO PROFIL (LAYOUT PERSEGI DASHBOARD) */}
         <div className="flex flex-col sm:flex-row gap-6">
           {/* KIRI: Visual Box Foto */}
@@ -306,8 +270,8 @@ export default function DataDiriTransport({
         <div className="space-y-3">
           <label className="flex items-center justify-between text-sm font-bold text-gray-800">
             <span className="flex items-center gap-2">
-              <MapPin size={18} className="text-[#B5302D]" /> Alamat/Lokasi Lahan
-              Kebun
+              <MapPin size={18} className="text-[#B5302D]" /> Alamat/Lokasi
+              Lahan Kebun
             </span>
             {lockedFields.alamat && (
               <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
@@ -368,8 +332,7 @@ export default function DataDiriTransport({
           </button>
 
           {/* Logika Tombol Simpan / Status Lengkap */}
-          {!lockedFields.foto ||
-          !lockedFields.alamat ? (
+          {!lockedFields.foto || !lockedFields.alamat ? (
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}

@@ -7,18 +7,13 @@ import {
   CheckCircle2,
   Clock,
   Calendar,
-  User,
   Hash,
-  ClipboardList,
-  Send,
-  Plus,
-  X,
   XCircle,
-  CheckCircle,
   CheckSquare,
 } from "lucide-react";
 
 import { API_ENDPOINTS } from "../../config/constants.js";
+import { showToast, confirmDialog } from "../../utils/notif";
 
 // --- KOMPONEN SECTION CARD ---
 const SectionCard = ({ title, children }) => (
@@ -56,14 +51,28 @@ const ManajemenPesanan = () => {
       );
       if (resPesanan.ok) {
         const dataPesanan = await resPesanan.json();
-
         console.log("=== DATA PESANAN MASUK DARI BE ===", dataPesanan);
 
-        // UBAH BAGIAN INI: Filter khusus pesanan baru yang butuh aksi Logistik
-        const pending = dataPesanan.filter(
-          (item) =>
-            item.status_permintaan?.toLowerCase() === "menunggu konfirmasi",
-        );
+        // --- TAMBAHAN BARU: Ambil tanggal hari ini dan reset jamnya ---
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // UBAH BAGIAN INI: Filter status "menunggu konfirmasi" DAN tanggal belum lewat
+        const pending = dataPesanan.filter((item) => {
+          // 1. Pastikan statusnya menunggu konfirmasi
+          const isPending =
+            item.status_permintaan?.toLowerCase() === "menunggu konfirmasi";
+
+          // 2. Jika BE tidak mengirimkan tanggal (kosong), kita loloskan saja berdasar status
+          if (!item.tanggal_permintaan_sampai) return isPending;
+
+          // 3. Ubah string tanggal dari BE menjadi tipe Date, lalu reset jamnya
+          const targetDate = new Date(item.tanggal_permintaan_sampai);
+          targetDate.setHours(0, 0, 0, 0);
+
+          // 4. Syarat Lolos: Statusnya isPending = true DAN targetDate masih >= hari ini
+          return isPending && targetDate >= today;
+        });
 
         setPesananMasuk(pending);
       } else {
@@ -181,8 +190,19 @@ const LogistikItem = ({
 
   // FUNGSI API TOLAK
   const handleTolak = async () => {
-    if (!catatanPenolakan.trim())
-      return alert("Catatan penolakan wajib diisi!");
+    if (!catatanPenolakan.trim()) {
+      return showToast.error("Catatan penolakan wajib diisi!");
+    }
+
+    // 1. TAMBAHKAN KONFIRMASI (DOUBLE CHECK) UNTUK TOLAK
+    const isSetuju = await confirmDialog({
+      title: "Yakin Ingin Menolak?",
+      text: "Permintaan pengiriman ini akan dibatalkan secara permanen.",
+      confirmText: "Ya, Tolak!",
+      isDanger: true, // Tombol merah karena ini aksi penolakan
+    });
+
+    if (!isSetuju) return; // Hentikan jika klik batal
 
     setIsLoadingSubmit(true);
     try {
@@ -203,19 +223,32 @@ const LogistikItem = ({
       if (!res.ok)
         throw new Error(data.detail || data.message || "Gagal menolak pesanan");
 
-      alert("Pesanan berhasil ditolak.");
+      showToast.success("Pesanan berhasil ditolak."); // Ganti alert jadi showToast
       onRefresh();
     } catch (error) {
-      alert(error.message);
+      showToast.error(error.message); // Ganti alert jadi showToast
     } finally {
       setIsLoadingSubmit(false);
     }
   };
 
-  // FUNGSI API TERIMA & TUGASKAN
+  // FUNGSI API TERIMA & TUGASKAN (ACC)
   const handleTerima = async () => {
-    if (!kruId || !kendaraanId || !tglKeberangkatan)
-      return alert("Supir, Kendaraan, dan Tanggal Berangkat wajib diisi!");
+    if (!kruId || !kendaraanId || !tglKeberangkatan) {
+      return showToast.error(
+        "Supir, Kendaraan, dan Tanggal Berangkat wajib diisi!",
+      );
+    }
+
+    // 2. TAMBAHKAN KONFIRMASI (DOUBLE CHECK) UNTUK ACC/TERIMA
+    const isSetuju = await confirmDialog({
+      title: "Konfirmasi Penugasan Armada",
+      text: "Pastikan Supir dan Kendaraan yang Anda pilih sudah benar. Lanjutkan?",
+      confirmText: "Ya, Tugaskan!",
+      isDanger: false, // Tombol warna standar (oranye/hijau) karena ini aksi positif
+    });
+
+    if (!isSetuju) return; // Hentikan jika klik batal
 
     setIsLoadingSubmit(true);
     try {
@@ -243,10 +276,12 @@ const LogistikItem = ({
           data.detail || data.message || "Gagal menerima pesanan",
         );
 
-      alert(data.message || "Armada berhasil ditugaskan! Resi telah dibuat.");
+      showToast.success(
+        data.message || "Armada berhasil ditugaskan! Resi telah dibuat.",
+      ); // Ganti alert jadi showToast
       onRefresh();
     } catch (error) {
-      alert(error.message);
+      showToast.error(error.message); // Ganti alert jadi showToast
     } finally {
       setIsLoadingSubmit(false);
     }
@@ -404,21 +439,22 @@ const LogistikItem = ({
 
           {/* VIEW: FORM TUGASKAN ARMADA */}
           {viewState === "form_assign" && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 bg-white p-5 sm:p-8 rounded-[25px] sm:rounded-[32px] border border-gray-200 shadow-sm">
-              <h4 className="text-lg sm:text-xl font-bold text-[#B5302D] mb-6 sm:mb-8 flex items-center gap-2">
-                <Truck className="w-5 h-5 sm:w-6 sm:h-6" /> Tugaskan Armada
+            <div className="animate-in fade-in slide-in-from-bottom-4 bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-200 shadow-sm">
+              <h4 className="text-base sm:text-xl font-bold text-[#B5302D] mb-4 sm:mb-8 flex items-center gap-2">
+                <Truck className="w-4 h-4 sm:w-6 sm:h-6" /> Tugaskan Armada
               </h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 {/* DROPDOWN SUPIR */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                  <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase ml-1">
                     Pilih Supir (Tersedia)
                   </label>
                   <select
                     value={kruId}
                     onChange={(e) => setKruId(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-red-200"
+                    // 4. INPUT: Kecilkan tinggi (py-2) dan font (text-xs) di HP agar tidak gemuk
+                    className="w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm outline-none focus:border-red-200"
                   >
                     <option value="">-- Pilih Supir --</option>
                     {dropdownKru.map((k) => (
@@ -431,13 +467,13 @@ const LogistikItem = ({
 
                 {/* DROPDOWN KENDARAAN */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                  <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase ml-1">
                     Pilih Kendaraan (Tersedia)
                   </label>
                   <select
                     value={kendaraanId}
                     onChange={(e) => setKendaraanId(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-red-200"
+                    className="w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm outline-none focus:border-red-200"
                   >
                     <option value="">-- Pilih Kendaraan --</option>
                     {dropdownKendaraan.map((v) => (
@@ -451,30 +487,30 @@ const LogistikItem = ({
 
                 {/* TANGGAL KEBERANGKATAN */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                  <label className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase ml-1">
                     Tgl Berangkat
                   </label>
                   <input
                     type="date"
                     value={tglKeberangkatan}
                     onChange={(e) => setTglKeberangkatan(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-red-200"
+                    className="w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm outline-none focus:border-red-200"
                   />
                 </div>
               </div>
 
               {/* TOMBOL SIMPAN */}
-              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-gray-50">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-5 sm:pt-6 border-t border-gray-50">
                 <button
                   onClick={() => setViewState("detail")}
-                  className="px-6 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold w-full sm:w-auto"
+                  className="px-6 py-2 sm:py-2.5 bg-gray-100 text-gray-600 rounded-lg sm:rounded-xl text-xs font-bold w-full sm:w-auto"
                 >
                   Kembali
                 </button>
                 <button
                   onClick={handleTerima}
                   disabled={isLoadingSubmit}
-                  className="bg-green-600 text-white px-8 py-2.5 rounded-xl text-xs font-bold hover:bg-green-700 shadow-lg shadow-green-100 flex items-center justify-center gap-2 w-full sm:w-auto transition-all"
+                  className="bg-green-600 text-white px-8 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs font-bold hover:bg-green-700 shadow-md shadow-green-100 flex items-center justify-center gap-2 w-full sm:w-auto transition-all"
                 >
                   {isLoadingSubmit ? (
                     "Menyimpan..."

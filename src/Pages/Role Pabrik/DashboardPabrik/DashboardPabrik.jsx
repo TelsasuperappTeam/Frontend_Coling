@@ -137,7 +137,7 @@ export default function DashboardPabrik() {
 
   // --- FETCH KETIGA DATA (TRUK AKTIF, STOK RAM, & PRODUKSI) PARALEL ---
   useEffect(() => {
-    const fetchDashboardData = async () => {
+const fetchDashboardData = async () => {
       setIsLoadingAktif(true);
       setIsLoadingRAM(true);
       setIsLoadingSiklus(true);
@@ -149,9 +149,10 @@ export default function DashboardPabrik() {
         // Tembak 3 API sekaligus agar performa dashboard sangat cepat
         const [resAktif, resRam, resSiklus] = await Promise.all([
           fetch(
-            `${API_ENDPOINTS.TRACEABILITY.PABRIK.GET_MONITORING}?is_history=false`,
-            { headers: { Authorization: `Bearer ${token}` } },
+            API_ENDPOINTS.TRACEABILITY.PABRIK.PEMERIKSAAN.DASHBOARD, 
+            { headers: { Authorization: `Bearer ${token}` } }
           ).catch(() => null),
+          
           fetch(API_ENDPOINTS.TRACEABILITY.PABRIK.STOK_RAM, {
             headers: { Authorization: `Bearer ${token}` },
           }).catch(() => null),
@@ -164,9 +165,13 @@ export default function DashboardPabrik() {
           ).catch(() => null),
         ]);
 
-        // 1. Proses Data Aktif (Truk)
+        // 1. Proses Data Aktif (Riwayat Pemeriksaan / Truk)
         if (resAktif && resAktif.ok) {
           const dataAktif = await resAktif.json();
+          
+          // ---> [TAMBAHAN] CONSOLE LOG DATA AKTIF / PEMERIKSAAN <---
+          console.log("=== DATA DASHBOARD PEMERIKSAAN (DARI BE) ===", dataAktif);
+          
           const filteredAktif = dataAktif.filter(
             (item) => item.status_permintaan?.toLowerCase() === "diterima",
           );
@@ -176,6 +181,10 @@ export default function DashboardPabrik() {
         // 2. Proses Data Kapasitas RAM
         if (resRam && resRam.ok) {
           const dataRam = await resRam.json();
+          
+          // ---> [TAMBAHAN] CONSOLE LOG DATA STOK RAM <---
+          console.log("=== DATA STOK RAM (DARI BE) ===", dataRam);
+          
           setKapasitasRAM({
             total: (dataRam.kuota_kapasitas_kg || 0) / 1000,
             terpakai: (dataRam.total_sisa_stok_tbs || 0) / 1000,
@@ -185,6 +194,10 @@ export default function DashboardPabrik() {
         // 3. Proses Data Siklus Produksi Aktif
         if (resSiklus && resSiklus.ok) {
           const dataSiklus = await resSiklus.json();
+          
+          // ---> [TAMBAHAN] CONSOLE LOG DATA SIKLUS PRODUKSI <---
+          console.log("=== DATA SIKLUS PRODUKSI AKTIF (DARI BE) ===", dataSiklus);
+          
           setSiklusAktif(dataSiklus);
         }
       } catch (error) {
@@ -309,10 +322,10 @@ export default function DashboardPabrik() {
       {/* SECTION 1: WIDGETS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* ========================================================= */}
-        {/* FITUR 1: Status Pengiriman TBS (AKTIF BERJALAN)           */}
+        {/* FITUR 1: RIWAYAT PEMERIKSAAN TBS       */}
         {/* ========================================================= */}
         <Card
-          title="Status Pengiriman TBS"
+          title="Riwayat Transaksi TBS"
           icon={Truck}
           rightContent={
             <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
@@ -435,7 +448,7 @@ export default function DashboardPabrik() {
             {/* Tombol Sticky Footer */}
             <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-1 sm:mt-2 z-10 border-t border-gray-50 text-right">
               <button
-                onClick={() => navigate("/pabrik/penerimaantbs")}
+                onClick={() => navigate("/pabrik/penerimaanTBS")}
                 className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
               >
                 Lihat Semua &rarr;
@@ -636,7 +649,7 @@ export default function DashboardPabrik() {
                 onClick={() => navigate("/pabrik/produksi")}
                 className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
               >
-                Manajemen Produksi &rarr;
+                Lihat Semua &rarr;
               </button>
             </div>
           </div>

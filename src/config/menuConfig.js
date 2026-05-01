@@ -14,7 +14,8 @@ import {
   Package,
   ClipboardList,
   ShoppingCart,
-  Route,
+  MapPin,
+  Warehouse,
 } from "lucide-react";
 
 export const menuConfig = {
@@ -31,11 +32,12 @@ export const menuConfig = {
   ],
   [ROLES.KEBUN]: [
     { label: "Tampilan Utama", path: "/kebun/dashboard", icon: LayoutDashboard },
-    { label: "Inventaris", path: "/kebun/inventaris", icon: Package },
+    { label: "Inventaris", path: "/kebun/inventaris", icon: Warehouse },
     { label: "Operasional", path: "/kebun/manajemenoperasional", icon: ClipboardList },
     { label: "Kemitraan Petani", path: "/kebun/kemitraanpetani", icon: Users },
     { label: "Penjualan", path: "/kebun/penjualan", icon: ShoppingCart },
     { label: "Distribusi & Logistik", path: "/kebun/distribusi&logistik", icon: Truck },
+    { label: "Riwayat Transaksi", path: "/kebun/riwayattransaksi", icon: History },
   ],
   [ROLES.ESTATE_MANAGER]: [
     { label: "Tampilan Utama", path: "/estate_manager/dashboard", icon: LayoutDashboard },
@@ -56,13 +58,13 @@ export const menuConfig = {
   [ROLES.TRANSPORT]: [
     { label: "Tampilan Utama", path: "/logistik/dashboard", icon: LayoutDashboard },
     { label: "Armada", path: "/logistik/armada", icon: Truck },
-    { label: "Manajemen Pesanan", path: "/logistik/manajemenpesanan", icon: ClipboardList },
-    { label: "Pengiriman", path: "/logistik/pengiriman", icon: Route },
+    { label: "Manajemen Pesanan", path: "/logistik/manajemenpesanan", icon: CheckSquare },
+    { label: "Pengiriman", path: "/logistik/pengiriman", icon: MapPin },
   ],
   [ROLES.PABRIK]: [
     { label: "Tampilan Utama", path: "/pabrik/dashboard", icon: LayoutDashboard },
     { label: "Transaksi TBS", path: "/pabrik/transaksiTBS", icon: ShoppingCart },
-    { label: "Konfirmasi TBS", path: "/pabrik/penerimaanTBS", icon: CheckSquare },
+    { label: "Transaksi TBS", path: "/pabrik/penerimaanTBS", icon: CheckSquare },
     { label: "Stok RAM", path: "/pabrik/stokram", icon: Database },
     { label: "Produksi", path: "/pabrik/produksi", icon: Factory },
   ],

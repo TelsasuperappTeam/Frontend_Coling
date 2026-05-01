@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import {
   Store,
+  ShoppingCart,
   MapPin,
   Calendar,
   ChevronRight,
@@ -461,7 +462,7 @@ const Penjualan = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-8">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
-            <Store className="w-8 h-8 text-[#B5302D]" />
+            <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
@@ -494,7 +495,7 @@ const Penjualan = () => {
                   : "text-gray-500"
               }`}
             >
-              <History className="w-3.5 h-3.5" /> Riwayat Pengajuan
+              <History className="w-3.5 h-3.5" /> Progres Pengajuan
             </button>
           </div>
         )}

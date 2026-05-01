@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { HashLink } from "react-router-hash-link";
-import { X, Menu, Home, Info, Star } from "lucide-react";
+import { X, Menu, Home, Info, Star, Search, HelpCircle } from "lucide-react";
 
 // Komponen utama Navbar
 const Navbar = () => {
@@ -43,7 +43,7 @@ const Navbar = () => {
   // =========================================================================
   // FUNGSI GAYA (STYLE) NAVBAR - DIPERBARUI UNTUK KONTRAS YANG JELAS
   // =========================================================================
-  
+
   // fungsi untuk menentukan gaya link (warna teks & layout) di mode desktop
   const getLinkClass = (name) =>
     `flex items-center gap-1.5 transition-all duration-300 text-sm lg:text-base px-3 py-1.5 rounded-full ${
@@ -68,7 +68,6 @@ const Navbar = () => {
       {/* Bagian background gradasi orange ke merah */}
       <div className="bg-gradient-to-r from-[#EF8523] to-[#d47227]">
         <div className="mx-auto flex items-center justify-between px-4 lg:px-32 py-3 min-h-[72px]">
-          
           {/* Bagian kiri: tombol menu (mobile) dan logo */}
           <div className="flex items-center gap-3">
             {/* Tombol menu untuk tampilan mobile */}
@@ -78,12 +77,20 @@ const Navbar = () => {
               aria-label="Toggle menu"
             >
               {/* Menggunakan Lucide Icon (Menu & X) agar lebih tajam dan seragam */}
-              {show ? <X size={26} strokeWidth={2.5} /> : <Menu size={26} strokeWidth={2.5} />}
+              {show ? (
+                <X size={26} strokeWidth={2.5} />
+              ) : (
+                <Menu size={26} strokeWidth={2.5} />
+              )}
             </button>
 
             {/* Logo aplikasi TSA */}
             <div className="flex items-center gap-2">
-              <img src="/LogoTSA.png" alt="Logo" className="h-6 w-auto sm:h-7" />
+              <img
+                src="/LogoTSA.png"
+                alt="Logo"
+                className="h-6 w-auto sm:h-7"
+              />
               <h1 className="text-lg sm:text-xl lg:text-xl font-bold text-white whitespace-nowrap tracking-tight">
                 PalmaOne-08
               </h1>
@@ -123,6 +130,29 @@ const Navbar = () => {
               >
                 <Star className="w-4 h-4 mb-0.5" />
                 Fitur Kami
+              </HashLink>
+            </li>
+            <li>
+              <HashLink
+                smooth
+                to="/#cek-produksi"
+                onClick={() => setActiveSection("cek-produksi")}
+                className={getLinkClass("cek-produksi")}
+              >
+                <Search className="w-4 h-4 mb-0.5" />
+                Lacak Produksi
+              </HashLink>
+            </li>
+
+            <li>
+              <HashLink
+                smooth
+                to="/#faq"
+                onClick={() => setActiveSection("faq")}
+                className={getLinkClass("faq")}
+              >
+                <HelpCircle className="w-4 h-4 mb-0.5" />
+                FAQ
               </HashLink>
             </li>
           </ul>
@@ -187,6 +217,36 @@ const Navbar = () => {
             >
               <Star className="w-5 h-5" />
               Fitur Kami
+            </HashLink>
+          </li>
+          <li className="w-full">
+            <HashLink
+              smooth
+              to="/#cek-produksi"
+              onClick={() => {
+                setActiveSection("cek-produksi");
+                setShow(false);
+              }}
+              className={getMobileLinkClass("cek-produksi")}
+            >
+              <Search className="w-5 h-5" />
+              Lacak Produksi
+            </HashLink>
+          </li>
+
+          {/* MENU FAQ (TAMBAHAN UNTUK HP) */}
+          <li className="w-full">
+            <HashLink
+              smooth
+              to="/#faq"
+              onClick={() => {
+                setActiveSection("faq");
+                setShow(false);
+              }}
+              className={getMobileLinkClass("faq")}
+            >
+              <HelpCircle className="w-5 h-5" />
+              FAQ
             </HashLink>
           </li>
         </ul>

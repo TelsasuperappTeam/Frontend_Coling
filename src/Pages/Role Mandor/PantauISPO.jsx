@@ -994,7 +994,7 @@ export default function PantauISPO() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
-            <ClipboardList className="text-[#B5302D]" size={28} />
+            <CheckSquare className="text-[#B5302D]" size={28} />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
@@ -1012,7 +1012,6 @@ export default function PantauISPO() {
       {/* ======================== BAGIAN 1: BUAT DOKUMEN OTOMATIS ============================ */}
       <div className="mb-10">
         <h2 className="text-lg font-bold text-[#B5302D] mb-4 flex items-center gap-2">
-          <FileText size={20} />
           Buat Dokumen Otomatis
         </h2>
 
