@@ -68,7 +68,7 @@ export default function NavbarRole({ role }) {
                 />
                 <span className="text-[13px] sm:text-lg md:text-2xl font-black text-[#B5302D] tracking-tight truncate">
                   {/* Di HP teksnya disingkat agar muat */}
-                  <span className="hidden sm:inline">Selamat Datang di </span>PalmaOne-08
+                  PalmaOne-08
                 </span>
               </div>
             </div>

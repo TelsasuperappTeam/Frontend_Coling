@@ -63,14 +63,14 @@ export default function Masuk() {
       const targetPath = getRoleRedirectPath(normalizedRole);
 
       if (targetPath && targetPath !== "/") {
-        // GANTI: Hentikan loading, dan beri notif sukses!
+        // Langsung pindah tanpa memunculkan toast sukses di sini
         showToast.dismiss(loadingId);
-        showToast.success("Login berhasil! Mengalihkan halaman...");
 
-        // Sedikit delay agar user sempat melihat pesan sukses sebelum dilempar
-        setTimeout(() => {
-          navigate(targetPath, { replace: true });
-        }, 1000);
+        // Kirim state 'fromLogin: true' agar Dashboard tahu user baru saja masuk
+        navigate(targetPath, {
+          replace: true,
+          state: { fromLogin: true },
+        });
       } else {
         throw new Error(
           `Role '${normalizedRole}' tidak terdaftar! Silakan hubungi admin.`,

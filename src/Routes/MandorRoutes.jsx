@@ -12,7 +12,7 @@ import { ROLES } from "../config/constants";
 import DashboardMandor from "../Pages/Role Mandor/DashboardMandor/DashboardMandor";
 import LuasLahan from "../Pages/Role Mandor/DashboardMandor/LuasLahan";
 import PantauISPO from "../Pages/Role Mandor/PantauISPO";
-import RiwayatPenjualan from "../Pages/Role Mandor/Riwayatpenjualan";
+import Riwayatpenjualan from "../Pages/Role Mandor/Riwayatpenjualan";
 import ManajemenKebun from "../Pages/Role Mandor/ManajemenKebun/ManajemenKebun";
 import DetailRencanaTanam from "../Pages/Role Mandor/ManajemenKebun/DetailRencanaTanam";
 import BudidayaMonitoring from "../Pages/Role Mandor/ManajemenKebun/BudidayaMonitoring";
@@ -75,7 +75,7 @@ const MandorRoutes = () => {
           path="riwayatpenjualan"
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
-              <RiwayatPenjualan />
+              <Riwayatpenjualan />
             </PrivateRoute>
           }
         />

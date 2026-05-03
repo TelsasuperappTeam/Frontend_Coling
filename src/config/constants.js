@@ -408,7 +408,7 @@ export const API_ENDPOINTS = {
 
       // --- MANAGEMENT PENGIRIMAN ---
       MANAGEMENT: {
-        // DONE ![GET] Daftar pengiriman (ALL ROLES: logistik, kebun, pabrik)
+        // DONE ![GET] Daftar pengiriman (ALL ROLES)
         GET_LIST: `${API_BASE_URLS.TRACEABILITY}/logistik/management`,
 
         // DONE! [POST] Terima pengajuan, tugaskan armada, generate resi otomatis

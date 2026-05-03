@@ -193,7 +193,7 @@ const HomePages = () => {
 
               <ul className="space-y-3 md:space-y-4 pl-4 md:pl-0">
                 {[
-                  "<strong>100% pemenuhan persyaratan ISPO</strong> dalam sistem PalmaOne-08.",
+                  "<strong>Membantu dalam pemenuhan persyaratan ISPO</strong> dalam sistem PalmaOne-08.",
                   "<strong>Otomatisasi dokumen</strong> berdasarkan aktivitas perkebunan.",
                   "Didesain khusus untuk <strong>perusahaan</strong> dan pendamping stakeholder lainnya.",
                 ].map((text, i) => {

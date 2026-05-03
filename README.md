@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Lanjut dari masukkan setelah kunjungan, memperbaiki tampilan FE supaya fleksibel dan petani paham menggunakan TELSA"
+git commit -m "Keperluan Deploy"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"
