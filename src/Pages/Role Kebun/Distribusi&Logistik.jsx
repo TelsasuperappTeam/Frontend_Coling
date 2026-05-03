@@ -43,7 +43,7 @@ const DistribusiLogistik = () => {
       const token = localStorage.getItem("token");
       const urlBase = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST;
 
-      // Memanggil dua data sekaligus (Yang sedang berjalan & Histori Selesai/Ditolak)
+      // Memanggil dua data sekaligus (Yang sedang berjalan & Histori Selesai/Ditolak)[cite: 14]
       const [resAktif, resHistori] = await Promise.all([
         fetch(`${urlBase}?is_history=false`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -59,12 +59,25 @@ const DistribusiLogistik = () => {
       if (resAktif.ok) dataAktif = await resAktif.json();
       if (resHistori.ok) dataHistori = await resHistori.json();
 
-      // Gabungkan data dan urutkan berdasarkan ID terbaru (menurun)
-      const combinedData = [...dataAktif, ...dataHistori].sort(
-        (a, b) => b.id - a.id,
+      // 1. Gabungkan semua data mentah[cite: 14]
+      let combinedData = [...dataAktif, ...dataHistori];
+
+      // 2. LOGIKA FILTERING BARU
+      // - HANYA tampilkan yang pemeriksaannya kosong (belum selesai di pabrik)
+      // - DAN HANYA tampilkan yang status_permintaannya BUKAN "ditolak"
+      combinedData = combinedData.filter(
+        (item) =>
+          (item.pemeriksaan === null || item.pemeriksaan === undefined) &&
+          item.status_permintaan?.toLowerCase() !== "ditolak",
       );
 
-      console.log("=== CEK DATA SELURUH PROGRES DARI BE ===", combinedData);
+      // 3. Urutkan berdasarkan ID terbaru (menurun)[cite: 14]
+      combinedData.sort((a, b) => b.id - a.id);
+
+      console.log(
+        "=== CEK DATA PROGRESS PENGIRIMAN (TERFILTER) ===",
+        combinedData,
+      );
       setProgresPengiriman(combinedData);
     } catch (error) {
       console.error("Gagal fetch progres pengiriman:", error);
@@ -182,8 +195,10 @@ const DistribusiLogistik = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-xs text-gray-500 mt-1">
-                      Halaman ini baru bisa dilakukan setelah pabrik menerima pengajuan penjualan TBS Anda. Silahkan pilih mitra logistik yang tersedia untuk mengirimkan TBS
-                      Anda ke pabrik.
+                      Halaman ini baru bisa dilakukan setelah pabrik menerima
+                      pengajuan penjualan TBS Anda. Silahkan pilih mitra
+                      logistik yang tersedia untuk mengirimkan TBS Anda ke
+                      pabrik.
                     </p>
                   </div>
                   <span className="bg-red-100 text-[#B5302D] px-3 py-1 rounded-full text-[10px] font-bold">
@@ -420,7 +435,7 @@ const ProgressItem = ({ item }) => {
   } else if (statusPermintaan === "diterima") {
     if (pDB === "terima") {
       colorClass = "bg-green-50 text-green-700 border-green-100";
-      label = "Tiba di Pabrik / Selesai";
+      label = "Menunggu Pemeriksaan Pabrik";
     } else {
       colorClass = "bg-blue-50 text-blue-700 border-blue-100";
       label = item.progress_publik || "Dalam Perjalanan";

@@ -6,48 +6,57 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Hash,
   Truck,
   Phone,
   MapPin,
   CheckCircle,
+  Info,
 } from "lucide-react";
 // Pastikan path konstanta Anda benar
-import { API_ENDPOINTS } from "../../config/constants"; 
+import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
 
 const Riwayatpenjualan = () => {
-  // State untuk menyimpan data riwayat dari API
-  const [dataPenjualan, setDataPenjualan] = useState([]);
-  
-  // State untuk indikator loading
+  // --- STATE TAB ---
+  const [activeTab, setActiveTab] = useState("aktif");
+
+  // --- STATE DATA ---
+  // Menyimpan SEMUA data dari BE (aktif + history)
+  const [allData, setAllData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
 
   // --- FUNGSI AMBIL DATA API ---
-  const fetchRiwayatLogistik = async () => {
+  const fetchSemuaTransaksi = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
-      
-      // Memanggil endpoint TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST[cite: 12]
-      const response = await fetch(API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const urlBase = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST;
 
-      const data = await response.json();
-      
-      // >>> CONSOLE LOG SESUAI PERMINTAAN <<<[cite: 12]
-      console.log("=== DATA RIWAYAT LOGISTIK/PENJUALAN (MANDOR) ===", data);
+      // Memanggil dua data sekaligus (Yang sedang berjalan & Histori Selesai/Ditolak)
+      const [resAktif, resHistori] = await Promise.all([
+        fetch(`${urlBase}?is_history=false`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${urlBase}?is_history=true`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (response.ok) {
-        // Simpan data ke state jika berhasil[cite: 12]
-        // Jika backend mengirimkan data ganda, kita bisa menambahkan .sort() seperti di file kebun
-        setDataPenjualan(data.sort((a, b) => b.id - a.id));
-      } else {
-        console.error("Gagal mengambil data:", data);
-      }
+      let dataAktif = [];
+      let dataHistori = [];
+
+      if (resAktif.ok) dataAktif = await resAktif.json();
+      if (resHistori.ok) dataHistori = await resHistori.json();
+
+      // Gabungkan semua data menjadi satu kesatuan
+      const combinedData = [...dataAktif, ...dataHistori];
+
+      console.log("=== SEMUA DATA TRANSAKSI (MANDOR) ===", combinedData);
+
+      // Simpan data mentah ke state
+      setAllData(combinedData);
     } catch (error) {
       console.error("Error Fetch API:", error);
     } finally {
@@ -55,50 +64,124 @@ const Riwayatpenjualan = () => {
     }
   };
 
-  // Jalankan fetch saat komponen pertama kali dimuat[cite: 12]
+  // Jalankan fetch saat komponen pertama kali dimuat
   useEffect(() => {
-    fetchRiwayatLogistik();
+    fetchSemuaTransaksi();
   }, []);
 
+  // --- LOGIKA PEMISAHAN DATA (Dijalankan secara lokal di FE) ---
+
+  // 1. Filter Transaksi Aktif:
+  // Harus BELUM ada pemeriksaan DAN status BUKAN ditolak
+  const dataAktif = allData
+    .filter((item) => {
+      const belumDiperiksa =
+        item.pemeriksaan === null || item.pemeriksaan === undefined;
+      const tidakDitolak = item.status_permintaan?.toLowerCase() !== "ditolak";
+      return belumDiperiksa && tidakDitolak;
+    })
+    .sort((a, b) => b.id - a.id);
+
+  // 2. Filter Transaksi Selesai:
+  // Harus SUDAH ADA pemeriksaan ATAU statusnya DITOLAK
+  const dataSelesai = allData
+    .filter((item) => {
+      const sudahDiperiksa =
+        item.pemeriksaan !== null && item.pemeriksaan !== undefined;
+      const ditolak = item.status_permintaan?.toLowerCase() === "ditolak";
+      return sudahDiperiksa || ditolak;
+    })
+    .sort((a, b) => b.id - a.id);
+
+  // Variabel penentu data mana yang sedang dirender berdasarkan tab aktif
+  const currentDataToRender = activeTab === "aktif" ? dataAktif : dataSelesai;
+
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
+
   return (
-    <div className="p-4 sm:p-10 min-h-screen font-sans">
+    <div className="p-4 sm:p-8 md:p-10 min-h-screen font-sans text-gray-800">
       {/* HEADER HERO */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
-            <History className="text-[#B5302D]" size={28} />
+      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
+            <History className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
-              Riwayat Transaksi Penjualan
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
+              Riwayat Penjualan TBS Anda
             </h1>
-            <p className="text-xs md:text-sm text-gray-500">
-              Pantau rincian pengiriman dan status transaksi TBS Anda.
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+              Pantau armada logistik yang aktif dan rekapitulasi penjualan TBS
+              Anda.
             </p>
           </div>
         </div>
+
+        {/* TAB SWITCHER */}
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full lg:w-auto">
+          <button
+            onClick={() => {
+              setActiveTab("aktif");
+              setExpandedId(null); // Tutup rincian saat pindah tab
+            }}
+            className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              activeTab === "aktif"
+                ? "bg-white text-[#B5302D] shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            <Truck className="w-4 h-4" /> Transaksi Aktif
+            {dataAktif.length > 0 && (
+              <span className="ml-1 bg-red-100 text-[#B5302D] px-2 py-0.5 rounded-full text-[9px] font-black">
+                {dataAktif.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("selesai");
+              setExpandedId(null); // Tutup rincian saat pindah tab
+            }}
+            className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              activeTab === "selesai"
+                ? "bg-white text-[#B5302D] shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            <History className="w-4 h-4" /> Transaksi Selesai
+          </button>
+        </div>
       </div>
 
-      <hr className="border-gray-200 mb-8" />
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
 
       {/* KONTEN DAFTAR TRANSAKSI */}
-      <SectionCard title="Daftar Transaksi & Progres">
+      <SectionCard
+        title={
+          activeTab === "aktif"
+            ? "Daftar Transaksi Aktif"
+            : "Rekapitulasi Transaksi Selesai"
+        }
+      >
         <div className="animate-fadeIn space-y-4">
           {isLoading ? (
-            <div className="text-center py-10 text-gray-500">
-              <p className="font-medium animate-pulse">Memuat data riwayat...</p>
+            <div className="text-center py-10 text-gray-400 text-sm">
+              Memuat Data...
             </div>
-          ) : dataPenjualan.length === 0 ? (
-            <div className="text-center py-10 text-gray-500 border border-dashed border-gray-300 rounded-xl bg-gray-50/50">
-              <History className="mx-auto mb-3 text-gray-400" size={32} />
-              <p className="font-medium">Belum ada riwayat transaksi.</p>
-              <p className="text-xs text-gray-400 mt-1">
-                Riwayat penjualan Anda akan muncul di sini.
-              </p>
+          ) : currentDataToRender.length === 0 ? (
+            <div className="text-center py-10 text-gray-400 text-sm">
+              Tidak ada data yang tersedia di tab ini.
             </div>
           ) : (
-            dataPenjualan.map((item) => (
-              <ProgressItem key={item.id} item={item} />
+            currentDataToRender.map((item) => (
+              <ProgressItem
+                key={item.id}
+                item={item}
+                isExpanded={expandedId === item.id}
+                toggleExpand={() => toggleExpand(item.id)}
+              />
             ))
           )}
         </div>
@@ -109,13 +192,8 @@ const Riwayatpenjualan = () => {
 
 /* ===================== COMPONENTS HELPERS ===================== */
 
-/**
- * SectionCard
- * Komponen wrapper standar untuk setiap section utama[cite: 12].
- */
 const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden hover:shadow-md transition-all">
-    {/* Decorative Header Line */}
+  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden transition-all">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
     <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
       {title}
@@ -124,10 +202,6 @@ const SectionCard = ({ title, children }) => (
   </div>
 );
 
-/**
- * MainCard
- * Wrapper Item dengan efek garis merah di kiri saat dihover[cite: 13].
- */
 const MainCard = ({ children }) => (
   <div className="relative bg-white rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md transition-all p-5 overflow-hidden group">
     <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -135,10 +209,6 @@ const MainCard = ({ children }) => (
   </div>
 );
 
-/**
- * StatusStep
- * Komponen pelacakan titik (stepper)[cite: 13].
- */
 const StatusStep = ({ label, active }) => (
   <div className="flex flex-col items-center justify-start gap-1.5 sm:gap-2 z-10 flex-1 px-1">
     <div
@@ -160,73 +230,172 @@ const StatusStep = ({ label, active }) => (
   </div>
 );
 
-/**
- * ProgressItem
- * Kartu per item yang berisi summary, tombol rincian, dan detail lengkap[cite: 13].
- */
-const ProgressItem = ({ item }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  // Normalisasi status dari BE[cite: 13]
+// Pindahkan ProgressItem ke luar dan beri props isExpanded & toggleExpand
+const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
   const statusPermintaan = (item.status_permintaan || "menunggu").toLowerCase();
   const rawProgress = item.progress_db || "menunggu_pengiriman";
   const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
 
-  // Penentuan Label Status[cite: 13]
+  // Penentuan Label Status
   let colorClass = "bg-gray-50 text-gray-600 border-gray-100";
   let label = "Menunggu";
 
   if (statusPermintaan === "menunggu") {
     colorClass = "bg-yellow-50 text-yellow-700 border-yellow-100";
-    label = "Menunggu Konfirmasi Mitra";
+    label = "Menunggu Konfirmasi";
   } else if (statusPermintaan === "ditolak") {
     colorClass = "bg-red-50 text-red-700 border-red-100";
     label = "Ditolak Mitra";
   } else if (statusPermintaan === "diterima") {
     if (pDB === "terima") {
       colorClass = "bg-green-50 text-green-700 border-green-100";
-      label = "Tiba di Pabrik / Selesai";
+      label = item.pemeriksaan
+        ? "Selesai (Ditimbang)"
+        : "Tiba (Menunggu Timbang)";
     } else {
       colorClass = "bg-blue-50 text-blue-700 border-blue-100";
       label = item.progress_publik || "Dalam Perjalanan";
     }
   }
 
-  // Jika ditolak, jangan tampilkan rute pelacakan, cukup card simpel[cite: 13]
+  // --- RENDER JIKA DITOLAK ---
   if (statusPermintaan === "ditolak") {
     return (
       <MainCard>
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              {item.kode_resi || `REQ-${item.id}`}
-            </span>
-            <h4 className="text-sm font-bold text-gray-900 mt-1 line-clamp-1">
-              Ke: {item.alamat_pengiriman_pabrik}
-            </h4>
-            <p className="text-xs text-red-500 mt-2 italic">
-              Alasan Ditolak: {item.catatan_penolakan || "Tidak ada alasan"}
-            </p>
+        <div
+          className="flex flex-col md:flex-row justify-between gap-0 sm:gap-4 cursor-pointer w-full"
+          onClick={toggleExpand}
+        >
+          <div className="flex-1 w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100 pb-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2 sm:p-2.5 bg-red-50 rounded-xl border border-red-100 shrink-0 mt-1 sm:mt-0">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#B5302D]" />
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                    Asal Kebun / Mandor
+                  </p>
+                  <p className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
+                    {item.nama_gapoktan || "Data Transaksi Anda"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center sm:block justify-between bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none w-full sm:w-auto mt-1 sm:mt-0">
+                <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:mb-1">
+                  Rencana Panen
+                </p>
+                <p className="text-xs sm:text-sm font-bold text-gray-700 flex items-center gap-1.5 bg-white sm:bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                  {item.tanggal_rencana_panen
+                    ? new Date(item.tanggal_rencana_panen).toLocaleDateString(
+                        "id-ID",
+                        { day: "2-digit", month: "short", year: "numeric" },
+                      )
+                    : "-"}
+                </p>
+              </div>
+            </div>
           </div>
-          <span
-            className={`px-4 py-2 rounded-full text-xs font-bold border text-center ${colorClass}`}
-          >
-            {label}
-          </span>
+
+          <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
+            <span
+              className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto ${colorClass}`}
+            >
+              {label}
+            </span>
+
+            <div className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm w-full md:w-auto">
+              <span>{isExpanded ? "Tutup Rincian" : "Lihat Rincian"}</span>
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4 text-[#B5302D]" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </div>
+          </div>
         </div>
+
+        {isExpanded && (
+          <div className="mt-5 sm:mt-8 pt-5 sm:pt-8 border-t border-gray-100 space-y-6 animate-in fade-in slide-in-from-top-2">
+            <div className="bg-red-50 p-4 sm:p-5 rounded-2xl border border-red-100 flex items-start gap-3 shadow-sm">
+              <div className="p-2 bg-red-100 rounded-xl shrink-0">
+                <Info className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-[11px] sm:text-xs font-bold text-red-600 uppercase tracking-wider mb-1">
+                  Alasan Penolakan Mitra:
+                </p>
+                <p className="text-xs sm:text-sm text-red-800 font-medium italic leading-relaxed">
+                  "
+                  {item.catatan_penolakan ||
+                    "Tidak ada alasan spesifik yang diberikan oleh mitra logistik."}
+                  "
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm">
+              <h4 className="text-[10px] sm:text-[11px] font-bold text-[#B5302D] uppercase tracking-wider border-b border-gray-100 pb-2 mb-4">
+                Detail Pengajuan Awal
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">
+                    Est. Muatan
+                  </p>
+                  <p className="text-sm font-extrabold text-[#B5302D]">
+                    {item.estimasi_total_tbs_grup_kg
+                      ? `${(item.estimasi_total_tbs_grup_kg / 1000).toFixed(2)} Ton`
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-orange-500" /> Titik
+                    Jemput
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 leading-snug">
+                    {item.alamat_pickup_teks ||
+                      "Alamat penjemputan tidak tersedia."}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-[#B5302D]" /> Pabrik
+                    Tujuan
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 leading-snug">
+                    {item.alamat_pengiriman_pabrik ||
+                      "Pabrik tujuan tidak tersedia."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-gray-100">
+              <button
+                onClick={toggleExpand}
+                className="w-full sm:w-auto px-8 py-3 bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-300 transition-all"
+              >
+                Tutup Rincian
+              </button>
+            </div>
+          </div>
+        )}
       </MainCard>
     );
   }
 
+  // --- RENDER KARTU STANDAR (AKTIF ATAU SELESAI) ---
   return (
     <MainCard>
-      {/* --- BAGIAN RINGKAS (HEADER) --- */}
       <div
         className="flex flex-col md:flex-row justify-between gap-0 sm:gap-4 cursor-pointer w-full"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={toggleExpand}
       >
         <div className="flex-1 w-full">
-          {/* Baris 1: Nama Kebun & Nomor Resi */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100 pb-4">
             <div className="flex items-start sm:items-center gap-3">
               <div className="p-2 sm:p-2.5 bg-red-50 rounded-xl border border-red-100 shrink-0 mt-1 sm:mt-0">
@@ -241,7 +410,6 @@ const ProgressItem = ({ item }) => {
                 </p>
               </div>
             </div>
-
             <div className="flex items-center sm:block justify-between bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none w-full sm:w-auto mt-1 sm:mt-0">
               <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:mb-1">
                 No. Resi
@@ -252,7 +420,6 @@ const ProgressItem = ({ item }) => {
             </div>
           </div>
 
-          {/* Baris 2: Alamat & Tanggal */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mt-4">
             <div className="col-span-2 sm:col-span-1 md:col-span-3 lg:col-span-1">
               <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
@@ -262,7 +429,6 @@ const ProgressItem = ({ item }) => {
                 {item.alamat_pickup_teks || "-"}
               </p>
             </div>
-
             <div className="col-span-1">
               <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
                 Est Tiba di Pabrik
@@ -272,7 +438,6 @@ const ProgressItem = ({ item }) => {
                 {item.tanggal_permintaan_sampai || "-"}
               </p>
             </div>
-
             <div className="col-span-1">
               <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
                 Biaya Kirim
@@ -284,12 +449,11 @@ const ProgressItem = ({ item }) => {
           </div>
         </div>
 
-        {/* KANAN: STATUS & TOMBOL RINCIAN */}
         <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
           <span
             className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto ${colorClass}`}
           >
-            {statusPermintaan === "diterima" && (
+            {label === "Selesai (Ditimbang)" && (
               <CheckCircle2 className="w-3.5 h-3.5" />
             )}
             {label}
@@ -306,157 +470,171 @@ const ProgressItem = ({ item }) => {
         </div>
       </div>
 
-      {/* --- BAGIAN DETAIL (DROPDOWN/ACCORDION) --- */}
-      {isExpanded && statusPermintaan === "diterima" && (
+      {isExpanded && (
         <div className="mt-5 sm:mt-8 pt-5 sm:pt-8 border-t border-gray-100 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-top-2">
-          {/* Stepper Pelacakan */}
-          <div className="bg-gray-50 p-5 sm:p-6 rounded-[20px] sm:rounded-[25px] border border-gray-200">
-            <p className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase mb-6 sm:mb-8 tracking-widest text-center">
-              Proses Pelacakan Armada
-            </p>
-            <div className="flex justify-between items-center max-w-3xl mx-auto relative px-2 sm:px-4">
-              <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -translate-y-1/2 z-0 rounded-full"></div>
-              <StatusStep label="Menunggu" active={true} />
-              <StatusStep
-                label="Menjemput"
-                active={["mengirim", "menuju_pabrik", "terima"].includes(pDB)}
-              />
-              <StatusStep
-                label="Perjalanan"
-                active={["menuju_pabrik", "terima"].includes(pDB)}
-              />
-              <StatusStep label="Selesai" active={pDB === "terima"} />
-            </div>
-          </div>
-
-          {/* GRID DETAIL INFORMASI LENGKAP */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {/* 1. Info Transaksi */}
-            <div className="flex flex-col gap-3 sm:gap-4">
-              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
-                <Hash className="w-4 h-4" /> Informasi Transaksi
-              </h4>
-              <div className="flex-1 flex flex-col justify-center gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">No Resi:</span>
-                  <span className="font-bold font-mono text-gray-700">
-                    {item.kode_resi || "-"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Tanggal Kirim:</span>
-                  <span className="font-bold text-right">
-                    {item.tanggal_keberangkatan || "-"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Tanggal Tiba:</span>
-                  <span className="font-bold text-right">
-                    {item.tanggal_permintaan_sampai || "-"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Muatan (Est):</span>
-                  <span className="font-bold text-right">
-                    {item.estimasi_total_tbs_grup_kg
-                      ? `${(item.estimasi_total_tbs_grup_kg / 1000).toFixed(2)} Ton`
-                      : "-"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-3 mt-1 border-t border-gray-50">
-                  <span className="text-gray-500">Biaya Pengiriman:</span>
-                  <span className="font-extrabold text-[#B5302D] text-sm">
-                    Rp {(item.biaya_final || 0).toLocaleString("id-ID")}
-                  </span>
-                </div>
+          {/* PELACAKAN HANYA MUNCUL DI TAB AKTIF ATAU JIKA BELUM ADA PEMERIKSAAN */}
+          {!item.pemeriksaan && (
+            <div className="bg-gray-50 p-5 sm:p-6 rounded-[20px] sm:rounded-[25px] border border-gray-200">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase mb-6 sm:mb-8 tracking-widest text-center">
+                Proses Pelacakan Armada
+              </p>
+              <div className="flex justify-between items-center max-w-3xl mx-auto relative px-2 sm:px-4">
+                <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -translate-y-1/2 z-0 rounded-full"></div>
+                <StatusStep label="Menunggu" active={true} />
+                <StatusStep
+                  label="Menjemput"
+                  active={["mengirim", "menuju_pabrik", "terima"].includes(pDB)}
+                />
+                <StatusStep
+                  label="Perjalanan"
+                  active={["menuju_pabrik", "terima"].includes(pDB)}
+                />
+                <StatusStep label="Tiba di Pabrik" active={pDB === "terima"} />
               </div>
             </div>
+          )}
 
-            {/* 2. Armada & Supir */}
-            <div className="flex flex-col gap-3 sm:gap-4">
-              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
-                <Truck className="w-4 h-4" /> Armada & Supir
-              </h4>
-              <div className="flex-1 flex flex-col gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
-                  <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
-                    <User className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-bold text-gray-900 truncate">
-                      {item.kru?.nama_supir || "-"}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5 truncate">
-                      <Phone className="w-3 h-3 shrink-0" />{" "}
-                      {item.kru?.nomor_telepon || "-"}
-                    </p>
-                  </div>
+          {/* BOX HIJAU: INFO HASIL TIMBANGAN (MUNCUL DI TAB SELESAI JIKA ADA PEMERIKSAAN) */}
+          {item.pemeriksaan && (
+            <div className="bg-green-50/40 border border-green-200 rounded-xl p-3 sm:p-5 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-green-200/50 pb-3 mb-4 gap-2">
+                <h4 className="text-[11px] sm:text-xs font-extrabold text-green-800 uppercase flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>Hasil Pemeriksaan & Nota Akhir</span>
+                </h4>
+                {item.pemeriksaan.harga_beli_per_kg_snapshot > 0 && (
+                  <span className="bg-green-100 text-green-800 text-[9px] sm:text-[10px] font-bold px-2.5 py-1.5 rounded-md border border-green-200 w-fit">
+                    Harga Dasar: Rp{" "}
+                    {item.pemeriksaan.harga_beli_per_kg_snapshot.toLocaleString(
+                      "id-ID",
+                    )}{" "}
+                    / Kg
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-gray-100">
+                  <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                    Berat Bruto
+                  </p>
+                  <p className="text-xs sm:text-sm font-black text-gray-900">
+                    {item.pemeriksaan.bruto?.toLocaleString("id-ID") || 0}{" "}
+                    <span className="text-[9px] font-bold text-gray-400">
+                      Kg
+                    </span>
+                  </p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-y-2.5 pt-1">
-                  <p className="text-gray-500">Kendaraan</p>
-                  <p className="font-semibold text-right">
-                    {item.kendaraan?.jenis_kendaraan_nama || "-"}
+                <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-gray-100">
+                  <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                    Total Potongan Sortasi
                   </p>
-
-                  <p className="text-gray-500">Kapasitas</p>
-                  <p className="font-semibold text-right">
-                    {item.kendaraan?.kapasitas_angkut_kg
-                      ? `${item.kendaraan.kapasitas_angkut_kg.toLocaleString("id-ID")} Kg`
-                      : "-"}
+                  <p className="text-xs sm:text-sm font-black text-red-600">
+                    {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") ||
+                      0}{" "}
+                    <span className="text-[9px] font-bold text-red-400">
+                      Kg
+                    </span>
                   </p>
-
-                  <p className="text-gray-500">Biaya / KM</p>
-                  <p className="font-semibold text-right">
-                    {item.kendaraan?.biaya_per_km
-                      ? `Rp ${item.kendaraan.biaya_per_km.toLocaleString("id-ID")}`
-                      : "-"}
+                </div>
+                <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-green-200 ring-1 ring-green-50 shadow-sm">
+                  <p className="text-[9px] sm:text-[10px] text-green-700 font-bold uppercase tracking-wider">
+                    Netto Bersih
                   </p>
-
-                  <p className="text-gray-500 pt-2 border-t border-gray-50">Tipe</p>
-                  <p className="font-semibold text-right pt-2 border-t border-gray-50">
-                    {item.kendaraan?.nama_kendaraan || "-"}
+                  <p className="text-sm sm:text-base font-black text-green-700">
+                    {item.pemeriksaan.final_weigh?.toLocaleString("id-ID") ||
+                      item.pemeriksaan.netto?.toLocaleString("id-ID") ||
+                      0}{" "}
+                    <span className="text-[9px] font-bold text-green-600/70">
+                      Kg
+                    </span>
                   </p>
-
-                  <p className="text-gray-500">Plat</p>
-                  <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
-                    {item.kendaraan?.plat_kendaraan || "-"}
+                </div>
+                <div className="flex justify-between items-center bg-gradient-to-r from-green-600 to-emerald-700 px-4 py-3 rounded-xl shadow-sm text-white mt-1.5">
+                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-green-100">
+                    Total Harga Diterima
+                  </p>
+                  <p className="text-base sm:text-lg font-black tracking-tight">
+                    <span className="text-[10px] font-medium mr-1">Rp</span>
+                    {item.pemeriksaan.harga_final?.toLocaleString("id-ID") || 0}
                   </p>
                 </div>
               </div>
-            </div>
 
-            {/* 3. Rute & Estimasi */}
+              {(item.pemeriksaan.catatan ||
+                item.pemeriksaan.dokumen_nota_url) && (
+                <div className="mt-4 flex flex-col gap-3 border-t border-green-200/50 pt-4">
+                  {item.pemeriksaan.catatan && (
+                    <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                      <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 shrink-0" /> Catatan
+                        Pabrik
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-gray-700 font-medium italic leading-relaxed">
+                        "{item.pemeriksaan.catatan}"
+                      </p>
+                    </div>
+                  )}
+
+                  {item.pemeriksaan.dokumen_nota_url && (
+                    <div className="bg-white/60 p-3 rounded-lg border border-green-100 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Upload className="w-4 h-4 text-gray-500 shrink-0" />
+                        <p className="text-[10px] sm:text-xs text-gray-600 font-bold uppercase tracking-wider truncate">
+                          Unduh Nota Timbangan Resmi
+                        </p>
+                      </div>
+                      <a
+                        href={getFileUrl(
+                          item.pemeriksaan.dokumen_nota_url,
+                          "TRACEABILITY",
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center bg-blue-50 text-blue-600 px-3 py-1.5 rounded border border-blue-100 hover:bg-blue-100 transition-colors shrink-0"
+                      >
+                        <span className="text-[10px] font-bold whitespace-nowrap">
+                          Lihat Nota &rarr;
+                        </span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* GRID DETAIL INFORMASI TAMBAHAN (Rute & Supir) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 pt-2">
             <div className="flex flex-col gap-3 sm:gap-4">
               <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
-                <MapPin className="w-4 h-4" /> Rute & Estimasi
+                <MapPin className="w-4 h-4" /> Rute Pengiriman
               </h4>
               <div className="flex-1 flex flex-col justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
                 <div className="flex flex-col gap-4">
                   <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
                     <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-orange-400 border-2 border-white" />
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                      Dari: Kebun
+                      Dari: Kebun (Titik Jemput)
                     </p>
-                    <p className="font-medium text-gray-700 leading-snug">
+                    <p className="font-medium text-gray-700">
                       {item.alamat_pickup_teks || "-"}
                     </p>
                   </div>
                   <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
-                    <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-[#B5302D] border-2 border-white" />
+                    <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                      Ke: Pabrik
+                      Tujuan: Pabrik
                     </p>
-                    <p className="font-medium text-gray-700 leading-snug">
+                    <p className="font-medium text-gray-700">
                       {item.alamat_pengiriman_pabrik || "-"}
                     </p>
                   </div>
                 </div>
-
                 <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase font-bold mb-0.5">
-                      Est. Jarak
+                      Est. Jarak Total
                     </p>
                     <p className="font-bold text-gray-900">
                       {item.estimasi_jarak_km
@@ -464,20 +642,46 @@ const ProgressItem = ({ item }) => {
                         : "-"}
                     </p>
                   </div>
-                  <div
-                    className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center ${pDB === "terima" ? "bg-green-50 text-green-600 border border-green-100" : "bg-orange-50 text-[#EF8523] border border-orange-100"}`}
-                  >
-                    {item.progress_publik || label}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                <Truck className="w-4 h-4" /> Armada Pengangkut
+              </h4>
+              <div className="flex-1 flex flex-col gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                  <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
+                    <User className="w-4 h-4 text-gray-400" />
                   </div>
+                  <div>
+                    <p className="font-bold text-gray-900">
+                      {item.kru?.nama_supir || "-"}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5">
+                      <Phone className="w-3 h-3" />{" "}
+                      {item.kru?.nomor_telepon || "-"}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-y-2.5 pt-1">
+                  <p className="text-gray-500">Kendaraan</p>
+                  <p className="font-semibold text-right">
+                    {item.kendaraan?.jenis_kendaraan_nama || "-"}
+                  </p>
+                  <p className="text-gray-500">Plat Kendaraan</p>
+                  <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
+                    {item.kendaraan?.plat_kendaraan || "-"}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Tombol Tutup Rincian Bawah */}
           <div className="flex justify-end pt-5 sm:pt-6 mt-2 border-t border-gray-100">
             <button
-              onClick={() => setIsExpanded(false)}
+              onClick={toggleExpand}
               className="w-full sm:w-auto px-8 py-3 bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-300 transition-all"
             >
               Tutup Rincian

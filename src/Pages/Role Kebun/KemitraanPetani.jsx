@@ -356,10 +356,15 @@ const KemitraanPetani = () => {
                           label="Jenis Sawit"
                           value={item.jenis_sawit || "-"}
                         />
-                        <DetailRow
-                          label="Varietas (jika tenera)"
-                          value={item.nama_varietas || "-"}
-                        />
+
+                        {/* Tampilkan baris Varietas HANYA jika jenis_sawit adalah Tenera */}
+                        {item.jenis_sawit?.toLowerCase() === "tenera" && (
+                          <DetailRow
+                            label="Varietas"
+                            value={item.nama_varietas || "-"}
+                          />
+                        )}
+
                         {item.catatan_penolakan && (
                           <div className="mt-3 pt-2 border-t border-dashed border-gray-200">
                             <p className="font-bold text-red-500 mb-1">
@@ -439,10 +444,18 @@ const KemitraanPetani = () => {
                           label="Jenis Bibit"
                           value={item.jenis_bibit}
                         />
-                        <DetailRow
-                          label="Varietas"
-                          value={item.varietas_bibit_nama || "-"}
-                        />
+
+                        {/* Tampilkan baris Varietas HANYA jika jenis_bibit adalah Tenera */}
+                        {item.jenis_bibit?.toLowerCase() === "tenera" && (
+                          <DetailRow
+                            label="Varietas"
+                            value={
+                              item.dinamis_varietas_bibit?.nama_varietas ||
+                              item.varietas_bibit_nama ||
+                              "-"
+                            }
+                          />
+                        )}
 
                         <DetailRow
                           label="Jml. Bibit Total"
@@ -558,11 +571,6 @@ const KemitraanPetani = () => {
                             <div className="flex items-center gap-1 text-emerald-800 border-b border-emerald-200 pb-1 mb-1 font-bold">
                               Detail Gambut
                             </div>
-
-                            <DetailRow
-                              label="Nama Lahan"
-                              value={item.nama_lahan_gambut || "-"}
-                            />
                             <DetailRow
                               label="Lapisan Mineral"
                               value={

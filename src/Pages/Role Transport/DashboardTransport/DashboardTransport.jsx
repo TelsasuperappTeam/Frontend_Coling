@@ -12,6 +12,7 @@ import {
   Calendar,
   Clock,
   Plus,
+  ArrowRight,
 } from "lucide-react";
 
 // --- Komponen Card Reusable ---
@@ -165,18 +166,53 @@ export default function DashboardLogistik() {
             ? mgmtData
             : mgmtData.data || [];
 
-          // Pisahkan untuk Card Permintaan Masuk (Menunggu Konfirmasi)
-          const pending = dataArray.filter(
-            (item) =>
-              item.status_permintaan?.toLowerCase() === "menunggu konfirmasi",
-          );
-          setPermintaanMasuk(pending);
+          console.log("=== RAW DATA DARI BE (MANAGEMENT) ===", dataArray);
 
-          // Pisahkan untuk Card Pengiriman Aktif (Diterima)
-          const filteredPengiriman = dataArray.filter(
-            (item) => item.status_permintaan?.toLowerCase() === "diterima",
-          );
-          setPengirimanAktif(filteredPengiriman);
+          // PISAHKAN UNTUK CARD 1: Permintaan Masuk
+          // Syarat: HANYA Menunggu Konfirmasi DAN tanggal belum lewat
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Normalisasi ke jam 00:00:00
+
+          const pendingRequests = dataArray
+            .filter((item) => {
+              // 1. Standarisasi status
+              const statusP = String(item.status_permintaan || "")
+                .trim()
+                .toLowerCase();
+              const isPending =
+                statusP === "menunggu konfirmasi" ||
+                statusP === "menunggu_konfirmasi";
+
+              // Jika status bukan pending, langsung tolak
+              if (!isPending) return false;
+
+              // 2. Filter Tanggal Kadaluwarsa
+              // Jika data dari BE tidak menyertakan tanggal, biarkan lolos
+              if (!item.tanggal_permintaan_sampai) return true;
+
+              const targetDate = new Date(item.tanggal_permintaan_sampai);
+              targetDate.setHours(0, 0, 0, 0);
+
+              // Lolos hanya jika targetDate sama dengan atau setelah hari ini
+              return targetDate >= today;
+            })
+            .sort((a, b) => b.id - a.id); // Urutkan ID terbaru di atas
+
+          setPermintaanMasuk(pendingRequests);
+
+          // PISAHKAN UNTUK CARD 2: Pantau Pengiriman Aktif
+          // Mengikuti logika Pengiriman.jsx: Tampilkan SEMUA yang statusnya "diterima"
+          // tanpa memandang progress perjalanannya (progress_db).
+          const activeDeliveries = dataArray
+            .filter((item) => {
+              const statusP = String(item.status_permintaan || "")
+                .trim()
+                .toLowerCase();
+              return statusP === "diterima";
+            })
+            .sort((a, b) => b.id - a.id); // Urutkan ID terbaru di atas
+
+          setPengirimanAktif(activeDeliveries);
         }
 
         // Matikan loading pesanan & pengiriman
@@ -401,12 +437,13 @@ export default function DashboardLogistik() {
               )}
             </div>
 
-            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-2 z-10 border-t border-gray-50 text-right">
-              <button
-                onClick={() => navigate("/logistik/manajemenpesanan")}
-                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
+            {/* Tombol Lihat Semua di bawah Card */}
+            <div className="pt-2">
+              <button 
+                onClick={() => navigate("/kebun/distribusilogistik")}
+                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
               >
-                Lihat semua &rarr;
+                Lihat Semua &rarr;
               </button>
             </div>
           </div>
@@ -418,70 +455,105 @@ export default function DashboardLogistik() {
           icon={MapPin}
           rightContent={
             <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-              {pengirimanAktif.length} Pengiriman
+              {pengirimanAktif.length} Aktif
             </span>
           }
         >
-          <div className="space-y-3 h-full flex flex-col">
-            <div className="flex-grow space-y-3">
+          <div className="space-y-3 h-full flex flex-col relative">
+            <div className="flex-grow space-y-3 pb-8">
               {isLoadingPengiriman ? (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Memuat data...
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#EF8523]" />
+                  <span className="text-[11px] font-medium">
+                    Memuat rute pengiriman...
+                  </span>
                 </div>
               ) : pengirimanAktif.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                  Tidak ada pengiriman aktif
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                  <Truck className="w-8 h-8 mb-2 opacity-50 text-gray-400" />
+                  <span className="text-[11px] font-medium">
+                    Tidak ada armada di perjalanan
+                  </span>
                 </div>
               ) : (
                 pengirimanAktif.slice(0, 5).map((log) => {
                   // Dinamika Badge berdasarkan progress_db
                   const rawProgress = log.progress_db || "menunggu_pengiriman";
                   const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
-                  let statusLabel = log.progress_publik || "Menunggu";
+                  let statusLabel = log.progress_publik || "Menunggu Penugasan";
 
-                  let badgeColor = "bg-gray-50 text-gray-600 border-gray-200"; // menunggu_pengiriman
-                  if (pDB === "mengirim")
+                  // Styling Badge yang lebih cerah dan tegas
+                  let badgeColor = "bg-gray-100 text-gray-600 border-gray-200";
+                  let IconStatus = Clock;
+
+                  if (pDB === "mengirim") {
                     badgeColor =
-                      "bg-orange-50 text-[#EF8523] border-orange-100";
-                  if (pDB === "menuju_pabrik")
-                    badgeColor = "bg-blue-50 text-blue-600 border-blue-100";
+                      "bg-orange-50 text-[#EF8523] border-orange-200";
+                    IconStatus = Truck;
+                  }
+                  if (pDB === "menuju_pabrik") {
+                    badgeColor = "bg-blue-50 text-blue-600 border-blue-200";
+                    IconStatus = Send;
+                  }
 
                   return (
                     <div
                       key={log.id}
-                      className="relative bg-gray-50 rounded-xl p-3 border border-gray-300 shadow-sm hover:shadow-md transition-shadow"
+                      className="group relative bg-white rounded-[16px] p-3 sm:p-4 border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-300 flex flex-col gap-2 overflow-hidden"
                     >
-                      <div className="absolute top-3 right-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[9px] font-medium border ${badgeColor}`}
-                        >
-                          {statusLabel}
+                      {/* Efek Garis Samping Saat Hover */}
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EF8523] to-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                      {/* Header Item: Badge Status & Resi */}
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[9px] font-mono font-bold text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
+                          {log.kode_resi || `REQ-${log.id}`}
                         </span>
+                        <div
+                          className={`px-2 py-0.5 rounded-md text-[9px] font-bold border flex items-center gap-1 shadow-sm ${badgeColor}`}
+                        >
+                          <IconStatus className="w-3 h-3" />
+                          <span>{statusLabel}</span>
+                        </div>
                       </div>
 
-                      {/* Asal dan Tujuan */}
-                      <p className="font-bold text-sm text-gray-800 pr-20 truncate">
-                        {log.nama_gapoktan || "-"}
-                      </p>
-                      <p className="text-[11px] text-gray-600 mt-1 truncate">
-                        Tujuan: {log.alamat_pengiriman_pabrik || "-"}
-                      </p>
+                      {/* Info Rute Cepat */}
+                      <div>
+                        <h4 className="font-bold text-[13px] text-gray-800 line-clamp-1 group-hover:text-[#B5302D] transition-colors">
+                          {log.nama_gapoktan || "Data Kebun Tidak Tersedia"}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                          <p className="text-[10px] text-gray-500 line-clamp-1">
+                            Ke:{" "}
+                            <span className="font-medium text-gray-700">
+                              {log.alamat_pengiriman_pabrik || "-"}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
 
-                      {/* Tanggal */}
-                      <div className="mt-2 grid grid-cols-2 gap-2 border-t border-gray-200 pt-2">
-                        <p className="text-[10px] text-gray-500">
-                          Berangkat:{" "}
-                          <span className="font-semibold text-gray-700">
+                      {/* Info Tanggal Ringkas (Bawah) */}
+                      <div className="mt-2 bg-gray-50/80 rounded-lg p-2 flex justify-between items-center border border-gray-50">
+                        <div className="flex flex-col">
+                          <span className="text-[8px] uppercase font-bold text-gray-400 tracking-wider">
+                            Tgl Berangkat
+                          </span>
+                          <span className="text-[10px] font-semibold text-gray-800 flex items-center gap-1">
+                            <Calendar className="w-2.5 h-2.5 opacity-70" />{" "}
                             {log.tanggal_keberangkatan || "-"}
                           </span>
-                        </p>
-                        <p className="text-[10px] text-gray-500 text-right">
-                          Estimasi:{" "}
-                          <span className="font-semibold text-[#B5302D]">
+                        </div>
+                        <div className="h-4 w-px bg-gray-200 mx-2"></div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[8px] uppercase font-bold text-[#B5302D] tracking-wider">
+                            Target Tiba
+                          </span>
+                          <span className="text-[10px] font-bold text-[#B5302D] flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" />{" "}
                             {log.tanggal_permintaan_sampai || "-"}
                           </span>
-                        </p>
+                        </div>
                       </div>
                     </div>
                   );
@@ -489,11 +561,10 @@ export default function DashboardLogistik() {
               )}
             </div>
 
-            {/* Tombol Lihat Semua yang dirapikan (Sticky & Background Putih) */}
-            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-2 z-10 border-t border-gray-50 text-right">
-              <button
-                onClick={() => navigate("/logistik/pengiriman")}
-                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
+            <div className="pt-2">
+              <button 
+                onClick={() => navigate("/kebun/distribusilogistik")}
+                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
               >
                 Lihat semua &rarr;
               </button>
@@ -563,11 +634,11 @@ export default function DashboardLogistik() {
               </div>
             )}
 
-            {/* --- TOMBOL MANAJEMEN (DIRAPIHKAN & SERAGAM) --- */}
-            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-2 z-10 border-t border-gray-50 text-right">
-              <button
-                onClick={() => navigate("/logistik/armada")}
-                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
+            {/* Tombol Lihat Semua di bawah Card */}
+            <div className="pt-2">
+              <button 
+                onClick={() => navigate("/kebun/distribusilogistik")}
+                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
               >
                 Lihat Semua &rarr;
               </button>

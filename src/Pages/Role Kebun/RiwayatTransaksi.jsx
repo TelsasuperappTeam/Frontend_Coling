@@ -7,50 +7,69 @@ import {
   MapPin,
   Calendar,
   Info,
-  ClipboardList,
+  User,
+  Hash,
+  Truck,
+  Upload,
+  FileText,
+  Phone,
 } from "lucide-react";
-import { API_ENDPOINTS } from "../../config/constants";
+import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
 
 const RiwayatTransaksi = () => {
   const [riwayatSelesai, setRiwayatSelesai] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [openDetailId, setOpenDetailId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
-  // --- FUNGSI AMBIL DATA RIWAYAT SELESAI ---
+  // Fungsi toggle rincian card
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
+
+  // --- FUNGSI AMBIL DATA RIWAYAT SELESAI & DITOLAK ---
   const fetchRiwayatSelesai = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
+      const urlBase = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST;
 
-      // MENGGUNAKAN ENDPOINT TRACEABILITY DENGAN QUERY history=true
-      // Asumsi: API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST
-      // juga berlaku untuk melihat history pengiriman milik Kebun.
-      // Sesuaikan URL ini jika Kebun memiliki endpoint list-nya sendiri di backend (misal: TRACEABILITY.KEBUN.GET_PENGIRIMAN)
-      const response = await fetch(
-        `${API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST}?is_history=true`,
-        {
+      // Panggil dua endpoint sekaligus untuk memastikan tidak ada data yang terlewat[cite: 16]
+      const [resAktif, resHistori] = await Promise.all([
+        fetch(`${urlBase}?is_history=false`, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+        }),
+        fetch(`${urlBase}?is_history=true`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      const data = await response.json();
+      let dataAktif = [];
+      let dataHistori = [];
 
-      // Tambahkan console log untuk melihat struktur data dari endpoint history
-      console.log("=== DATA HISTORY TRACEABILITY (KEBUN) ===", data);
+      if (resAktif.ok) dataAktif = await resAktif.json();
+      if (resHistori.ok) dataHistori = await resHistori.json();
 
-      if (response.ok) {
-        // Karena endpoint sudah mengembalikan history (selesai/ditolak),
-        // kita hanya perlu memfilter yang statusnya benar-benar "terima" (Selesai Sukses)
-        const dataSelesai = data.filter(
-          (item) =>
-            item.progress_db === "terima" ||
-            item.status_permintaan === "diterima",
-        );
-        setRiwayatSelesai(dataSelesai);
-      } else {
-        console.error("Backend mengembalikan error:", data);
-      }
+      // Gabungkan semua data
+      const combinedData = [...dataAktif, ...dataHistori];
+
+      console.log("=== SEMUA DATA TRACEABILITY SEBELUM FILTER (KEBUN) ===", combinedData);
+
+      // --- LOGIKA FILTER UTAMA ---
+      // Tampilkan HANYA jika:
+      // 1. Pemeriksaan SUDAH ADA nilainya (artinya sudah selesai ditimbang pabrik)
+      // 2. ATAU Status permintaannya adalah "ditolak" (batal oleh mitra)
+      const dataSelesai = combinedData.filter((item) => {
+        const isSelesaiPabrik = item.pemeriksaan !== null && item.pemeriksaan !== undefined;
+        const isDitolakMitra = item.status_permintaan?.toLowerCase() === "ditolak";
+        
+        return isSelesaiPabrik || isDitolakMitra;
+      });
+
+      // Urutkan dari yang terbaru
+      setRiwayatSelesai(dataSelesai.sort((a, b) => b.id - a.id));
+      
     } catch (error) {
       console.error("Gagal memuat riwayat:", error);
     } finally {
@@ -62,173 +81,473 @@ const RiwayatTransaksi = () => {
     fetchRiwayatSelesai();
   }, []);
 
-  const toggleDetail = (id) => {
-    setOpenDetailId(openDetailId === id ? null : id);
-  };
-
   return (
-    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans bg-gray-50/30">
-      {/* HEADER */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-50 rounded-2xl">
-            <History className="w-8 h-8 text-[#B5302D]" />
+    <div className="p-4 sm:p-8 md:p-10 min-h-screen font-sans text-gray-800">
+      {/* HEADER HERO */}
+      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
+            <History className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
               Riwayat Transaksi
             </h1>
-            <p className="text-xs md:text-sm text-gray-500">
-              Rekapitulasi riwayat pemeriksaan dan transaksi yang telah selesai.
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+              Rekapitulasi riwayat pemeriksaan dan transaksi yang telah selesai atau dibatalkan.
             </p>
           </div>
         </div>
       </div>
 
-      <hr className="border-gray-200" />
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
 
       {/* BANNER INFO */}
-      <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
-        <Info className="text-blue-500 shrink-0" size={20} />
+      <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3 mb-6">
+        <Info className="text-blue-500 shrink-0 mt-0.5" size={18} />
         <p className="text-xs md:text-sm text-blue-800 leading-relaxed">
           Halaman ini menampilkan seluruh data transaksi yang telah{" "}
-          <strong>selesai diproses oleh pabrik</strong>, termasuk hasil
-          pemeriksaan akhir dan potongan.
+          <strong>selesai diproses oleh pabrik</strong> beserta hasil timbangan akhir, 
+          maupun pengajuan yang <strong>ditolak oleh mitra logistik</strong>.
         </p>
       </div>
 
       {/* LIST KONTEN RIWAYAT */}
-      <div className="space-y-4">
+      <SectionCard title="Daftar Riwayat Transaksi">
         {isLoading ? (
-          <div className="text-center py-10 text-gray-500 text-sm">
-            Memuat riwayat...
+          <div className="text-center py-10 text-gray-400 text-sm animate-pulse">
+            Memuat riwayat transaksi...
           </div>
         ) : riwayatSelesai.length === 0 ? (
-          <div className="text-center py-10 text-gray-500 text-sm bg-white rounded-xl border border-dashed border-gray-300">
-            Belum ada riwayat transaksi yang selesai.
+          <div className="text-center py-10 text-gray-400 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50/50">
+            <History className="mx-auto mb-3 text-gray-400" size={32} />
+            <p className="font-medium">Belum ada riwayat transaksi yang selesai atau ditolak.</p>
           </div>
         ) : (
-          riwayatSelesai.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all"
-            >
-              <div
-                onClick={() => toggleDetail(item.id)}
-                className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
-                    <CheckCircle2 size={20} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-800 text-sm">
-                      {item.nama_pabrik_tujuan || "Transaksi Pabrik"}
-                    </h4>
-                    <p className="text-xs text-gray-500 font-medium">
-                      {item.nama_grup} •{" "}
-                      {item.estimasi_total_tbs_grup_kg / 1000} Ton
-                    </p>
-                  </div>
-                </div>
+          <div className="space-y-4 sm:space-y-6">
+            {riwayatSelesai.map((item) => {
+              
+              const statusPermintaan = (item.status_permintaan || "").toLowerCase();
+              const isExpanded = expandedId === item.id;
 
-                <div className="flex items-center justify-between sm:justify-end gap-5 border-t sm:border-t-0 pt-3 sm:pt-0">
-                  <div className="text-left sm:text-right flex flex-col sm:items-end gap-1">
-                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                      Status Akhir
-                    </p>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-100 text-green-700">
-                      Selesai
-                    </span>
-                  </div>
-                  <button className="py-1.5 px-4 border border-gray-200 rounded-lg text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                    {openDetailId === item.id ? "Tutup" : "Lihat Nota"}
-                    {openDetailId === item.id ? (
-                      <ChevronUp size={14} />
-                    ) : (
-                      <ChevronDown size={14} />
-                    )}
-                  </button>
-                </div>
-              </div>
+              // ==========================================================
+              // RENDER KARTU KHUSUS JIKA STATUS DITOLAK
+              // ==========================================================
+              if (statusPermintaan === "ditolak") {
+                return (
+                  <MainCard key={item.id}>
+                    {/* --- HEADER DITOLAK (RINGKAS) --- */}
+                    <div
+                      className="flex flex-col md:flex-row justify-between gap-0 sm:gap-4 cursor-pointer w-full"
+                      onClick={() => toggleExpand(item.id)}
+                    >
+                      <div className="flex-1 w-full">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100 pb-4">
+                          <div className="flex items-start sm:items-center gap-3">
+                            <div className="p-2 sm:p-2.5 bg-red-50 rounded-xl border border-red-100 shrink-0 mt-1 sm:mt-0">
+                              <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#B5302D]" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                                Asal Kebun / Mandor
+                              </p>
+                              <p className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
+                                {item.nama_gapoktan || "Data Transaksi Anda"}
+                              </p>
+                            </div>
+                          </div>
 
-              {/* DETAIL HASIL PEMERIKSAAN (REKAPITULASI) */}
-              {openDetailId === item.id && (
-                <div className="border-t border-gray-100 bg-white animate-fadeIn">
-                  <div className="p-5 bg-gray-50/50">
-                    <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <ClipboardList size={14} /> Rekapitulasi Riwayat
-                      Pemeriksaan
-                    </h5>
+                          <div className="flex items-center sm:block justify-between bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none w-full sm:w-auto mt-1 sm:mt-0">
+                            <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:mb-1">
+                              Rencana Panen
+                            </p>
+                            <p className="text-xs sm:text-sm font-bold text-gray-700 flex items-center gap-1.5 bg-white sm:bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                              <Calendar className="w-3.5 h-3.5 shrink-0" />
+                              {item.tanggal_rencana_panen
+                                ? new Date(item.tanggal_rencana_panen).toLocaleDateString(
+                                    "id-ID",
+                                    { day: "2-digit", month: "short", year: "numeric" }
+                                  )
+                                : "-"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {/* INFORMASI DASAR */}
-                      <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
-                        <label className="text-[10px] text-gray-400 font-bold block uppercase">
-                          Tanggal Kirim
-                        </label>
-                        <p className="font-bold text-gray-800 text-sm">
-                          {new Date(
-                            item.tanggal_rencana_panen,
-                          ).toLocaleDateString("id-ID")}
-                        </p>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
-                        <label className="text-[10px] text-gray-400 font-bold block uppercase">
-                          Jenis Sawit
-                        </label>
-                        <p className="font-bold text-gray-800 text-sm">
-                          {item.jenis_varietas_gabungan}
-                        </p>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-green-100 shadow-sm">
-                        <label className="text-[10px] text-green-600 font-bold block uppercase">
-                          Netto Akhir (Kg)
-                        </label>
-                        <p className="font-black text-green-700 text-sm">
-                          {item.estimasi_total_tbs_grup_kg.toLocaleString(
-                            "id-ID",
-                          )}{" "}
-                          Kg
-                        </p>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-red-100 shadow-sm">
-                        <label className="text-[10px] text-red-500 font-bold block uppercase">
-                          Total Potongan
-                        </label>
-                        <p className="font-black text-red-600 text-sm">0 %</p>
+                      <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
+                        <span className="px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto bg-red-50 text-red-700 border-red-100 border">
+                          Ditolak Mitra
+                        </span>
+
+                        <div className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-bold text-gray-600 group-hover:bg-gray-50 transition-all shadow-sm w-full md:w-auto">
+                          <span>{isExpanded ? "Tutup Rincian" : "Lihat Rincian"}</span>
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-[#B5302D]" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 p-4 bg-white rounded-xl border border-gray-200">
-                      <label className="text-[10px] text-gray-400 font-bold block uppercase mb-2 tracking-widest">
-                        Informasi Penjemputan & Lokasi
-                      </label>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex items-start gap-2 flex-1">
-                          <MapPin
-                            className="text-orange-500 shrink-0"
-                            size={16}
-                          />
-                          <p className="text-xs text-gray-600 leading-relaxed italic">
-                            {item.alamat_pickup_teks}
+                    {/* --- DETAIL DITOLAK (DROPDOWN) --- */}
+                    {isExpanded && (
+                      <div className="mt-5 sm:mt-8 pt-5 sm:pt-8 border-t border-gray-100 space-y-6 animate-in fade-in slide-in-from-top-2">
+                        {/* Box Alasan Penolakan */}
+                        <div className="bg-red-50 p-4 sm:p-5 rounded-2xl border border-red-100 flex items-start gap-3 shadow-sm">
+                          <div className="p-2 bg-red-100 rounded-xl shrink-0">
+                            <Info className="w-5 h-5 text-red-600" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] sm:text-xs font-bold text-red-600 uppercase tracking-wider mb-1">
+                              Alasan Penolakan Mitra:
+                            </p>
+                            <p className="text-xs sm:text-sm text-red-800 font-medium italic leading-relaxed">
+                              "{item.catatan_penolakan || "Tidak ada alasan spesifik yang diberikan oleh mitra logistik."}"
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Info Rute & Muatan */}
+                        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm">
+                          <h4 className="text-[10px] sm:text-[11px] font-bold text-[#B5302D] uppercase tracking-wider border-b border-gray-100 pb-2 mb-4">
+                            Detail Pengajuan Awal
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                            <div>
+                              <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">
+                                Est. Muatan
+                              </p>
+                              <p className="text-sm font-extrabold text-[#B5302D]">
+                                {item.estimasi_total_tbs_grup_kg
+                                  ? `${(item.estimasi_total_tbs_grup_kg / 1000).toFixed(2)} Ton`
+                                  : "-"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-orange-500" /> Titik Jemput
+                              </p>
+                              <p className="text-xs sm:text-sm font-medium text-gray-700 leading-snug">
+                                {item.alamat_pickup_teks || "Alamat penjemputan tidak tersedia."}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1.5">
+                                <Truck className="w-3.5 h-3.5 text-[#B5302D]" /> Pabrik Tujuan
+                              </p>
+                              <p className="text-xs sm:text-sm font-medium text-gray-700 leading-snug">
+                                {item.alamat_pengiriman_pabrik || "Pabrik tujuan tidak tersedia."}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2 border-t border-gray-100">
+                          <button
+                            onClick={() => toggleExpand(null)}
+                            className="w-full sm:w-auto px-8 py-3 bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-300 transition-all"
+                          >
+                            Tutup Rincian
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </MainCard>
+                );
+              }
+
+              // ==========================================================
+              // RENDER KARTU STANDAR JIKA STATUS DITERIMA / SELESAI
+              // ==========================================================
+              return (
+                <MainCard key={item.id}>
+                  {/* --- DATA RINGKAS (SELALU MUNCUL DI AWAL) --- */}
+                  <div
+                    className="flex flex-col md:flex-row justify-between gap-0 sm:gap-4 cursor-pointer w-full"
+                    onClick={() => toggleExpand(item.id)}
+                  >
+                    <div className="flex-1 w-full">
+                      {/* Baris 1: Nama Kebun & Resi */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-gray-100 pb-4">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div className="p-2 sm:p-2.5 bg-red-50 rounded-xl border border-red-100 shrink-0 mt-1 sm:mt-0">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#B5302D]" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                              Asal Kebun
+                            </p>
+                            <p className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
+                              {item.nama_gapoktan || "Data Transaksi Anda"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center sm:block justify-between bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none w-full sm:w-auto mt-1 sm:mt-0">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:mb-1">
+                            No. Resi
+                          </p>
+                          <p className="text-xs sm:text-sm font-mono font-bold text-gray-700 bg-white sm:bg-gray-50 px-2.5 py-1 rounded border border-gray-200">
+                            {item.kode_resi || "-"}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-gray-700 bg-gray-100 px-3 py-2 rounded-lg">
-                          <Calendar size={14} />
-                          Usia Pohon: {item.usia_pohon_range}
+                      </div>
+
+                      {/* Baris 2: Detail Utama Ringkas */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mt-4">
+                        <div className="col-span-2 sm:col-span-1 md:col-span-3 lg:col-span-1">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            Pabrik Tujuan
+                          </p>
+                          <p className="text-xs sm:text-sm font-medium text-gray-700 leading-relaxed line-clamp-2">
+                            {item.alamat_pengiriman_pabrik || "-"}
+                          </p>
+                        </div>
+                        <div className="col-span-1">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            Tiba di Pabrik
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-blue-600 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 shrink-0" />
+                            {item.tanggal_permintaan_sampai || "-"}
+                          </p>
+                        </div>
+                        <div className="col-span-1">
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            Biaya Kirim
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-green-500">
+                            Rp {(item.biaya_final || 0).toLocaleString("id-ID")}
+                          </p>
                         </div>
                       </div>
                     </div>
+
+                    {/* Tombol Lihat Rincian di Kanan */}
+                    <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
+                      {/* Badge Selesai */}
+                      <span className="px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto bg-green-50 text-green-700 border-green-100 border">
+                        Selesai
+                      </span>
+
+                      <div className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-bold text-gray-600 group-hover:bg-gray-50 transition-all shadow-sm w-full md:w-auto">
+                        <span>
+                          {isExpanded ? "Tutup Rincian" : "Lihat Rincian"}
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-[#B5302D]" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))
+
+                  {/* --- DATA DETAIL & HASIL PEMERIKSAAN (MUNCUL SAAT DI KLIK) --- */}
+                  {isExpanded && (
+                    <div className="mt-5 sm:mt-8 pt-5 sm:pt-8 border-t border-gray-100 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-top-2">
+                      
+                      {/* BOX HIJAU: INFO HASIL TIMBANGAN & PEMERIKSAAN */}
+                      {item.pemeriksaan ? (
+                        <div className="bg-green-50/40 border border-green-200 rounded-xl p-3 sm:p-5 shadow-sm">
+                          {/* Header Box Hijau */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-green-200/50 pb-3 mb-4 gap-2">
+                            <h4 className="text-[11px] sm:text-xs font-extrabold text-green-800 uppercase flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 shrink-0" />
+                              <span>Hasil Pemeriksaan & Nota Akhir</span>
+                            </h4>
+                            {/* Harga Snapshot */}
+                            {item.pemeriksaan.harga_beli_per_kg_snapshot > 0 && (
+                              <span className="bg-green-100 text-green-800 text-[9px] sm:text-[10px] font-bold px-2.5 py-1.5 rounded-md border border-green-200 w-fit">
+                                Harga Dasar: Rp {item.pemeriksaan.harga_beli_per_kg_snapshot.toLocaleString("id-ID")} / Kg
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Detail Berat & Potongan (Ramping) */}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-gray-100">
+                              <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Berat Bruto</p>
+                              <p className="text-xs sm:text-sm font-black text-gray-900">
+                                {item.pemeriksaan.bruto?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-gray-400">Kg</span>
+                              </p>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-gray-100">
+                              <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Total Potongan Sortasi</p>
+                              <p className="text-xs sm:text-sm font-black text-red-600">
+                                {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-red-400">Kg</span>
+                              </p>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-green-200 ring-1 ring-green-50 shadow-sm">
+                              <p className="text-[9px] sm:text-[10px] text-green-700 font-bold uppercase tracking-wider">Netto Bersih</p>
+                              <p className="text-sm sm:text-base font-black text-green-700">
+                                {item.pemeriksaan.final_weigh?.toLocaleString("id-ID") || item.pemeriksaan.netto?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-green-600/70">Kg</span>
+                              </p>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-gradient-to-r from-green-600 to-emerald-700 px-4 py-3 rounded-xl shadow-sm text-white mt-1.5">
+                              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-green-100">Total Harga Diterima</p>
+                              <p className="text-base sm:text-lg font-black tracking-tight">
+                                <span className="text-[10px] font-medium mr-1">Rp</span> 
+                                {item.pemeriksaan.harga_final?.toLocaleString("id-ID") || 0}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Catatan & Dokumen */}
+                          {(item.pemeriksaan.catatan || item.pemeriksaan.dokumen_nota_url) && (
+                            <div className="mt-4 flex flex-col gap-3 border-t border-green-200/50 pt-4">
+                              {item.pemeriksaan.catatan && (
+                                <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                    <FileText className="w-3.5 h-3.5 shrink-0" /> Catatan Pabrik
+                                  </p>
+                                  <p className="text-[10px] sm:text-xs text-gray-700 font-medium italic leading-relaxed">
+                                    "{item.pemeriksaan.catatan}"
+                                  </p>
+                                </div>
+                              )}
+
+                              {item.pemeriksaan.dokumen_nota_url && (
+                                <div className="bg-white/60 p-3 rounded-lg border border-green-100 flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Upload className="w-4 h-4 text-gray-500 shrink-0" />
+                                    <p className="text-[10px] sm:text-xs text-gray-600 font-bold uppercase tracking-wider truncate">
+                                      Unduh Nota Timbangan Resmi
+                                    </p>
+                                  </div>
+                                  <a 
+                                    href={getFileUrl(item.pemeriksaan.dokumen_nota_url, "TRACEABILITY")} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center bg-blue-50 text-blue-600 px-3 py-1.5 rounded border border-blue-100 hover:bg-blue-100 transition-colors shrink-0"
+                                  >
+                                    <span className="text-[10px] font-bold whitespace-nowrap">Lihat Nota &rarr;</span>
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="bg-yellow-50 text-yellow-700 p-4 rounded-xl text-xs font-semibold text-center border border-yellow-200">
+                          Data pemeriksaan belum tersedia atau sedang diproses.
+                        </div>
+                      )}
+
+                      {/* --- GRID DETAIL INFORMASI TAMBAHAN --- */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 pt-2">
+                        {/* Kolom Kiri: Rute Pengiriman */}
+                        <div className="flex flex-col gap-3 sm:gap-4">
+                          <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                            <MapPin className="w-4 h-4" /> Rute Pengiriman
+                          </h4>
+                          <div className="flex-1 flex flex-col justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                            <div className="flex flex-col gap-4">
+                              <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
+                                <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-orange-400 border-2 border-white" />
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                                  Dari: Kebun (Titik Jemput)
+                                </p>
+                                <p className="font-medium text-gray-700">
+                                  {item.alamat_pickup_teks || "-"}
+                                </p>
+                              </div>
+                              <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
+                                <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                                  Tujuan: Pabrik
+                                </p>
+                                <p className="font-medium text-gray-700">
+                                  {item.alamat_pengiriman_pabrik || "-"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                              <div>
+                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-0.5">
+                                  Est. Jarak Total
+                                </p>
+                                <p className="font-bold text-gray-900">
+                                  {item.estimasi_jarak_km ? `${item.estimasi_jarak_km} KM` : "-"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Kolom Kanan: Armada & Supir */}
+                        <div className="flex flex-col gap-3 sm:gap-4">
+                          <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                            <Truck className="w-4 h-4" /> Armada Pengangkut
+                          </h4>
+                          <div className="flex-1 flex flex-col gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                            <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                              <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
+                                <User className="w-4 h-4 text-gray-400" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900">
+                                  {item.kru?.nama_supir || "-"}
+                                </p>
+                                <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5">
+                                  <Phone className="w-3 h-3" /> {item.kru?.nomor_telepon || "-"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-y-2.5 pt-1">
+                              <p className="text-gray-500">Kendaraan</p>
+                              <p className="font-semibold text-right">
+                                {item.kendaraan?.jenis_kendaraan_nama || "-"}
+                              </p>
+                              <p className="text-gray-500">Plat Kendaraan</p>
+                              <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
+                                {item.kendaraan?.plat_kendaraan || "-"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tombol Tutup Bawah */}
+                      <div className="flex justify-end pt-5 sm:pt-6 mt-2 border-t border-gray-100">
+                        <button
+                          onClick={() => toggleExpand(null)}
+                          className="w-full sm:w-auto px-8 py-3 bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-300 transition-all"
+                        >
+                          Tutup Rincian
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </MainCard>
+              );
+            })}
+          </div>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 };
+
+/* --- KOMPONEN HELPER --- */
+const SectionCard = ({ title, children }) => (
+  <div className="bg-white rounded-[24px] sm:rounded-[30px] border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8 relative overflow-hidden transition-all">
+    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-90" />
+    <h3 className="text-base sm:text-lg font-bold text-[#B5302D] mb-5 flex items-center gap-2">
+      {title}
+    </h3>
+    {children}
+  </div>
+);
+
+const MainCard = ({ children }) => (
+  <div className="relative bg-white rounded-[20px] sm:rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md transition-all p-4 sm:p-6 overflow-hidden group">
+    <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
+    {children}
+  </div>
+);
 
 export default RiwayatTransaksi;

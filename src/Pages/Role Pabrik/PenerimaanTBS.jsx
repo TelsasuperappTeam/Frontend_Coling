@@ -78,13 +78,16 @@ const PenerimaanTBS = () => {
 
       const data = await response.json();
 
-      // --- CONSOLE LOG RESPON BE DITAMBAHKAN DI SINI ---
       console.log("=== DATA TRUK MASUK (AKTIF) DARI BE ===", data);
 
+      // Filter: Hanya tampilkan yang pengajuannya disetujui (diterima)
+      // BE otomatis meletakkan yang belum di-inspeksi di sini (is_history=false)
       const filteredData = data.filter(
         (item) => item.status_permintaan?.toLowerCase() === "diterima",
       );
-      setShipments(filteredData);
+
+      // Sort berdasarkan ID terbaru
+      setShipments(filteredData.sort((a, b) => b.id - a.id));
     } catch (error) {
       console.error("Error fetching shipments:", error);
     } finally {
@@ -109,8 +112,10 @@ const PenerimaanTBS = () => {
       if (!response.ok) throw new Error("Gagal mengambil data histori");
       const data = await response.json();
 
-      console.log("=== DATA HISTORI PEMERIKSAAN ===", data);
-      setHistoryData(data);
+      console.log("=== DATA HISTORI PEMERIKSAAN DARI BE ===", data);
+
+      // Sort berdasarkan ID terbaru
+      setHistoryData(data.sort((a, b) => b.id - a.id));
     } catch (error) {
       console.error("Error fetching history:", error);
     } finally {
@@ -150,9 +155,8 @@ const PenerimaanTBS = () => {
         "Truk dikonfirmasi tiba! Silakan lanjutkan mengisi hasil Timbangan & Sortasi TBS.",
       );
 
-      // PENYESUAIAN SESUAI INSTRUKSI BE: Lakukan re-fetch data di tab aktif
-      // Karena BE sekarang menahan data truknya, truk tidak akan hilang dari layar.
-      fetchShipments();
+      // Re-fetch data aktif. Truk akan tetap ada di sini karena belum di-inspeksi.
+      await fetchShipments();
 
       // Tetap buka popup otomatis agar memanjakan user (UX Plus)
       openModalPemeriksaan(id);
@@ -485,69 +489,105 @@ const PenerimaanTBS = () => {
                           </div>
                         )}
 
-{/* --- INFO HASIL TIMBANGAN MUNCUL JIKA DI TAB RIWAYAT --- */}
+                        {/* --- INFO HASIL TIMBANGAN MUNCUL JIKA DI TAB RIWAYAT --- */}
                         {!isAktif && item.pemeriksaan && (
                           <div className="mt-5 bg-green-50/40 border border-green-200 rounded-xl p-3 sm:p-4 animate-in fade-in shadow-sm">
-                            
                             {/* HEADER - Dikecilkan ukurannya */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-green-200/50 pb-2.5 mb-3 gap-2">
                               <h4 className="text-[11px] sm:text-xs font-extrabold text-green-800 uppercase flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> 
+                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                                 <span>Hasil Pemeriksaan</span>
                               </h4>
                               {/* Harga Snapshot */}
-                              {item.pemeriksaan.harga_beli_per_kg_snapshot > 0 && (
+                              {item.pemeriksaan.harga_beli_per_kg_snapshot >
+                                0 && (
                                 <span className="bg-green-100 text-green-800 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded border border-green-200 w-fit">
-                                  Dasar: Rp {item.pemeriksaan.harga_beli_per_kg_snapshot.toLocaleString("id-ID")} / Kg
+                                  Dasar: Rp{" "}
+                                  {item.pemeriksaan.harga_beli_per_kg_snapshot.toLocaleString(
+                                    "id-ID",
+                                  )}{" "}
+                                  / Kg
                                 </span>
                               )}
                             </div>
-                            
+
                             {/* LIST BARIS KE BAWAH (Lebih ramping & tidak ada kotak besar) */}
                             <div className="flex flex-col gap-1.5">
-                              
                               {/* Baris 1: Berat Bruto */}
                               <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-100">
-                                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Berat Bruto</p>
+                                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                                  Berat Bruto
+                                </p>
                                 <p className="text-xs sm:text-sm font-black text-gray-900">
-                                  {item.pemeriksaan.bruto?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-gray-400">Kg</span>
+                                  {item.pemeriksaan.bruto?.toLocaleString(
+                                    "id-ID",
+                                  ) || 0}{" "}
+                                  <span className="text-[9px] font-bold text-gray-400">
+                                    Kg
+                                  </span>
                                 </p>
                               </div>
 
                               {/* Baris 2: Tot Potongan */}
                               <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-100">
-                                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Tot. Potongan</p>
+                                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                                  Tot. Potongan
+                                </p>
                                 <p className="text-xs sm:text-sm font-black text-red-600">
-                                  {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-red-400">Kg</span>
+                                  {item.pemeriksaan.total_potongan?.toLocaleString(
+                                    "id-ID",
+                                  ) || 0}{" "}
+                                  <span className="text-[9px] font-bold text-red-400">
+                                    Kg
+                                  </span>
                                 </p>
                               </div>
 
                               {/* Baris 3: Netto Bersih */}
                               <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-green-200 ring-1 ring-green-50 shadow-sm">
-                                <p className="text-[9px] sm:text-[10px] text-green-700 font-bold uppercase tracking-wider">Netto Bersih</p>
+                                <p className="text-[9px] sm:text-[10px] text-green-700 font-bold uppercase tracking-wider">
+                                  Netto Bersih
+                                </p>
                                 <p className="text-sm sm:text-base font-black text-green-700">
-                                  {item.pemeriksaan.final_weigh?.toLocaleString("id-ID") || item.pemeriksaan.netto?.toLocaleString("id-ID") || 0} <span className="text-[9px] font-bold text-green-600/70">Kg</span>
+                                  {item.pemeriksaan.final_weigh?.toLocaleString(
+                                    "id-ID",
+                                  ) ||
+                                    item.pemeriksaan.netto?.toLocaleString(
+                                      "id-ID",
+                                    ) ||
+                                    0}{" "}
+                                  <span className="text-[9px] font-bold text-green-600/70">
+                                    Kg
+                                  </span>
                                 </p>
                               </div>
 
                               {/* Baris 4: Total Harga Final (Warna Hijau) */}
                               <div className="flex justify-between items-center bg-gradient-to-r from-green-600 to-emerald-700 px-3 py-2.5 rounded-lg shadow-sm text-white mt-1">
-                                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-green-100">Total Harga</p>
+                                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-green-100">
+                                  Total Harga
+                                </p>
                                 <p className="text-sm sm:text-base font-black tracking-tight">
-                                  <span className="text-[9px] font-medium mr-1">Rp</span> 
-                                  {item.pemeriksaan.harga_final?.toLocaleString("id-ID") || 0}
+                                  <span className="text-[9px] font-medium mr-1">
+                                    Rp
+                                  </span>
+                                  {item.pemeriksaan.harga_final?.toLocaleString(
+                                    "id-ID",
+                                  ) || 0}
                                 </p>
                               </div>
                             </div>
 
                             {/* --- CATATAN & DOKUMEN (Disusun vertikal sangat tipis) --- */}
-                            {(item.pemeriksaan.catatan || item.pemeriksaan.dokumen_nota_url) && (
+                            {(item.pemeriksaan.catatan ||
+                              item.pemeriksaan.dokumen_nota_url) && (
                               <div className="mt-3 flex flex-col gap-2 border-t border-green-200/50 pt-3">
                                 {/* Catatan */}
                                 {item.pemeriksaan.catatan && (
                                   <div className="bg-white/60 p-2.5 rounded-lg border border-green-100">
                                     <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                                      <FileText className="w-3 h-3 shrink-0" /> Catatan
+                                      <FileText className="w-3 h-3 shrink-0" />{" "}
+                                      Catatan
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] text-gray-700 font-medium italic leading-snug">
                                       "{item.pemeriksaan.catatan}"
@@ -564,13 +604,18 @@ const PenerimaanTBS = () => {
                                         Nota Timbangan
                                       </p>
                                     </div>
-                                    <a 
-                                      href={getFileUrl(item.pemeriksaan.dokumen_nota_url, "TRACEABILITY")} 
-                                      target="_blank" 
+                                    <a
+                                      href={getFileUrl(
+                                        item.pemeriksaan.dokumen_nota_url,
+                                        "TRACEABILITY",
+                                      )}
+                                      target="_blank"
                                       rel="noopener noreferrer"
                                       className="flex items-center bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-100 hover:bg-blue-100 transition-colors shrink-0"
                                     >
-                                      <span className="text-[9px] font-bold whitespace-nowrap">Lihat Nota &rarr;</span>
+                                      <span className="text-[9px] font-bold whitespace-nowrap">
+                                        Lihat Nota &rarr;
+                                      </span>
                                     </a>
                                   </div>
                                 )}

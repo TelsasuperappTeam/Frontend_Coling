@@ -13,6 +13,8 @@ import {
   Truck,
   Calendar,
   Coins,
+  CheckCircle2,
+  History,
 } from "lucide-react";
 
 const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
@@ -99,35 +101,6 @@ export default function DashboardKebun() {
       { id: 2, nama: "Rina Nose" },
     ],
   });
-
-  // --- MOCK DATA LAINNYA ---
-  const [progresPenjualan] = useState([
-    {
-      id: 1,
-      pabrik: "PT. Agro Lestari Pabrik",
-      tanggal: "20 Okt 2023",
-      status: "Diterima",
-    },
-    {
-      id: 2,
-      pabrik: "PT. Sawit Makmur",
-      tanggal: "21 Okt 2023",
-      status: "Ditolak",
-    },
-  ]);
-
-  const [pengirimanTBS] = useState([
-    {
-      id: 1,
-      pabrik: "PT. Agro Lestari Pabrik",
-      steps: ["Proses", "Penjemputan", "Pengiriman"],
-    },
-    {
-      id: 2,
-      pabrik: "PT. Sawit Makmur",
-      steps: ["Proses", "Penjemputan", "Pengiriman"],
-    },
-  ]);
 
   // --- HELPER AUTH ---
   const getToken = () =>
@@ -323,6 +296,93 @@ export default function DashboardKebun() {
   useEffect(() => {
     fetchValidasiRequests();
   }, [fetchValidasiRequests]);
+
+  // --- STATE RIWAYAT PENJUALAN TBS (MINI) ---
+  const [riwayatPenjualanMini, setRiwayatPenjualanMini] = useState([]);
+  const [isLoadingRiwayatMini, setIsLoadingRiwayatMini] = useState(false);
+
+  // --- FETCH RIWAYAT PENJUALAN TBS (MINI) ---
+  useEffect(() => {
+    const fetchRiwayatMini = async () => {
+      setIsLoadingRiwayatMini(true);
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        const response = await fetch(
+          API_ENDPOINTS.FARM.MARKETPLACE.GET_PENGAJUAN_MASUK,
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          // Hanya ambil 3 data teratas (terbaru)
+          setRiwayatPenjualanMini(data.slice(0, 3)); 
+        } else {
+          setRiwayatPenjualanMini([]);
+        }
+      } catch (error) {
+        console.error("Error fetching riwayat mini:", error);
+      } finally {
+        setIsLoadingRiwayatMini(false);
+      }
+    };
+
+    fetchRiwayatMini();
+  }, []);
+
+  // --- STATE PENGIRIMAN TBS (MINI) ---
+  const [pengirimanMini, setPengirimanMini] = useState([]);
+  const [isLoadingPengirimanMini, setIsLoadingPengirimanMini] = useState(false);
+
+  // --- FETCH PENGIRIMAN TBS (MINI) ---
+  useEffect(() => {
+    const fetchPengirimanMini = async () => {
+      setIsLoadingPengirimanMini(true);
+      try {
+        const token = getToken();
+        if (!token) return;
+        const urlBase = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST;
+
+        // Ambil data aktif dan histori secara bersamaan (Sama seperti DistribusiLogistik.jsx)
+        const [resAktif, resHistori] = await Promise.all([
+          fetch(`${urlBase}?is_history=false`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${urlBase}?is_history=true`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        let dataAktif = resAktif.ok ? await resAktif.json() : [];
+        let dataHistori = resHistori.ok ? await resHistori.json() : [];
+
+        let combinedData = [...dataAktif, ...dataHistori];
+
+        // Filter: Belum diperiksa pabrik & tidak ditolak
+        combinedData = combinedData.filter(
+          (item) =>
+            (item.pemeriksaan === null || item.pemeriksaan === undefined) &&
+            item.status_permintaan?.toLowerCase() !== "ditolak"
+        );
+
+        // Urutkan ID terbaru ke atas
+        combinedData.sort((a, b) => b.id - a.id);
+
+        // Ambil 3 teratas untuk dashboard mini
+        setPengirimanMini(combinedData.slice(0, 3));
+      } catch (error) {
+        console.error("Error fetching pengiriman mini:", error);
+      } finally {
+        setIsLoadingPengirimanMini(false);
+      }
+    };
+
+    fetchPengirimanMini();
+  }, []);
 
   /**
    * --- HANDLE MANAGE PETANI ---
@@ -623,95 +683,178 @@ export default function DashboardKebun() {
           )}
         </Card>
 
-        {/* CARD 3: PROGRES PENJUALAN TBS */}
-        <Card title="Progres Penjualan TBS" icon={Calendar}>
-          <div className="space-y-0">
-            {progresPenjualan.map((item, index) => (
-              <div key={item.id} className="relative pl-6 py-3 group">
-                {/* Garis Konektor Vertical */}
-                {index !== progresPenjualan.length - 1 && (
-                  <div className="absolute left-[9px] top-6 bottom-[-12px] w-0.5 bg-gray-200 group-hover:bg-green-200 transition-colors"></div>
-                )}
-
-                {/* Dot Indikator */}
-                <div
-                  className={`absolute left-0 top-4 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 ${
-                    item.status === "Diterima" ? "bg-green-500" : "bg-red-500"
-                  }`}
-                ></div>
-
-                <div className="flex justify-between items-start bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-800">
-                      {item.pabrik}
-                    </h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
-                      <Calendar size={10} /> {item.tanggal}
-                    </p>
-                  </div>
-                  <div
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                      item.status === "Diterima"
-                        ? "bg-green-50 border-green-200 text-green-700"
-                        : "bg-red-50 border-red-200 text-red-700"
-                    }`}
-                  >
-                    {item.status}
-                  </div>
-                </div>
+        {/* CARD 3: PROGRES PENJUALAN TBS (Tampilan Mini dari Penjualan.jsx) */}
+        <Card title="Status Pengajuan Penjualan TBS" icon={Calendar}>
+          <div className="space-y-4">
+            {isLoadingRiwayatMini ? (
+              <div className="h-32 flex items-center justify-center text-gray-400">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
               </div>
-            ))}
+            ) : riwayatPenjualanMini.length === 0 ? (
+              <div className="h-32 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
+                <p className="text-xs">Belum ada pengajuan penjualan.</p>
+              </div>
+            ) : (
+              riwayatPenjualanMini.map((item) => {
+                // Formatting Tanggal
+                const tglAjuanFormat = new Date(item.created_at).toLocaleDateString("id-ID", {
+                  day: "2-digit", month: "short", year: "numeric",
+                });
+                
+                // Menentukan warna label status
+                const statusRaw = (item.status_pengajuan || "").toLowerCase();
+                let badgeClass = "bg-yellow-50 text-yellow-700 border-yellow-100"; 
+                let IconStatus = History;
+
+                if (statusRaw.includes("setuju")) {
+                  badgeClass = "bg-green-50 text-green-700 border-green-100";
+                  IconStatus = CheckCircle2;
+                }
+                if (statusRaw.includes("tolak")) {
+                  badgeClass = "bg-red-50 text-red-700 border-red-100";
+                  IconStatus = X;
+                }
+
+                return (
+                  <div key={item.id} className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                          Nama Grup
+                        </p>
+                        <p className="text-sm font-bold text-gray-800 leading-snug">
+                          {item.nama_grup}
+                        </p>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${badgeClass}`}>
+                        <IconStatus className="w-3 h-3" />
+                        {item.status_pengajuan || "MENUNGGU"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase">
+                          Tgl Pengajuan
+                        </p>
+                        <p className="text-[11px] font-medium text-gray-700 flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3 text-gray-400" /> {tglAjuanFormat}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase">
+                          Est. Muatan (TBS)
+                        </p>
+                        <p className="text-[11px] font-bold text-[#B5302D] mt-0.5">
+                          {item.estimasi_total_tbs_grup_kg} Kg
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            
+            {/* Tombol Lihat Semua di bawah Card */}
+            <div className="pt-2">
+              <button 
+                onClick={() => navigate("/kebun/distribusilogistik")}
+                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
+              >
+                Lihat Semua &rarr;
+              </button>
+            </div>
           </div>
         </Card>
 
-        {/* CARD 4: PENGIRIMAN TBS */}
-        <Card title="Pengiriman TBS" icon={Truck}>
-          <div className="space-y-6">
-            {pengirimanTBS.map((item) => (
-              <div
-                key={item.id}
-                className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 bg-white rounded-lg shadow-sm text-[#EF8523]">
-                    <Truck size={16} />
-                  </div>
-                  <h4 className="text-sm font-bold text-gray-800">
-                    {item.pabrik}
-                  </h4>
-                </div>
+        {/* CARD 4: PENGIRIMAN TBS (Tampilan Mini) */}
+        <Card title="Status Pengiriman TBS" icon={Truck}>
+          <div className="space-y-4">
+            {isLoadingPengirimanMini ? (
+              <div className="h-32 flex items-center justify-center text-gray-400">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              </div>
+            ) : pengirimanMini.length === 0 ? (
+              <div className="h-32 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
+                <p className="text-xs">Belum ada armada yang sedang berjalan.</p>
+              </div>
+            ) : (
+              pengirimanMini.map((item) => {
+                // Logika Status dari DistribusiLogistik.jsx
+                const statusPermintaan = (item.status_permintaan || "menunggu").toLowerCase();
+                const rawProgress = item.progress_db || "menunggu_pengiriman";
+                const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
 
-                <div className="flex items-center justify-between relative px-2">
-                  <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 -z-0 rounded-full"></div>
+                let badgeClass = "bg-yellow-50 text-yellow-700 border-yellow-100";
+                let label = "Menunggu Konfirmasi";
+                let IconStatus = History;
 
-                  {item.steps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="relative z-10 flex flex-col items-center"
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm transition-all ${
-                          idx === 1
-                            ? "bg-white border-[#EF8523] text-[#EF8523]" // Step Aktif (Contoh)
-                            : "bg-white border-gray-300 text-gray-400"
-                        }`}
-                      >
-                        <span className="text-[10px] font-bold">{idx + 1}</span>
+                if (statusPermintaan === "diterima") {
+                  if (pDB === "terima") {
+                    badgeClass = "bg-green-50 text-green-700 border-green-100";
+                    label = "Tiba di Pabrik";
+                    IconStatus = CheckCircle2;
+                  } else {
+                    badgeClass = "bg-blue-50 text-blue-700 border-blue-100";
+                    label = item.progress_publik || "Dalam Perjalanan";
+                    IconStatus = Truck;
+                  }
+                }
+
+                return (
+                  <div key={item.id} className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#EF8523] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                          Tujuan Pabrik
+                        </p>
+                        <p className="text-sm font-bold text-gray-800 leading-snug line-clamp-1 pr-2">
+                          {item.alamat_pengiriman_pabrik || "Pabrik Tujuan"}
+                        </p>
                       </div>
-                      <span
-                        className={`text-[10px] font-bold mt-2 px-2 py-0.5 rounded-full ${
-                          idx === 1
-                            ? "text-[#EF8523] bg-orange-50"
-                            : "text-gray-400"
-                        }`}
-                      >
-                        {step}
+                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${badgeClass}`}>
+                        <IconStatus className="w-3 h-3" />
+                        {label}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase">
+                          No. Resi
+                        </p>
+                        <p className="text-[11px] font-mono font-bold text-gray-700 mt-0.5">
+                          {item.kode_resi || `REQ-${item.id}`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase">
+                          Est. Tiba
+                        </p>
+                        <p className="text-[11px] font-bold text-[#EF8523] flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3 text-orange-400" />
+                          {item.tanggal_permintaan_sampai || "-"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Tombol Lihat Semua di bawah Card */}
+            <div className="pt-2">
+              <button 
+                onClick={() => navigate("/kebun/distribusilogistik")}
+                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
+              >
+                Lihat Semua &rarr;
+              </button>
+            </div>
           </div>
         </Card>
 

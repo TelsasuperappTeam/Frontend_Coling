@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Keperluan Deploy"
+git commit -m "Memperbaiki UI/UX tampilan"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"
