@@ -270,7 +270,7 @@ const PenerimaanTBS = () => {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
-              Transaksi TBS
+              Pemeriksaan TBS
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
               Pantau kedatangan armada dan rekapitulasi timbangan TBS.
@@ -288,7 +288,7 @@ const PenerimaanTBS = () => {
                 : "text-gray-500"
             }`}
           >
-            <Truck className="w-4 h-4" /> Transaksi Aktif
+            <Truck className="w-4 h-4" /> Validasi TBS Masuk
           </button>
           <button
             onClick={() => setActiveTab("riwayat")}
@@ -298,7 +298,7 @@ const PenerimaanTBS = () => {
                 : "text-gray-500"
             }`}
           >
-            <History className="w-4 h-4" /> Riwayat Selesai
+            <History className="w-4 h-4" /> Riwayat Pemeriksaan
           </button>
         </div>
       </div>

@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Memperbaiki UI/UX tampilan"
+git commit -m "Memperbaiki UI/UX tampilan dan menyesuaikan alur sesuai revisi berdasarkan hasil survei"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"

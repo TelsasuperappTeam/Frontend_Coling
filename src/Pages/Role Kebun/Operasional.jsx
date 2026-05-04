@@ -14,34 +14,16 @@ import {
   Save,
   Loader2, // Icon loading tambahan
 } from "lucide-react";
+
 import {
   API_ENDPOINTS,
   API_BASE_URLS,
   getFileUrl,
 } from "../../config/constants.js";
 
-// DATA KEGIATAN - TETAP STATIC
-const MOCK_KEGIATAN = [
-  {
-    id: 1,
-    kegiatan: "Rapat Anggota Tahunan (RAT)",
-    tanggal: "10 Okt 2025",
-    status: "Rencana",
-  },
-  {
-    id: 2,
-    kegiatan: "Pelatihan ISPO Batch 2",
-    tanggal: "15 Okt 2025",
-    status: "Rencana",
-  },
-];
+import { showToast, confirmDialog } from "../../utils/notif";
 
 /* ===================== DEFINISI REQUIREMENTS (SESUAI BE MAHAR) ===================== */
-// Mapping Label Frontend ke Requirement Code Backend
-/* ===================== DEFINISI REQUIREMENTS ===================== */
-// Mapping Label Frontend ke Requirement Code Backend
-/* ===================== DEFINISI REQUIREMENTS ===================== */
-// Mapping Label Frontend ke Requirement Code Backend dengan Struktur Hirarki (Prinsip > Kriteria)
 const DOKUMEN_CONFIG = [
   // --- Prinsip 2. Penerapan Praktik Pertanian yang Baik ---
   // Kriteria 2.1
@@ -52,7 +34,7 @@ const DOKUMEN_CONFIG = [
     label: "Daftar anggota kelompok tani / koperasi",
     deskripsi:
       "Upload dokumen berisi: Nama anggota, NIK, Lokasi lahan, dan Luas lahan. (Minimal 20–30 orang per kelompok).",
-    code: "P2_1_ANGGOTA", // SESUAIKAN DENGAN BE
+    code: "P2_2_1_ANGGOTA", // SUDAH
   },
   {
     id: 2,
@@ -61,7 +43,7 @@ const DOKUMEN_CONFIG = [
     label: "SK pengurus & pembagian tugas",
     deskripsi:
       "Upload dokumen yang menjelaskan: Daftar pengurus serta Peran dan tanggung jawab masing-masing (Contoh: siapa yang menjadi manajer ICS, dll).",
-    code: "P2_1_SK", // SESUAIKAN DENGAN BE
+    code: "P2_2_1_SK_PENGURUS", // SUDAH
   },
   {
     id: 3,
@@ -70,7 +52,7 @@ const DOKUMEN_CONFIG = [
     label: "AD/ART kelompok",
     deskripsi:
       "Upload dokumen Anggaran Dasar dan Anggaran Rumah Tangga (Berisi aturan internal kelompok).",
-    code: "P2_1_ADART", // SESUAIKAN DENGAN BE
+    code: "P2_2_1_ADART", // SUDAH
   },
   {
     id: 4,
@@ -79,7 +61,7 @@ const DOKUMEN_CONFIG = [
     label: "Dokumen badan hukum",
     deskripsi:
       "Upload dokumen yang menunjukkan legalitas koperasi / organisasi (Sesuai peraturan yang berlaku).",
-    code: "P2_1_HUKUM", // SESUAIKAN DENGAN BE
+    code: "P2_2_1_BADAN_HUKUM", // SUDAH
   },
   {
     id: 5,
@@ -87,7 +69,7 @@ const DOKUMEN_CONFIG = [
     kriteria: "Kriteria 2.1 Organisasi Kelembagaan Pekebun",
     label: "Berita acara pembentukan",
     deskripsi: "Upload bukti resmi saat kelompok tani / koperasi didirikan.",
-    code: "P2_1_BERITA_ACARA", // SESUAIKAN DENGAN BE
+    code: "P2_2_1_BERITA_ACARA", // SUDAH
   },
 
   // Kriteria 2.2
@@ -98,7 +80,7 @@ const DOKUMEN_CONFIG = [
     label: "Rencana operasional kebun",
     deskripsi:
       "Upload dokumen yang memuat: Rencana kegiatan kebun berdasarkan data petani, Kebutuhan sarana produksi, Perkiraan hasil panen, Kegiatan pemeliharaan dan pengendalian hama, Proses panen dan pengangkutan TBS, Pemeliharaan lahan (terasering, drainase, jalan produksi), dan Rencana peremajaan kebun (jika diperlukan).",
-    code: "P2_2_OPERASIONAL", // SESUAIKAN DENGAN BE
+    code: "P2_2_2_RENCANA_KERJA", // SUDAH
   },
 
   // Kriteria 2.3
@@ -111,10 +93,24 @@ const DOKUMEN_CONFIG = [
     label: "SOP pembukaan lahan tanpa bakar",
     deskripsi:
       "Upload dokumen SOP yang mengacu pada pedoman resmi (Dirjen Perkebunan atau instansi terkait).",
-    code: "P2_3_1_SOP_LAHAN", // SESUAIKAN DENGAN BE
+    code: "P2_2_3_1_SOP_LAHAN", // SESUAIKAN DENGAN BE
   },
+
+  // BE BELUM ADA,
   {
     id: 8,
+    prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
+    kriteria:
+      "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
+    subKriteria: "2.3.2 pembenihan",
+    label: "Bukti sosialisasi informasi benih",
+    deskripsi:
+      "Upload dokumen/foto/video bukti sosialisasi informasi benih melalui kelompok tani.",
+    code: "P2_2_3_1_SOP_LAHANnNNN", // BELUM ADA
+  },
+
+  {
+    id: 9,
     prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
     kriteria:
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
@@ -122,10 +118,10 @@ const DOKUMEN_CONFIG = [
     label: "SOP penanaman sesuai GAP",
     deskripsi:
       "Upload SOP yang mengatur: Praktik budidaya yang berkelanjutan dan ramah lingkungan serta Upaya peningkatan produktivitas dan kualitas hasil.",
-    code: "P2_3_3_SOP_GAP", // SESUAIKAN DENGAN BE
+    code: "P2_2_3_3_SOP_GAP", // SUDAH
   },
   {
-    id: 9,
+    id: 10,
     prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
     kriteria:
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
@@ -133,10 +129,10 @@ const DOKUMEN_CONFIG = [
     label: "SOP pedoman teknis penanaman",
     deskripsi:
       "Upload dokumen yang memuat: Luas areal tanam, Jumlah tanaman dan jarak tanam, dan Pembuatan terasering untuk lahan miring.",
-    code: "P2_3_3_SOP_TEKNIS", // SESUAIKAN DENGAN BE
+    code: "P2_2_3_3_SOP_TEKNIS", // SUDAH
   },
   {
-    id: 10,
+    id: 11,
     prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
     kriteria:
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
@@ -144,17 +140,7 @@ const DOKUMEN_CONFIG = [
     label: "SOP pemeliharaan tanaman",
     deskripsi:
       "Upload dokumen SOP dan instruksi kerja terkait pemeliharaan tanaman.",
-    code: "P2_3_5_SOP_PELIHARA", // SESUAIKAN DENGAN BE
-  },
-  {
-    id: 11,
-    prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
-    kriteria:
-      "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
-    subKriteria: "2.3.6 Pengendalian OPT",
-    label: "SOP pengendalian hama terpadu (PHT/IPM)",
-    deskripsi: "Upload dokumen SOP pengendalian hama.",
-    code: "P2_3_6_SOP_PHT", // SESUAIKAN DENGAN BE
+    code: "P2_2_3_5_SOP_PEMELIHARAAN", // SESUAIKAN DENGAN BE
   },
   {
     id: 12,
@@ -162,12 +148,33 @@ const DOKUMEN_CONFIG = [
     kriteria:
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
     subKriteria: "2.3.6 Pengendalian OPT",
-    label: "SOP penanganan limbah pestisida",
-    deskripsi: "Upload dokumen SOP pengelolaan limbah pestisida.",
-    code: "P2_3_6_SOP_LIMBAH", // SESUAIKAN DENGAN BE
+    label: "SOP pengendalian hama terpadu (PHT/IPM)",
+    deskripsi: "Upload dokumen SOP pengendalian hama.",
+    code: "P2_2_3_6_SOP_HAMA", // SESUAIKAN DENGAN BE
   },
   {
     id: 13,
+    prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
+    kriteria:
+      "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
+    subKriteria: "2.3.6 Pengendalian OPT",
+    label: "SOP penanganan limbah pestisida",
+    deskripsi: "Upload dokumen SOP pengelolaan limbah pestisida.",
+    code: "P2_2_3_6_SOP_LIMBAH", // SESUAIKAN DENGAN BE
+  },
+  {
+    id: 14,
+    prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
+    kriteria:
+      "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
+    subKriteria: "2.3.6 Pengendalian OPT",
+    label: "Bukti sertifikasi pestisida",
+    deskripsi:
+      "Upload dokumen bukti bahwa pestisida yang digunakan telah terdaftar di komisi pestisida.",
+    code: "P2_2_3_6_SERTIFIKASI_PESTISIDA", // SESUAIKAN DENGAN BE
+  },
+  {
+    id: 15,
     prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
     kriteria:
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
@@ -175,10 +182,10 @@ const DOKUMEN_CONFIG = [
     label: "SOP kriteria buah matang",
     deskripsi:
       "Upload dokumen yang menjelaskan standar kematangan panen: Kurang matang (12,5–25% buah membrondol), Matang 1 (26–60% merah mengkilap), Matang 2 (61–75% oranye).",
-    code: "P2_3_7_SOP_MATANG", // SESUAIKAN DENGAN BE
+    code: "P2_2_3_7_SOP_MATANG", // SESUAIKAN DENGAN BE
   },
   {
-    id: 14,
+    id: 16,
     prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
     kriteria:
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
@@ -186,10 +193,10 @@ const DOKUMEN_CONFIG = [
     label: "SOP alat transportasi",
     deskripsi:
       "Upload dokumen SOP terkait alat transportasi dan sarana pendukung.",
-    code: "P2_3_8_SOP_TRANSPORT1", // SESUAIKAN DENGAN BE
+    code: "P2_2_3_8_SOP_TRANSPORT", // SESUAIKAN DENGAN BE
   },
   {
-    id: 15,
+    id: 17,
     prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
     kriteria:
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
@@ -197,68 +204,72 @@ const DOKUMEN_CONFIG = [
     label: "SOP penjagaan kualitas",
     deskripsi:
       "Upload dokumen SOP yang memastikan: Buah tidak rusak atau terkontaminasi, Tidak terjadi kehilangan, dan Pengiriman tepat waktu ke tempat pengolahan.",
-    code: "P2_3_8_SOP_TRANSPORT2", // SESUAIKAN DENGAN BE
+    code: "P2_2_3_8_SOP_KUALITAS", // SESUAIKAN DENGAN BE
   },
 
   // --- Prinsip 3. Pengelolaan Lingkungan Hidup, SDA, dan Keanekaragaman Hayati ---
   // Kriteria 3.1
   {
-    id: 16,
+    id: 18,
     prinsip:
       "Prinsip 3. Pengelolaan Lingkungan Hidup, SDA, dan Keanekaragaman Hayati",
     kriteria: "Kriteria 3.1 Pencegahan dan Penanggulangan Kebakaran",
     label: "SOP pencegahan dan penanggulangan kebakaran",
     deskripsi:
       "Upload dokumen yang menjelaskan: Prosedur pencegahan kebakaran dan Langkah penanggulangan saat terjadi kebakaran.",
-    code: "P3_1_SOP_KEBAKARAN", // SESUAIKAN DENGAN BE
+    code: "P3_3_1_PENANGGULANGAN_KEBAKARAN", // SESUAIKAN DENGAN BE
   },
+
+  // BE BELUM ADA
   {
-    id: 17,
+    id: 19,
     prinsip:
       "Prinsip 3. Pengelolaan Lingkungan Hidup, SDA, dan Keanekaragaman Hayati",
     kriteria: "Kriteria 3.1 Pencegahan dan Penanggulangan Kebakaran",
     label: "Informasi area rawan kebakaran",
     deskripsi:
       "Upload dokumen yang memuat: Peta atau data lokasi area rawan kebakaran dan Cakupan seluruh lahan anggota kelompok.",
-    code: "P3_1_PETA_RAWAN", // SESUAIKAN DENGAN BE
+    code: "P3_1_PETA_RAWAN", // BE BELUM
   },
+
+  // BE BELUM ADA
   {
-    id: 18,
+    id: 20,
     prinsip:
       "Prinsip 3. Pengelolaan Lingkungan Hidup, SDA, dan Keanekaragaman Hayati",
     kriteria: "Kriteria 3.1 Pencegahan dan Penanggulangan Kebakaran",
     label: "Dokumentasi simulasi tanggap darurat",
     deskripsi:
       "Upload bukti bahwa telah dilakukan simulasi kebakaran, seperti: Foto, laporan, atau berita acara kegiatan.",
-    code: "P3_1_SIMULASI", // SESUAIKAN DENGAN BE
+    code: "P3_1_SIMULASI", // BE BELUM
   },
 
   // Kriteria 3.2
   {
-    id: 19,
+    id: 21,
     prinsip:
       "Prinsip 3. Pengelolaan Lingkungan Hidup, SDA, dan Keanekaragaman Hayati",
     kriteria: "Kriteria 3.2 Pelestarian Keanekaragaman Hayati",
     label: "SOP identifikasi satwa dan tumbuhan langka",
     deskripsi:
       "Upload dokumen yang menjelaskan cara mengidentifikasi satwa dan tumbuhan langka di area kebun.",
-    code: "P3_2_SOP_IDENTIFIKASI", // SESUAIKAN DENGAN BE
+    code: "P3_3_2_1_SOP_IDENTIFIKASI_HAYATI", // SESUAIKAN DENGAN BE
   },
   {
-    id: 20,
+    id: 22,
     prinsip:
       "Prinsip 3. Pengelolaan Lingkungan Hidup, SDA, dan Keanekaragaman Hayati",
     kriteria: "Kriteria 3.2 Pelestarian Keanekaragaman Hayati",
     label: "SOP perlindungan satwa dan tumbuhan langka",
     deskripsi:
       "Upload dokumen yang menjelaskan upaya perlindungan terhadap satwa dan tumbuhan langka di area kebun.",
-    code: "P3_2_SOP_LINDUNG", // SESUAIKAN DENGAN BE
+    code: "P3_3_2_2_PERLINDUNGAN_HAYATI", // SESUAIKAN DENGAN BE
   },
 
   // --- Prinsip 4. Penerapan Transparansi ---
   // Kriteria 4.1
   {
-    id: 21,
+    id: 23,
     prinsip: "Prinsip 4. Penerapan Transparansi",
     kriteria: "Kriteria 4.1 Penjualan dan Kesepakatan Harga TBS",
     label: "Informasi harga TBS dari pemerintah",
@@ -267,7 +278,7 @@ const DOKUMEN_CONFIG = [
     code: "P4_1_HARGA", // SESUAIKAN DENGAN BE
   },
   {
-    id: 22,
+    id: 24,
     prinsip: "Prinsip 4. Penerapan Transparansi",
     kriteria: "Kriteria 4.1 Penjualan dan Kesepakatan Harga TBS",
     label: "Dokumen kerja sama kemitraan",
@@ -278,25 +289,25 @@ const DOKUMEN_CONFIG = [
 
   // Kriteria 4.2
   {
-    id: 23,
+    id: 25,
     prinsip: "Prinsip 4. Penerapan Transparansi",
     kriteria: "Kriteria 4.2 Penyediaan Data dan Informasi",
     label: "SOP pelayanan informasi",
     deskripsi:
       "Upload dokumen yang menjelaskan: Prosedur permintaan dan pemberian informasi serta Mekanisme pelayanan kepada pihak terkait.",
-    code: "P4_2_SOP_INFO", // SESUAIKAN DENGAN BE
+    code: "P3_4_1_SOP_PELAYANAN_INFORMASI", // SESUAIKAN DENGAN BE
   },
 
   // --- Prinsip 5. Peningkatan Usaha Secara Berkelanjutan ---
   // Kriteria 5.1
   {
-    id: 24,
+    id: 26,
     prinsip: "Prinsip 5. Peningkatan Usaha Secara Berkelanjutan",
     kriteria: "Kriteria 5.1 Peningkatan Kinerja",
-    label: "Rencana aksi peningkatan produksi",
+    label: "Rencana aksi peningkatan produksi kelapa sawit",
     deskripsi:
       "Upload dokumen yang memuat: Rencana peningkatan produksi kelapa sawit, Langkah atau strategi yang akan dilakukan, dan Bukti bahwa rencana dibagikan ke seluruh anggota.",
-    code: "P5_1_RENCANA_PRODUKSI", // SESUAIKAN DENGAN BE
+    code: "P3_4_1_SOP_PELAYANAN_INFORMASI", // SESUAIKAN DENGAN BE
   },
 ];
 
@@ -359,6 +370,7 @@ const Operasional = () => {
       file_url: null, // Jika null, berarti belum upload
       status: null, // PENDING, APPROVED, etc
       isUploading: false,
+      isFetchingData: true,
     })),
   );
 
@@ -437,14 +449,6 @@ const Operasional = () => {
     }
   };
 
-  // Panggil Fetch Petani & Peralatan otomatis saat tab transaksi aktif
-  useEffect(() => {
-    if (activeTab === "transaksi") {
-      fetchOpsiPetani();
-      fetchOpsiPeralatan();
-    }
-  }, [activeTab]);
-
   // ===================== LOGIC GET TRANSAKSI =====================
   const fetchRiwayatTransaksi = async () => {
     setIsLoadingTransaksi(true);
@@ -509,74 +513,84 @@ const Operasional = () => {
     }
   };
 
-  // GET DOKUMEN YANG SUDAH DI-UPLOAD (DYNAMIC ISPO)
+  // GET DOKUMEN YANG SUDAH DI-UPLOAD (PROGRESSIVE RENDERING)
   const fetchDokumenExisting = async () => {
-    try {
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-      // Karena BE menggunakan endpoint /submission/{requirement_code}
-      // Kita fetch data satu per satu untuk setiap config secara paralel
-      const fetchPromises = DOKUMEN_CONFIG.map(async (docConfig) => {
-        try {
-          // Gabungkan URL base dengan kode dokumen
-          // Contoh hasil: ".../ispo/submission/P2_2_1_BERITA_ACARA"
-          const url = `${API_ENDPOINTS.ISPO.KEBUN.SUBMISSION}/${docConfig.code}`;
+    // Kita gunakan forEach agar setiap fetch jalan sendiri-sendiri secara paralel,
+    // tanpa memblokir atau menunggu dokumen yang lain selesai (Promise.all dihapus).
+    DOKUMEN_CONFIG.forEach(async (docConfig, index) => {
+      try {
+        const url = `${API_ENDPOINTS.ISPO.KEBUN.SUBMISSION}/${docConfig.code}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-          const response = await fetch(url, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (response.ok) {
-            const dataServer = await response.json();
-            // Jika dokumen ada (200 OK), masukkan data file_url dan status dari server
-            return {
-              ...docConfig,
+        if (response.ok) {
+          const dataServer = await response.json();
+          // Begitu data 1 dokumen tiba, LANGSUNG update state-nya
+          setDokumenStatus((prevDocs) => {
+            const newDocs = [...prevDocs];
+            newDocs[index] = {
+              ...newDocs[index],
               file_url: dataServer.file_url,
               status: dataServer.status,
-              isUploading: false,
+              isFetchingData: false, // Matikan loading khusus untuk dokumen ini
             };
-          } else if (response.status === 404) {
-            // Jika 404 (Sesuai logic BE: "Dokumen ini belum di-upload")
-            // Kembalikan state kosong agar UI menampilkan "Belum ada file"
-            return {
-              ...docConfig,
+            return newDocs;
+          });
+        } else if (response.status === 404) {
+          // Jika 404, artinya belum di-upload. Matikan loading, kembalikan ke state awal
+          setDokumenStatus((prevDocs) => {
+            const newDocs = [...prevDocs];
+            newDocs[index] = {
+              ...newDocs[index],
               file_url: null,
               status: null,
-              isUploading: false,
+              isFetchingData: false, // Matikan loading
             };
-          } else {
-            // Jika ada error lain dari server (misal 500)
-            return { ...docConfig, isUploading: false };
-          }
-        } catch (err) {
-          console.error(`Gagal fetch dokumen ${docConfig.code}:`, err);
-          return { ...docConfig, isUploading: false };
+            return newDocs;
+          });
+        } else {
+          // Error lain (500, dll), matikan loading agar tidak stuck
+          setDokumenStatus((prevDocs) => {
+            const newDocs = [...prevDocs];
+            newDocs[index] = { ...newDocs[index], isFetchingData: false };
+            return newDocs;
+          });
         }
-      });
-
-      // Tunggu semua request paralel selesai
-      const results = await Promise.all(fetchPromises);
-
-      // Update state sekaligus untuk mengubah tampilan Card Dokumen
-      setDokumenStatus(results);
-    } catch (error) {
-      console.error("Error pada proses Promise.all documents:", error);
-    }
+      } catch (err) {
+        console.error(`Gagal fetch dokumen ${docConfig.code}:`, err);
+        // Error jaringan, matikan loading
+        setDokumenStatus((prevDocs) => {
+          const newDocs = [...prevDocs];
+          newDocs[index] = { ...newDocs[index], isFetchingData: false };
+          return newDocs;
+        });
+      }
+    });
   };
 
-  // FETCH DATA BERDASARKAN TAB AKTIF
+  // --- FETCH SEMUA DATA SAAT HALAMAN PERTAMA KALI DIBUKA ---
   useEffect(() => {
-    if (activeTab === "organisasi") {
+    // Jalankan semua fetch secara paralel agar tidak saling menunggu
+    const fetchAllData = async () => {
+      // Data untuk tab Transaksi
+      fetchOpsiPetani();
+      fetchOpsiPeralatan();
+      fetchRiwayatTransaksi();
+
+      // Data untuk tab Organisasi
       fetchPengurus();
       fetchDokumenExisting();
-    } else if (activeTab === "transaksi") {
-      fetchRiwayatTransaksi();
-    }
-  }, [activeTab]);
+    };
+
+    fetchAllData();
+  }, []);
 
   // HANDLER FORM PENGURUS
   const handleAddPengurus = () => {
@@ -624,10 +638,11 @@ const Operasional = () => {
       });
 
       if (response.ok) {
+        showToast.success("Data pengurus berhasil disimpan!");
         setShowModalPengurus(false);
         fetchPengurus();
       } else {
-        alert("Gagal menyimpan data pengurus.");
+        showToast.error("Gagal menyimpan data pengurus.");
       }
     } catch (error) {
       console.error("Error submitting:", error);
@@ -635,8 +650,15 @@ const Operasional = () => {
   };
 
   const handleDeletePengurus = async (id) => {
-    if (!window.confirm("Apakah anda yakin ingin menghapus pengurus ini?"))
-      return;
+    // Menggunakan confirmDialog dari notif.js
+    const isSetuju = await confirmDialog({
+      title: "Yakin ingin menghapus?",
+      text: "Data pengurus ini akan terhapus dari sistem.",
+      confirmText: "Ya, Hapus!",
+      isDanger: true,
+    });
+
+    if (!isSetuju) return; // Batalkan jika user klik 'Batal'
 
     try {
       const token = localStorage.getItem("token");
@@ -648,12 +670,14 @@ const Operasional = () => {
       });
 
       if (response.ok) {
+        showToast.success("Pengurus berhasil dihapus!");
         fetchPengurus();
       } else {
-        alert("Gagal menghapus data.");
+        showToast.error("Gagal menghapus data pengurus.");
       }
     } catch (error) {
       console.error("Error deleting:", error);
+      showToast.error("Terjadi kesalahan jaringan.");
     }
   };
 
@@ -672,15 +696,14 @@ const Operasional = () => {
 
     // Validasi Tambahan
     if (!tbsFormData.file) {
-      alert("Mohon upload file SK Pemerintah.");
+      showToast.error("Mohon upload file SK Pemerintah.");
       return;
     }
-    // Pastikan bulan dan tahun adalah angka valid
     if (
       isNaN(parseInt(tbsFormData.bulan)) ||
       isNaN(parseInt(tbsFormData.tahun))
     ) {
-      alert("Format Bulan atau Tahun salah.");
+      showToast.error("Format Bulan atau Tahun salah.");
       return;
     }
 
@@ -699,31 +722,23 @@ const Operasional = () => {
 
       const response = await fetch(url, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formDataToSend,
       });
 
       if (response.ok) {
-        alert("Data Harga TBS berhasil dikirim!");
+        showToast.success("Data Harga TBS berhasil dikirim!");
         setShowModalTBS(false);
-        setTbsFormData({
-          bulan: "",
-          tahun: "",
-          harga: "",
-          file: null,
-        });
+        setTbsFormData({ bulan: "", tahun: "", harga: "", file: null });
       } else {
         const errorData = await response.json();
-        console.log("Error Detail:", errorData);
-        alert(
-          `Gagal mengirim data: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`,
+        showToast.error(
+          `Gagal mengirim: ${errorData.detail || "Cek input Anda"}`,
         );
       }
     } catch (error) {
       console.error("Error submitting TBS:", error);
-      alert("Terjadi kesalahan jaringan.");
+      showToast.error("Terjadi kesalahan jaringan.");
     } finally {
       setIsSubmittingTBS(false);
     }
@@ -740,9 +755,11 @@ const Operasional = () => {
     const parsedJumlah = parseFloat(jualFormData.jumlah);
 
     if (isNaN(parsedPetaniId) || isNaN(parsedItemId) || isNaN(parsedJumlah)) {
-      alert("Harap pilih Petani, Barang, dan isi Jumlah dengan benar!");
+      showToast.error(
+        "Harap pilih Petani, Barang, dan isi Jumlah dengan benar!",
+      );
       setIsSubmittingJual(false);
-      return; // Berhenti di sini, jangan tembak BE
+      return;
     }
 
     try {
@@ -770,7 +787,7 @@ const Operasional = () => {
       );
 
       if (response.ok) {
-        alert("Berhasil mencatat penjualan barang ke petani!");
+        showToast.success("Berhasil mencatat penjualan barang!");
         setShowModalJual(false);
         setJualFormData({
           petani_user_id: "",
@@ -782,14 +799,11 @@ const Operasional = () => {
         fetchRiwayatTransaksi();
       } else {
         const errorData = await response.json();
-        console.log("Error Jual:", errorData);
-        alert(
-          `Gagal Jual: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`,
-        );
+        showToast.error(`Gagal Jual: ${errorData.detail || "Cek input Anda"}`);
       }
     } catch (error) {
       console.error("Error submit jual:", error);
-      alert("Terjadi kesalahan jaringan.");
+      showToast.error("Terjadi kesalahan jaringan.");
     } finally {
       setIsSubmittingJual(false);
     }
@@ -806,7 +820,9 @@ const Operasional = () => {
     const parsedJumlah = parseInt(pinjamFormData.jumlah_dipinjam);
 
     if (isNaN(parsedPetaniId) || isNaN(parsedAlatId) || isNaN(parsedJumlah)) {
-      alert("Harap pilih Petani, Peralatan, dan isi Jumlah dengan benar!");
+      showToast.error(
+        "Harap pilih Petani, Peralatan, dan isi Jumlah dengan benar!",
+      );
       setIsSubmittingPinjam(false);
       return;
     }
@@ -833,7 +849,7 @@ const Operasional = () => {
       );
 
       if (response.ok) {
-        alert("Berhasil mencatat peminjaman alat ke petani!");
+        showToast.success("Berhasil mencatat peminjaman alat!");
         setShowModalPinjam(false);
         setPinjamFormData({
           petani_user_id: "",
@@ -844,14 +860,13 @@ const Operasional = () => {
         fetchRiwayatTransaksi();
       } else {
         const errorData = await response.json();
-        console.log("Error Pinjam:", errorData);
-        alert(
-          `Gagal Pinjam: ${JSON.stringify(errorData.detail) || "Cek input Anda"}`,
+        showToast.error(
+          `Gagal Pinjam: ${errorData.detail || "Cek input Anda"}`,
         );
       }
     } catch (error) {
       console.error("Error submit pinjam:", error);
-      alert("Terjadi kesalahan jaringan.");
+      showToast.error("Terjadi kesalahan jaringan.");
     } finally {
       setIsSubmittingPinjam(false);
     }
@@ -868,7 +883,9 @@ const Operasional = () => {
     const targetDoc = dokumenStatus[index];
     const requirementCode = targetDoc.code;
 
-    // Set status loading lokal
+    // Panggil toast loading
+    showToast.loading("Sedang mengunggah dokumen...");
+
     const newDocs = [...dokumenStatus];
     newDocs[index].isUploading = true;
     setDokumenStatus(newDocs);
@@ -898,11 +915,13 @@ const Operasional = () => {
         updatedDocs[index].isUploading = false;
         setDokumenStatus(updatedDocs);
 
-        alert("Berhasil upload dokumen!");
-        fetchDokumenExisting();
+        showToast.success("Berhasil mengunggah dokumen ISPO!");
+        await fetchDokumenExisting();
       } else {
         const errorData = await response.json();
-        alert(`Gagal upload: ${errorData.detail || "Terjadi kesalahan"}`);
+        showToast.error(
+          `Gagal upload: ${errorData.detail || "Terjadi kesalahan"}`,
+        );
 
         const updatedDocs = [...dokumenStatus];
         updatedDocs[index].isUploading = false;
@@ -910,11 +929,13 @@ const Operasional = () => {
       }
     } catch (error) {
       console.error("Error upload:", error);
-      alert("Terjadi kesalahan jaringan saat upload.");
+      showToast.error("Terjadi kesalahan jaringan saat mengunggah.");
 
       const updatedDocs = [...dokumenStatus];
       updatedDocs[index].isUploading = false;
       setDokumenStatus(updatedDocs);
+    } finally {
+      showToast.dismiss();
     }
   };
 
@@ -1244,7 +1265,7 @@ const Operasional = () => {
               </div>
             </SectionCard>
 
-{/* SECTION 2 DOKUMEN ORGANISASI (DINAMIS SESUAI BE MAHAR) */}
+            {/* SECTION 2 DOKUMEN ORGANISASI (DINAMIS SESUAI BE MAHAR) */}
             <SectionCard title="Kelengkapan Dokumen ISPO untuk Petani Mitra">
               <div className="-mt-4 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
                 <div className="max-w-3xl">
@@ -1252,174 +1273,237 @@ const Operasional = () => {
                     Upload Dokumen Sertifikasi
                   </h4>
                   <p className="text-[13px] text-gray-500 font-normal leading-relaxed">
-                    Pastikan semua dokumen yang dibutuhkan untuk memenuhi standar Indonesian Sustainable Palm Oil (ISPO) telah diunggah dengan lengkap dan benar sesuai dengan kriteria yang berlaku.
+                    Pastikan semua dokumen yang dibutuhkan untuk memenuhi
+                    standar Indonesian Sustainable Palm Oil (ISPO) telah
+                    diunggah dengan lengkap dan benar sesuai dengan kriteria
+                    yang berlaku.
                   </p>
                 </div>
-
-                {/* TOMBOL TAMBAH HARGA TBS */}
-                <button
-                  onClick={() => setShowModalTBS(true)}
-                  className="shrink-0 flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 hover:border-[#EF8523] hover:text-[#EF8523] px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow-md"
-                >
-                  <FileText className="w-4 h-4" /> Input Harga TBS
-                </button>
               </div>
 
               {/* LIST DOKUMEN DENGAN GROUPING BERDASARKAN PRINSIP DAN KRITERIA */}
               <div className="space-y-12">
                 {/* 1. Looping Berdasarkan Prinsip */}
-                {Array.from(new Set(dokumenStatus.map((d) => d.prinsip))).map((namaPrinsip, prinsipIdx) => {
-                  // Regex untuk memisahkan "Prinsip X" dan teks sisanya
-                  const prinsipMatch = namaPrinsip.match(/^(Prinsip \d+)\.\s*(.*)/);
-                  const prinsipNumber = prinsipMatch ? prinsipMatch[1] : "";
-                  const prinsipText = prinsipMatch ? prinsipMatch[2] : namaPrinsip;
+                {Array.from(new Set(dokumenStatus.map((d) => d.prinsip))).map(
+                  (namaPrinsip, prinsipIdx) => {
+                    // Regex untuk memisahkan "Prinsip X" dan teks sisanya
+                    const prinsipMatch = namaPrinsip.match(
+                      /^(Prinsip \d+)\.\s*(.*)/,
+                    );
+                    const prinsipNumber = prinsipMatch ? prinsipMatch[1] : "";
+                    const prinsipText = prinsipMatch
+                      ? prinsipMatch[2]
+                      : namaPrinsip;
 
-                  const docsInPrinsip = dokumenStatus.filter((d) => d.prinsip === namaPrinsip);
-                  const kriteriaList = Array.from(new Set(docsInPrinsip.map((d) => d.kriteria)));
+                    const docsInPrinsip = dokumenStatus.filter(
+                      (d) => d.prinsip === namaPrinsip,
+                    );
+                    const kriteriaList = Array.from(
+                      new Set(docsInPrinsip.map((d) => d.kriteria)),
+                    );
 
-                  return (
-                    <div key={prinsipIdx} className="relative">
-                      {/* Judul Level 1 (Prinsip) - Minimalist & Elegant */}
-                      <div className="mb-6 flex items-center gap-3">
-                        <div className="h-8 w-1.5 bg-[#B5302D] rounded-full shrink-0"></div>
-                        <h3 className="text-lg md:text-xl font-extrabold text-gray-900 tracking-tight">
-                          <span className="text-[#B5302D] mr-2 uppercase tracking-wider text-sm md:text-base">
-                            {prinsipNumber}
-                          </span>
-                          <span className="text-gray-800">{prinsipText}</span>
-                        </h3>
-                      </div>
+                    return (
+                      <div key={prinsipIdx} className="relative">
+                        {/* Judul Level 1 (Prinsip) - Minimalist & Elegant */}
+                        <div className="mb-6 flex items-center gap-3">
+                          <div className="h-8 w-1.5 bg-[#B5302D] rounded-full shrink-0"></div>
+                          <h3 className="text-lg md:text-xl font-extrabold text-gray-900 tracking-tight">
+                            <span className="text-[#B5302D] mr-2 uppercase tracking-wider text-sm md:text-base">
+                              {prinsipNumber}
+                            </span>
+                            <span className="text-gray-800">{prinsipText}</span>
+                          </h3>
+                        </div>
 
-                      {/* 2. Looping Berdasarkan Kriteria */}
-                      <div className="grid grid-cols-1 gap-6">
-                        {kriteriaList.map((namaKriteria, kriteriaIdx) => {
-                          const docsInKriteria = docsInPrinsip.filter((d) => d.kriteria === namaKriteria);
+                        {/* 2. Looping Berdasarkan Kriteria */}
+                        <div className="grid grid-cols-1 gap-6">
+                          {kriteriaList.map((namaKriteria, kriteriaIdx) => {
+                            const docsInKriteria = docsInPrinsip.filter(
+                              (d) => d.kriteria === namaKriteria,
+                            );
 
-                          // Ekstrak Kriteria X.X
-                          const kriteriaMatch = namaKriteria.match(/^(Kriteria \d+\.\d+)\s*(.*)/);
-                          const kriteriaNumber = kriteriaMatch ? kriteriaMatch[1] : "";
-                          const kriteriaText = kriteriaMatch ? kriteriaMatch[2] : namaKriteria;
+                            // Ekstrak Kriteria X.X
+                            const kriteriaMatch = namaKriteria.match(
+                              /^(Kriteria \d+\.\d+)\s*(.*)/,
+                            );
+                            const kriteriaNumber = kriteriaMatch
+                              ? kriteriaMatch[1]
+                              : "";
+                            const kriteriaText = kriteriaMatch
+                              ? kriteriaMatch[2]
+                              : namaKriteria;
 
-                          return (
-                            <div key={kriteriaIdx} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-                              {/* Header Level 2 (Kriteria) - Clean White */}
-                              <div className="bg-white px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-                                {kriteriaNumber && (
-                                  <span className="bg-gray-50 border border-gray-200 text-gray-600 text-[10px] font-extrabold px-3 py-1 rounded-full shrink-0 uppercase tracking-widest">
-                                    {kriteriaNumber}
-                                  </span>
-                                )}
-                                <h4 className="text-sm font-bold text-gray-800 leading-snug">
-                                  {kriteriaText}
-                                </h4>
-                              </div>
+                            return (
+                              <div
+                                key={kriteriaIdx}
+                                className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+                              >
+                                {/* Header Level 2 (Kriteria) - Clean White */}
+                                <div className="bg-white px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                                  {kriteriaNumber && (
+                                    <span className="bg-gray-50 border border-gray-200 text-gray-600 text-[10px] font-extrabold px-3 py-1 rounded-full shrink-0 uppercase tracking-widest">
+                                      {kriteriaNumber}
+                                    </span>
+                                  )}
+                                  <h4 className="text-sm font-bold text-gray-800 leading-snug">
+                                    {kriteriaText}
+                                  </h4>
+                                </div>
 
-                              {/* 3. Render Dokumen dalam Kriteria */}
-                              <div className="divide-y divide-gray-100">
-                                {docsInKriteria.map((doc) => {
-                                  const originalIndex = dokumenStatus.findIndex((d) => d.id === doc.id);
-                                  const isUploaded = !!doc.file_url;
+                                {/* 3. Render Dokumen dalam Kriteria */}
+                                <div className="divide-y divide-gray-100">
+                                  {docsInKriteria.map((doc) => {
+                                    const originalIndex =
+                                      dokumenStatus.findIndex(
+                                        (d) => d.id === doc.id,
+                                      );
+                                    const isUploaded = !!doc.file_url;
 
-                                  return (
-                                    <div
-                                      key={doc.id}
-                                      className={`group p-5 sm:p-6 flex flex-col md:flex-row md:items-start gap-5 transition-all duration-300 ${
-                                        isUploaded ? "bg-emerald-50/20" : "hover:bg-gray-50/50"
-                                      }`}
-                                    >
-                                      {/* Ikon Status & Informasi Dokumen */}
-                                      <div className="flex-1 flex items-start gap-4 sm:gap-5 min-w-0">
-                                        <div
-                                          className={`mt-1 p-3 rounded-xl flex-shrink-0 transition-all duration-300 ${
-                                            isUploaded
-                                              ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
-                                              : "bg-gray-50 text-gray-400 border border-gray-200 group-hover:bg-orange-50 group-hover:text-orange-500 group-hover:border-orange-200"
-                                          }`}
-                                        >
-                                          {isUploaded ? <CheckCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                                    return (
+                                      <div
+                                        key={doc.id}
+                                        // Hapus class "group" agar efek hover tidak menyebar ke anak elemen
+                                        className={`p-5 sm:p-6 flex flex-col md:flex-row md:items-start gap-5 transition-all duration-300 ${
+                                          isUploaded
+                                            ? "bg-emerald-50/20"
+                                            : "hover:bg-gray-50/80"
+                                        }`}
+                                      >
+                                        {/* Ikon Status & Informasi Dokumen */}
+                                        <div className="flex-1 flex items-start gap-4 sm:gap-5 min-w-0">
+                                          <div
+                                            // Hapus group-hover kuning, ganti dengan warna statis yang elegan
+                                            className={`mt-1 p-3 rounded-xl flex-shrink-0 transition-all duration-300 ${
+                                              isUploaded
+                                                ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
+                                                : "bg-gray-50 text-gray-400 border border-gray-200"
+                                            }`}
+                                          >
+                                            {/* IKON SELALU TETAP FILETEXT (Sesuai Permintaan) */}
+                                            <FileText className="w-5 h-5" />
+                                          </div>
+
+                                          <div className="flex-1 min-w-0 space-y-1.5">
+                                            {doc.subKriteria && (
+                                              <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">
+                                                {doc.subKriteria}
+                                              </p>
+                                            )}
+
+                                            <h5 className="text-[14px] font-bold text-gray-900 leading-snug">
+                                              {doc.label}
+                                            </h5>
+
+                                            <p className="text-[12px] text-gray-500 leading-relaxed max-w-3xl pb-1">
+                                              {doc.deskripsi}
+                                            </p>
+
+                                            {/* Status Badge Minimalist (Ini yang jadi penanda utama) */}
+                                            <div className="pt-1.5">
+                                              {doc.isFetchingData ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-500 border border-blue-100">
+                                                  <Loader2 className="w-3 h-3 animate-spin" />{" "}
+                                                  Memeriksa status...
+                                                </span>
+                                              ) : isUploaded ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                  <CheckCircle className="w-3 h-3" />{" "}
+                                                  Diunggah (
+                                                  {doc.status || "APPROVED"})
+                                                </span>
+                                              ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-200">
+                                                  Menunggu Unggahan
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
 
-                                        <div className="flex-1 min-w-0 space-y-1.5">
-                                          {doc.subKriteria && (
-                                            <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">
-                                              {doc.subKriteria}
-                                            </p>
+                                        {/* Area Aksi (Kanan) - Buttons Clean Outline */}
+                                        <div className="flex flex-col gap-2.5 md:w-40 mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-gray-100 shrink-0">
+                                          {/* --- TOMBOL KHUSUS UNTUK INPUT HARGA TBS --- */}
+                                          {doc.code === "P4_1_HARGA" && (
+                                            <button
+                                              onClick={() =>
+                                                setShowModalTBS(true)
+                                              }
+                                              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-50 border border-orange-200 text-[#EF8523] hover:bg-orange-100 text-xs font-bold transition-all shadow-sm"
+                                              title="Input Harga TBS"
+                                            >
+                                              <FileText className="w-4 h-4" />{" "}
+                                              Input Data TBS
+                                            </button>
                                           )}
 
-                                          <h5 className="text-[14px] font-bold text-gray-900 leading-snug transition-colors">
-                                            {doc.label}
-                                          </h5>
+                                          <div className="flex flex-row md:flex-col gap-2.5">
+                                            {/* Tombol Lihat */}
+                                            {isUploaded && (
+                                              <button
+                                                onClick={() =>
+                                                  handleViewDocument(
+                                                    doc.file_url,
+                                                  )
+                                                }
+                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 text-xs font-bold transition-all shadow-sm"
+                                                title="Lihat Dokumen"
+                                              >
+                                                <Search className="w-4 h-4" />{" "}
+                                                Lihat File
+                                              </button>
+                                            )}
 
-                                          <p className="text-[12px] text-gray-500 leading-relaxed max-w-3xl pb-1">
-                                            {doc.deskripsi}
-                                          </p>
-
-                                          {/* Status Badge Minimalist */}
-                                          <div className="pt-1.5">
-                                            {isUploaded ? (
-                                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                                <CheckCircle className="w-3 h-3" /> Diunggah ({doc.status || "Selesai"})
-                                              </span>
-                                            ) : (
-                                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-200">
-                                                Menunggu Unggahan
-                                              </span>
+                                            {/* --- TOMBOL UPLOAD REGULER --- */}
+                                            {doc.code !== "P4_1_HARGA" && (
+                                              <label
+                                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm border ${
+                                                  doc.isUploading
+                                                    ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                                                    : isUploaded
+                                                      ? "bg-white border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50"
+                                                      : "bg-white border-gray-200 text-gray-700 hover:border-[#B5302D] hover:text-[#B5302D] hover:bg-red-50"
+                                                }`}
+                                              >
+                                                <input
+                                                  type="file"
+                                                  className="hidden"
+                                                  onChange={(e) =>
+                                                    handleUploadDokumen(
+                                                      originalIndex,
+                                                      e,
+                                                    )
+                                                  }
+                                                  disabled={doc.isUploading}
+                                                />
+                                                {doc.isUploading ? (
+                                                  <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />{" "}
+                                                    Proses...
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <Upload className="w-4 h-4" />{" "}
+                                                    {isUploaded
+                                                      ? "Ubah File"
+                                                      : "Unggah File"}
+                                                  </>
+                                                )}
+                                              </label>
                                             )}
                                           </div>
                                         </div>
                                       </div>
-
-                                      {/* Area Aksi (Kanan) - Buttons Clean Outline */}
-                                      <div className="flex flex-row md:flex-col gap-2.5 md:w-40 mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-gray-100 shrink-0">
-                                        {/* Tombol Lihat */}
-                                        {isUploaded && (
-                                          <button
-                                            onClick={() => handleViewDocument(doc.file_url)}
-                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 text-xs font-bold transition-all shadow-sm"
-                                            title="Lihat Dokumen"
-                                          >
-                                            <Search className="w-4 h-4" /> Lihat File
-                                          </button>
-                                        )}
-
-                                        {/* Tombol Upload */}
-                                        <label
-                                          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm border ${
-                                            doc.isUploading
-                                              ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                                              : isUploaded
-                                              ? "bg-white border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50" // Tombol "Ubah" (Neutral)
-                                              : "bg-white border-gray-200 text-gray-700 hover:border-[#B5302D] hover:text-[#B5302D] hover:bg-red-50" // Tombol "Unggah" (Aksen Merah saat Hover)
-                                          }`}
-                                        >
-                                          <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={(e) => handleUploadDokumen(originalIndex, e)}
-                                            disabled={doc.isUploading}
-                                          />
-                                          {doc.isUploading ? (
-                                            <>
-                                              <Loader2 className="w-4 h-4 animate-spin" /> Proses...
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Upload className="w-4 h-4" /> {isUploaded ? "Ubah File" : "Unggah File"}
-                                            </>
-                                          )}
-                                        </label>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  })}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  },
+                )}
               </div>
             </SectionCard>
           </>

@@ -15,31 +15,32 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-// --- Komponen Card Reusable ---
-const Card = ({ title, icon: Icon, children, rightContent }) => (
-  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-full overflow-hidden">
-    {/* Header Card: Background Orange, Judul Putih + Icon Wrapped */}
-    <div className="bg-[#EF8523] px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
-      <div className="flex items-center gap-3">
-        {/* Render Icon jika ada dengan wrapper transparan (white/20) */}
+const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
+  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-[320px] overflow-hidden">
+    
+    <div className="bg-[#EF8523] px-4 py-3 sm:px-4 flex justify-between items-center flex-shrink-0">
+      <div className="flex items-center gap-2.5">
         {Icon && (
           <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-sm flex items-center justify-center">
-            <Icon className="text-white w-5 h-5" />
+            <Icon className="text-white w-4 h-4" /> 
           </div>
         )}
-        <h3 className="text-[14px] sm:text-[16px] font-bold text-white tracking-wide">
+        <h3 className="font-bold text-white text-sm sm:text-base tracking-wide">
           {title}
         </h3>
       </div>
-
-      {rightContent && (
-        <div className="scale-90 sm:scale-100 origin-right">{rightContent}</div>
-      )}
+      {rightContent && <div>{rightContent}</div>}
     </div>
 
-    <div className="p-4 sm:p-5 text-gray-800 bg-white h-64 sm:h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+    <div className="p-3 sm:p-4 flex-grow flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
       {children}
     </div>
+
+    {footer && (
+      <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-100 text-sm text-gray-500 flex-shrink-0">
+        {footer}
+      </div>
+    )}
   </div>
 );
 
@@ -369,6 +370,14 @@ export default function DashboardLogistik() {
         <Card
           title="Permintaan Jasa Logistik"
           icon={Inbox}
+          footer={
+            <button
+              onClick={() => navigate("/logistik/manajemenpesanan")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
           rightContent={
             <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
               {permintaanMasuk.length} Permintaan
@@ -436,16 +445,6 @@ export default function DashboardLogistik() {
                   ))
               )}
             </div>
-
-            {/* Tombol Lihat Semua di bawah Card */}
-            <div className="pt-2">
-              <button 
-                onClick={() => navigate("/kebun/distribusilogistik")}
-                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
-              >
-                Lihat Semua &rarr;
-              </button>
-            </div>
           </div>
         </Card>
 
@@ -453,6 +452,14 @@ export default function DashboardLogistik() {
         <Card
           title="Pantau Pengiriman"
           icon={MapPin}
+          footer={
+            <button
+              onClick={() => navigate("/logistik/pengiriman")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
           rightContent={
             <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
               {pengirimanAktif.length} Aktif
@@ -462,11 +469,9 @@ export default function DashboardLogistik() {
           <div className="space-y-3 h-full flex flex-col relative">
             <div className="flex-grow space-y-3 pb-8">
               {isLoadingPengiriman ? (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#EF8523]" />
-                  <span className="text-[11px] font-medium">
-                    Memuat rute pengiriman...
-                  </span>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Memuat data...
                 </div>
               ) : pengirimanAktif.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
@@ -560,88 +565,79 @@ export default function DashboardLogistik() {
                 })
               )}
             </div>
-
-            <div className="pt-2">
-              <button 
-                onClick={() => navigate("/kebun/distribusilogistik")}
-                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
-              >
-                Lihat semua &rarr;
-              </button>
-            </div>
           </div>
         </Card>
 
         {/* FITUR 3 Armada Logistik */}
-        <Card title="Armada Logistik" icon={Truck}>
-          <div className="space-y-3 h-full flex flex-col justify-between">
-            {isLoadingArmada ? (
-              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                <Loader2 className="w-6 h-6 animate-spin mb-2" />
-                <p className="text-[10px]">Memuat data...</p>
-              </div>
-            ) : (
-              <div className="flex-grow flex flex-col gap-3 mt-1">
-                {/* --- ROW 1: KENDARAAN --- */}
-                <div className="bg-gradient-to-br from-red-50 to-white p-3.5 sm:p-4 rounded-xl border border-red-100 flex items-center justify-between hover:shadow-md hover:border-red-200 transition-all group">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-sm group-hover:scale-105 transition-transform text-[#B5302D]">
-                      <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
+        <Card title="Armada Logistik" icon={Truck}
+                  footer={
+            <button
+              onClick={() => navigate("/logistik/armada")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }>
+          <div className="space-y-3 h-full flex flex-col justify-between relative">
+            <div className="flex-grow flex flex-col gap-3">
+              {isLoadingArmada ? (
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Memuat data...
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 mt-1 pb-4">
+                  {/* --- ROW 1: KENDARAAN --- */}
+                  <div className="bg-gradient-to-br from-red-50 to-white p-3.5 sm:p-4 rounded-xl border border-red-100 flex items-center justify-between hover:shadow-md hover:border-red-200 transition-all group">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-sm group-hover:scale-105 transition-transform text-[#B5302D]">
+                        <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                          Kendaraan
+                        </p>
+                        <p className="text-xl sm:text-2xl font-black text-gray-800 leading-none mt-1">
+                          {armadaStats.totalKendaraan}{" "}
+                          <span className="text-[10px] font-semibold text-gray-400 lowercase">
+                            Total unit
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                        Kendaraan
-                      </p>
-                      <p className="text-xl sm:text-2xl font-black text-gray-800 leading-none mt-1">
-                        {armadaStats.totalKendaraan}{" "}
-                        <span className="text-[10px] font-semibold text-gray-400 lowercase">
-                          Total unit
-                        </span>
-                      </p>
+                    {/* Badge Ready */}
+                    <div className="bg-green-100 text-green-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold border border-green-200 flex items-center gap-1.5 shadow-sm">
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      {armadaStats.readyKendaraan} Ready
                     </div>
                   </div>
-                  {/* Badge Ready */}
-                  <div className="bg-green-100 text-green-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold border border-green-200 flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    {armadaStats.readyKendaraan} Ready
+
+                  {/* --- ROW 2: KRU / DRIVER --- */}
+                  <div className="bg-gradient-to-br from-orange-50 to-white p-3.5 sm:p-4 rounded-xl border border-orange-100 flex items-center justify-between hover:shadow-md hover:border-orange-200 transition-all group">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-sm group-hover:scale-105 transition-transform text-[#EF8523]">
+                        <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                          Kru / Driver
+                        </p>
+                        <p className="text-xl sm:text-2xl font-black text-gray-800 leading-none mt-1">
+                          {armadaStats.totalKru}{" "}
+                          <span className="text-[10px] font-semibold text-gray-400 lowercase">
+                            Total personil
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    {/* Badge Ready */}
+                    <div className="bg-green-100 text-green-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold border border-green-200 flex items-center gap-1.5 shadow-sm">
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      {armadaStats.readyKru} Ready
+                    </div>
                   </div>
                 </div>
-
-                {/* --- ROW 2: KRU / DRIVER --- */}
-                <div className="bg-gradient-to-br from-orange-50 to-white p-3.5 sm:p-4 rounded-xl border border-orange-100 flex items-center justify-between hover:shadow-md hover:border-orange-200 transition-all group">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-sm group-hover:scale-105 transition-transform text-[#EF8523]">
-                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                        Kru / Driver
-                      </p>
-                      <p className="text-xl sm:text-2xl font-black text-gray-800 leading-none mt-1">
-                        {armadaStats.totalKru}{" "}
-                        <span className="text-[10px] font-semibold text-gray-400 lowercase">
-                          Total personil
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                  {/* Badge Ready */}
-                  <div className="bg-green-100 text-green-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold border border-green-200 flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    {armadaStats.readyKru} Ready
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tombol Lihat Semua di bawah Card */}
-            <div className="pt-2">
-              <button 
-                onClick={() => navigate("/kebun/distribusilogistik")}
-                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
-              >
-                Lihat Semua &rarr;
-              </button>
+              )}
             </div>
           </div>
         </Card>

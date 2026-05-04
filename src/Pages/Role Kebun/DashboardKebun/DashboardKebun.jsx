@@ -18,30 +18,27 @@ import {
 } from "lucide-react";
 
 const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
-  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-full overflow-hidden">
-    {/* Header Lebih Compact (Versi Petani) */}
-    <div className="bg-[#EF8523] px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
-      <div className="flex items-center gap-3">
+  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-[320px] overflow-hidden">
+    <div className="bg-[#EF8523] px-4 py-3 sm:px-4 flex justify-between items-center flex-shrink-0">
+      <div className="flex items-center gap-2.5">
         {Icon && (
           <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-sm flex items-center justify-center">
-            <Icon className="text-white w-5 h-5" />
+            <Icon className="text-white w-4 h-4" />
           </div>
         )}
-        <h3 className="font-bold text-white text-base sm:text-lg tracking-wide">
+        <h3 className="font-bold text-white text-sm sm:text-base tracking-wide">
           {title}
         </h3>
       </div>
       {rightContent && <div>{rightContent}</div>}
     </div>
 
-    {/* Body dengan Padding Lebih Kecil agar Grafik Lega */}
-    <div className="p-4 sm:p-5 flex-grow flex flex-col relative">
+    <div className="p-3 sm:p-4 flex-grow flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
       {children}
     </div>
 
-    {/* Footer Opsional */}
     {footer && (
-      <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+      <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-100 text-sm text-gray-500 flex-shrink-0">
         {footer}
       </div>
     )}
@@ -80,6 +77,7 @@ export default function DashboardKebun() {
     koordinat: "",
     kebun_id: "",
     distrik_id: "",
+    user_id: "",
   });
 
   // Data dinamis dari API
@@ -138,6 +136,7 @@ export default function DashboardKebun() {
           alamat_kebun: userData.alamat || "",
           foto: getFileUrl(userData.foto_profil_url) || "",
           kebun_id: userData.kebun_id || userData.id || "-",
+          user_id: userData.id || "-",
           distrik_id: userData.distrik_id || "-",
           koordinat: userData.koordinat
             ? JSON.stringify(userData.koordinat)
@@ -155,24 +154,24 @@ export default function DashboardKebun() {
 
   /**
    * --- FETCH GRAFIK HARGA TBS ---
-   * Sesuai Backend: kebun_routes.py -> @kebun_blok_router.get("/harga-tbs/grafik/{kebun_id}")
    */
   useEffect(() => {
     const fetchGrafikHarga = async () => {
-      // Pastikan kebun_id sudah ada dan bukan default "-"
-      if (!profile.kebun_id || profile.kebun_id === "-") return;
+      // UBAH: Gunakan user_id bukan kebun_id
+      if (!profile.user_id || profile.user_id === "-") {
+        return;
+      }
 
       setIsLoadingHargaTbs(true);
       try {
         const token = getToken();
         if (!token) return;
 
-        const baseUrl =
-          API_ENDPOINTS.FARM?.KEBUN?.TRANSAKSI?.GET_HARGA_TBS_GRAPH.replace(
-            "{kebun_id}",
-            profile.kebun_id,
-          );
+        const rawEndpoint =
+          API_ENDPOINTS?.FARM?.KEBUN?.TRANSAKSI?.GET_HARGA_TBS_GRAPH;
 
+        // UBAH: Ganti dengan profile.user_id
+        const baseUrl = rawEndpoint.replace("{kebun_id}", profile.user_id);
         const url = `${baseUrl}?tahun=${tahunTbs}`;
 
         const response = await fetch(url, {
@@ -187,20 +186,15 @@ export default function DashboardKebun() {
           throw new Error("Gagal mengambil data grafik Harga TBS");
 
         const resData = await response.json();
-        console.log("Cek Data dari BE:", resData);
 
-        // --- PERBAIKAN: Mapping Format Data BE -> Format yang dimengerti SVG FE ---
         let chartData = [];
-
-        // Cek apakah balikan dari BE (Objek) memiliki key 'labels' dan 'data_harga'
         if (resData && resData.labels && resData.data_harga) {
           chartData = resData.labels.map((namaBulan, index) => ({
             bulan: namaBulan,
-            harga: Number(resData.data_harga[index]) || 0, // Tetap dibungkus Number agar SVG aman dari NaN
+            harga: Number(resData.data_harga[index]) || 0,
             dokumen: resData.meta_dokumen ? resData.meta_dokumen[index] : null,
           }));
         } else {
-          // Fallback bawaan lama
           chartData = Array.isArray(resData)
             ? resData
             : resData.data || resData.grafik || [];
@@ -208,14 +202,14 @@ export default function DashboardKebun() {
 
         setHargaTbsData(chartData);
       } catch (error) {
-        console.error("Error fetching grafik harga:", error);
+        console.error("Error saat proses grafik:", error);
       } finally {
         setIsLoadingHargaTbs(false);
       }
     };
 
     fetchGrafikHarga();
-  }, [profile.kebun_id, tahunTbs]);
+  }, [profile.user_id, tahunTbs]);
 
   /**
    * --- FETCH PENDING PETANI ---
@@ -314,13 +308,13 @@ export default function DashboardKebun() {
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
 
         if (response.ok) {
           const data = await response.json();
           // Hanya ambil 3 data teratas (terbaru)
-          setRiwayatPenjualanMini(data.slice(0, 3)); 
+          setRiwayatPenjualanMini(data.slice(0, 3));
         } else {
           setRiwayatPenjualanMini([]);
         }
@@ -366,7 +360,7 @@ export default function DashboardKebun() {
         combinedData = combinedData.filter(
           (item) =>
             (item.pemeriksaan === null || item.pemeriksaan === undefined) &&
-            item.status_permintaan?.toLowerCase() !== "ditolak"
+            item.status_permintaan?.toLowerCase() !== "ditolak",
         );
 
         // Urutkan ID terbaru ke atas
@@ -550,8 +544,9 @@ export default function DashboardKebun() {
         {/* CARD 1: PERMINTAAN RELASI */}
         <Card title="Permintaan Relasi Mandor" icon={User}>
           {isLoadingPending ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+            <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Memuat data...
             </div>
           ) : pendingPetani.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
@@ -615,17 +610,17 @@ export default function DashboardKebun() {
           icon={FileText}
           footer={
             <button
-              // TAMBAHKAN ONCLICK DI SINI:
               onClick={() => navigate("/kebun/kemitraanpetani")}
-              className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
-              Detail Validasi
+              Lihat Semua &rarr;
             </button>
           }
         >
           {isValidasiLoading ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+            <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Memuat data...
             </div>
           ) : (
             <div className="space-y-4">
@@ -684,11 +679,23 @@ export default function DashboardKebun() {
         </Card>
 
         {/* CARD 3: PROGRES PENJUALAN TBS (Tampilan Mini dari Penjualan.jsx) */}
-        <Card title="Status Pengajuan Penjualan TBS" icon={Calendar}>
+        <Card
+          title="Status Pengajuan Penjualan TBS"
+          icon={Calendar}
+          footer={
+            <button
+              onClick={() => navigate("/kebun/penjualan")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
+        >
           <div className="space-y-4">
             {isLoadingRiwayatMini ? (
-              <div className="h-32 flex items-center justify-center text-gray-400">
-                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Memuat data...
               </div>
             ) : riwayatPenjualanMini.length === 0 ? (
               <div className="h-32 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
@@ -697,13 +704,18 @@ export default function DashboardKebun() {
             ) : (
               riwayatPenjualanMini.map((item) => {
                 // Formatting Tanggal
-                const tglAjuanFormat = new Date(item.created_at).toLocaleDateString("id-ID", {
-                  day: "2-digit", month: "short", year: "numeric",
+                const tglAjuanFormat = new Date(
+                  item.created_at,
+                ).toLocaleDateString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
                 });
-                
+
                 // Menentukan warna label status
                 const statusRaw = (item.status_pengajuan || "").toLowerCase();
-                let badgeClass = "bg-yellow-50 text-yellow-700 border-yellow-100"; 
+                let badgeClass =
+                  "bg-yellow-50 text-yellow-700 border-yellow-100";
                 let IconStatus = History;
 
                 if (statusRaw.includes("setuju")) {
@@ -716,9 +728,12 @@ export default function DashboardKebun() {
                 }
 
                 return (
-                  <div key={item.id} className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group">
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group"
+                  >
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    
+
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
@@ -728,7 +743,9 @@ export default function DashboardKebun() {
                           {item.nama_grup}
                         </p>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${badgeClass}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${badgeClass}`}
+                      >
                         <IconStatus className="w-3 h-3" />
                         {item.status_pengajuan || "MENUNGGU"}
                       </span>
@@ -740,7 +757,8 @@ export default function DashboardKebun() {
                           Tgl Pengajuan
                         </p>
                         <p className="text-[11px] font-medium text-gray-700 flex items-center gap-1 mt-0.5">
-                          <Calendar className="w-3 h-3 text-gray-400" /> {tglAjuanFormat}
+                          <Calendar className="w-3 h-3 text-gray-400" />{" "}
+                          {tglAjuanFormat}
                         </p>
                       </div>
                       <div>
@@ -756,38 +774,45 @@ export default function DashboardKebun() {
                 );
               })
             )}
-            
-            {/* Tombol Lihat Semua di bawah Card */}
-            <div className="pt-2">
-              <button 
-                onClick={() => navigate("/kebun/distribusilogistik")}
-                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
-              >
-                Lihat Semua &rarr;
-              </button>
-            </div>
           </div>
         </Card>
 
         {/* CARD 4: PENGIRIMAN TBS (Tampilan Mini) */}
-        <Card title="Status Pengiriman TBS" icon={Truck}>
+        <Card
+          title="Status Pengiriman TBS"
+          icon={Truck}
+          footer={
+            <button
+              onClick={() => navigate("/kebun/distribusi&logistik")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
+        >
           <div className="space-y-4">
             {isLoadingPengirimanMini ? (
-              <div className="h-32 flex items-center justify-center text-gray-400">
-                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              <div className="h-32 flex items-center justify-center text-gray-400 text-xs">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Memuat data...
               </div>
             ) : pengirimanMini.length === 0 ? (
               <div className="h-32 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
-                <p className="text-xs">Belum ada armada yang sedang berjalan.</p>
+                <p className="text-xs">
+                  Belum ada armada yang sedang berjalan.
+                </p>
               </div>
             ) : (
               pengirimanMini.map((item) => {
                 // Logika Status dari DistribusiLogistik.jsx
-                const statusPermintaan = (item.status_permintaan || "menunggu").toLowerCase();
+                const statusPermintaan = (
+                  item.status_permintaan || "menunggu"
+                ).toLowerCase();
                 const rawProgress = item.progress_db || "menunggu_pengiriman";
                 const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
 
-                let badgeClass = "bg-yellow-50 text-yellow-700 border-yellow-100";
+                let badgeClass =
+                  "bg-yellow-50 text-yellow-700 border-yellow-100";
                 let label = "Menunggu Konfirmasi";
                 let IconStatus = History;
 
@@ -804,9 +829,12 @@ export default function DashboardKebun() {
                 }
 
                 return (
-                  <div key={item.id} className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group">
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group"
+                  >
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#EF8523] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    
+
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
@@ -816,7 +844,9 @@ export default function DashboardKebun() {
                           {item.alamat_pengiriman_pabrik || "Pabrik Tujuan"}
                         </p>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${badgeClass}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${badgeClass}`}
+                      >
                         <IconStatus className="w-3 h-3" />
                         {label}
                       </span>
@@ -845,21 +875,20 @@ export default function DashboardKebun() {
                 );
               })
             )}
-
-            {/* Tombol Lihat Semua di bawah Card */}
-            <div className="pt-2">
-              <button 
-                onClick={() => navigate("/kebun/distribusilogistik")}
-                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors"
-              >
-                Lihat Semua &rarr;
-              </button>
-            </div>
           </div>
         </Card>
 
         {/* FITUR 5: Harga TBS */}
-        <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}>
+        <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}
+        footer={
+            <button
+              onClick={() => navigate("/kebun/manajemenoperasional")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Tambahkan Informasi Harga Terbaru &rarr;
+            </button>
+          }
+          >
           <div className="relative h-full flex flex-col pt-2 w-full">
             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
@@ -887,8 +916,9 @@ export default function DashboardKebun() {
 
             {/* Tampilkan loader jika data sedang ditarik dari BE */}
             {isLoadingHargaTbs ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Memuat data...
               </div>
             ) : hargaTbsData.length === 0 ? (
               <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium">

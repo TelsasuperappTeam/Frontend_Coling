@@ -64,7 +64,7 @@ export const menuConfig = {
   [ROLES.PABRIK]: [
     { label: "Tampilan Utama", path: "/pabrik/dashboard", icon: LayoutDashboard },
     { label: "Transaksi TBS", path: "/pabrik/transaksiTBS", icon: ShoppingCart },
-    { label: "Transaksi TBS", path: "/pabrik/penerimaanTBS", icon: CheckSquare },
+    { label: "Pemeriksaan TBS", path: "/pabrik/penerimaanTBS", icon: CheckSquare },
     { label: "Stok RAM", path: "/pabrik/stokram", icon: Database },
     { label: "Produksi", path: "/pabrik/produksi", icon: Factory },
   ],

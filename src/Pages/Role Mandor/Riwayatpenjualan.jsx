@@ -11,6 +11,8 @@ import {
   MapPin,
   CheckCircle,
   Info,
+  FileText,
+  Upload,
 } from "lucide-react";
 // Pastikan path konstanta Anda benar
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
@@ -497,13 +499,31 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
           {/* BOX HIJAU: INFO HASIL TIMBANGAN (MUNCUL DI TAB SELESAI JIKA ADA PEMERIKSAAN) */}
           {item.pemeriksaan && (
             <div className="bg-green-50/40 border border-green-200 rounded-xl p-3 sm:p-5 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-green-200/50 pb-3 mb-4 gap-2">
-                <h4 className="text-[11px] sm:text-xs font-extrabold text-green-800 uppercase flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>Hasil Pemeriksaan & Nota Akhir</span>
-                </h4>
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b border-green-200/50 pb-3 mb-4 gap-3">
+                <div className="flex flex-col gap-1">
+                  <h4 className="text-[11px] sm:text-xs font-extrabold text-green-800 uppercase flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Hasil Pemeriksaan & Nota Akhir</span>
+                  </h4>
+                  {/* --- MENAMPILKAN TANGGAL TIMBANG DI SINI --- */}
+                  <p className="text-[9px] sm:text-[10px] text-green-700/80 font-medium flex items-center gap-1 ml-5">
+                    <Calendar className="w-3 h-3" />
+                    {item.pemeriksaan.created_at
+                      ? new Date(
+                          item.pemeriksaan.created_at,
+                        ).toLocaleDateString("id-ID", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "-"}
+                  </p>
+                </div>
+
                 {item.pemeriksaan.harga_beli_per_kg_snapshot > 0 && (
-                  <span className="bg-green-100 text-green-800 text-[9px] sm:text-[10px] font-bold px-2.5 py-1.5 rounded-md border border-green-200 w-fit">
+                  <span className="bg-green-100 text-green-800 text-[9px] sm:text-[10px] font-bold px-2.5 py-1.5 rounded-md border border-green-200 w-fit shrink-0">
                     Harga Dasar: Rp{" "}
                     {item.pemeriksaan.harga_beli_per_kg_snapshot.toLocaleString(
                       "id-ID",
@@ -604,37 +624,136 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
             </div>
           )}
 
-          {/* GRID DETAIL INFORMASI TAMBAHAN (Rute & Supir) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 pt-2">
+{/* GRID DETAIL INFORMASI LENGKAP */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {/* 1. Info Transaksi */}
             <div className="flex flex-col gap-3 sm:gap-4">
               <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
-                <MapPin className="w-4 h-4" /> Rute Pengiriman
+                <Hash className="w-4 h-4" /> Informasi Transaksi
+              </h4>
+              <div className="flex-1 flex flex-col justify-center gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">No Resi:</span>
+                  <span className="font-bold font-mono text-gray-700">
+                    {item.kode_resi || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Tanggal Keberangkatan:</span>
+                  <span className="font-bold text-right">
+                    {item.tanggal_keberangkatan || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Tanggal Tiba:</span>
+                  <span className="font-bold text-right">
+                    {item.tanggal_permintaan_sampai || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Muatan (Est):</span>
+                  <span className="font-bold text-right">
+                    {item.estimasi_total_tbs_grup_kg
+                      ? `${(item.estimasi_total_tbs_grup_kg / 1000).toFixed(2)} Ton`
+                      : "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-3 mt-1 border-t border-gray-50">
+                  <span className="text-gray-500">Biaya Pengiriman:</span>
+                  <span className="font-extrabold text-[#B5302D] text-sm">
+                    Rp {(item.biaya_final || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Armada & Supir */}
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                <Truck className="w-4 h-4" /> Armada & Supir
+              </h4>
+              <div className="flex-1 flex flex-col gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                  <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
+                    <User className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 truncate">
+                      {item.kru?.nama_supir || "-"}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5 truncate">
+                      <Phone className="w-3 h-3 shrink-0" />{" "}
+                      {item.kru?.nomor_telepon || "-"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-2.5 pt-1">
+                  <p className="text-gray-500">Kendaraan</p>
+                  <p className="font-semibold text-right">
+                    {item.kendaraan?.jenis_kendaraan_nama || "-"}
+                  </p>
+
+                  <p className="text-gray-500">Kapasitas</p>
+                  <p className="font-semibold text-right">
+                    {item.kendaraan?.kapasitas_angkut_kg
+                      ? `${item.kendaraan.kapasitas_angkut_kg.toLocaleString("id-ID")} Kg`
+                      : "-"}
+                  </p>
+
+                  <p className="text-gray-500">Biaya / KM</p>
+                  <p className="font-semibold text-right">
+                    {item.kendaraan?.biaya_per_km
+                      ? `Rp ${item.kendaraan.biaya_per_km.toLocaleString("id-ID")}`
+                      : "-"}
+                  </p>
+
+                  <p className="text-gray-500 pt-2 border-t border-gray-50">
+                    Tipe
+                  </p>
+                  <p className="font-semibold text-right pt-2 border-t border-gray-50">
+                    {item.kendaraan?.nama_kendaraan || "-"}
+                  </p>
+
+                  <p className="text-gray-500">Plat</p>
+                  <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
+                    {item.kendaraan?.plat_kendaraan || "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Rute & Estimasi */}
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
+                <MapPin className="w-4 h-4" /> Rute & Estimasi
               </h4>
               <div className="flex-1 flex flex-col justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
                 <div className="flex flex-col gap-4">
                   <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
                     <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-orange-400 border-2 border-white" />
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                      Dari: Kebun (Titik Jemput)
+                      Dari: Kebun
                     </p>
-                    <p className="font-medium text-gray-700">
+                    <p className="font-medium text-gray-700 leading-snug">
                       {item.alamat_pickup_teks || "-"}
                     </p>
                   </div>
                   <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
-                    <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
+                    <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-[#B5302D] border-2 border-white" />
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                      Tujuan: Pabrik
+                      Ke: Pabrik
                     </p>
-                    <p className="font-medium text-gray-700">
+                    <p className="font-medium text-gray-700 leading-snug">
                       {item.alamat_pengiriman_pabrik || "-"}
                     </p>
                   </div>
                 </div>
+
                 <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase font-bold mb-0.5">
-                      Est. Jarak Total
+                      Est. Jarak
                     </p>
                     <p className="font-bold text-gray-900">
                       {item.estimasi_jarak_km
@@ -642,38 +761,11 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
                         : "-"}
                     </p>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:gap-4">
-              <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
-                <Truck className="w-4 h-4" /> Armada Pengangkut
-              </h4>
-              <div className="flex-1 flex flex-col gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 text-xs sm:text-sm shadow-sm">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
-                  <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
-                    <User className="w-4 h-4 text-gray-400" />
+                  <div
+                    className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center ${pDB === "terima" ? "bg-green-50 text-green-600 border border-green-100" : "bg-orange-50 text-[#EF8523] border border-orange-100"}`}
+                  >
+                    {item.progress_publik || label}
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900">
-                      {item.kru?.nama_supir || "-"}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5">
-                      <Phone className="w-3 h-3" />{" "}
-                      {item.kru?.nomor_telepon || "-"}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-y-2.5 pt-1">
-                  <p className="text-gray-500">Kendaraan</p>
-                  <p className="font-semibold text-right">
-                    {item.kendaraan?.jenis_kendaraan_nama || "-"}
-                  </p>
-                  <p className="text-gray-500">Plat Kendaraan</p>
-                  <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
-                    {item.kendaraan?.plat_kendaraan || "-"}
-                  </p>
                 </div>
               </div>
             </div>

@@ -594,7 +594,7 @@ const ProgressItem = ({ item }) => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Tanggal Kirim:</span>
+                  <span className="text-gray-500">Tanggal Keberangkatan:</span>
                   <span className="font-bold text-right">
                     {item.tanggal_keberangkatan || "-"}
                   </span>

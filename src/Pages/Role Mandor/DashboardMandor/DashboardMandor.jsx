@@ -20,32 +20,42 @@ import {
   TrendingUp,
   Coins,
   User,
+  Layers,
+  Droplets,
+  ChevronRight,
+  ArrowRight,
+  ArrowLeft,
+  X,
+  Save,
+  CheckCircle2,
 } from "lucide-react";
 
 // --- Komponen Card Reusable ---
-const Card = ({ title, icon: Icon, children, rightContent }) => (
-  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-full overflow-hidden">
-    <div className="bg-[#EF8523] px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
-      <div className="flex items-center gap-3">
+const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
+  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-[320px] overflow-hidden">
+    <div className="bg-[#EF8523] px-4 py-3 sm:px-4 flex justify-between items-center flex-shrink-0">
+      <div className="flex items-center gap-2.5">
         {Icon && (
           <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-sm flex items-center justify-center">
-            <Icon className="text-white w-5 h-5" />
+            <Icon className="text-white w-4 h-4" />
           </div>
         )}
-        <h3 className="text-[14px] sm:text-[16px] font-bold text-white tracking-wide">
+        <h3 className="font-bold text-white text-sm sm:text-base tracking-wide">
           {title}
         </h3>
       </div>
-
-      {rightContent && (
-        <div className="scale-90 sm:scale-100 origin-right">{rightContent}</div>
-      )}
+      {rightContent && <div>{rightContent}</div>}
     </div>
 
-    {/* Content Body */}
-    <div className="p-4 sm:p-5 text-gray-800 bg-white h-64 sm:h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+    <div className="p-3 sm:p-4 flex-grow flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
       {children}
     </div>
+
+    {footer && (
+      <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-100 text-sm text-gray-500 flex-shrink-0">
+        {footer}
+      </div>
+    )}
   </div>
 );
 
@@ -106,7 +116,6 @@ export default function DashboardMandor() {
   const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear());
 
   // --- State Widget Lain (Dummy: Penjualan) ---
-  const [riwayatPenjualan, setRiwayatPenjualan] = useState([]);
   const [selectedGambutIndex, setSelectedGambutIndex] = useState(null);
 
   // --- State Progress ISPO (Dinamis) ---
@@ -254,13 +263,60 @@ export default function DashboardMandor() {
       fetchIspoProgress();
     };
     initData();
-
-    // Data dummy untuk fitur Riwayat Penjualan (Sementara/Static)
-    setRiwayatPenjualan([
-      { tanggal: "2023-10-20", berat: 1500, total: 3750000 },
-      { tanggal: "2023-10-18", berat: 2100, total: 5355000 },
-    ]);
   }, [fetchRencanaKerja, fetchIspoProgress]);
+
+  // --- STATE RIWAYAT PENJUALAN TBS (MINI - TAB SELESAI) ---
+  const [riwayatPenjualanMini, setRiwayatPenjualanMini] = useState([]);
+  const [isLoadingRiwayatMini, setIsLoadingRiwayatMini] = useState(false);
+
+  // --- FETCH RIWAYAT PENJUALAN TBS (MINI) ---
+  useEffect(() => {
+    const fetchRiwayatSelesaiMini = async () => {
+      setIsLoadingRiwayatMini(true);
+      try {
+        const token =
+          localStorage.getItem("accessToken") || localStorage.getItem("token");
+        if (!token) return;
+
+        // Fetch endpoint history
+        const response = await fetch(
+          `${API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST}?is_history=true`,
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Filter hanya yang ADA PEMERIKSAAN (selesai) dan BUKAN Ditolak
+          const dataSelesai = data.filter((item) => {
+            const sudahDiperiksa =
+              item.pemeriksaan !== null && item.pemeriksaan !== undefined;
+            const tidakDitolak =
+              item.status_permintaan?.toLowerCase() !== "ditolak";
+            return sudahDiperiksa && tidakDitolak;
+          });
+
+          // Urutkan terbaru ke atas dan ambil 3 saja
+          const dataTerbaru = dataSelesai
+            .sort((a, b) => b.id - a.id)
+            .slice(0, 3);
+
+          setRiwayatPenjualanMini(dataTerbaru);
+        } else {
+          setRiwayatPenjualanMini([]);
+        }
+      } catch (error) {
+        console.error("Error fetching riwayat penjualan mini:", error);
+      } finally {
+        setIsLoadingRiwayatMini(false);
+      }
+    };
+
+    fetchRiwayatSelesaiMini();
+  }, []);
 
   /**
    * --- FETCH GRAFIK HARGA TBS (Dinamis u/ Mandor) ---
@@ -274,8 +330,9 @@ export default function DashboardMandor() {
       setIsLoadingHargaTbs(true);
       try {
         // PERBAIKAN: Ambil token langsung dari localStorage seperti fungsi lainnya di file ini
-        const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
-        
+        const token =
+          localStorage.getItem("accessToken") || localStorage.getItem("token");
+
         if (!token) return;
 
         // Gunakan .replace untuk memasukkan ID ke parameter {kebun_id}
@@ -315,7 +372,7 @@ export default function DashboardMandor() {
     };
 
     fetchGrafikHarga();
-  }, [profile.kebun_id, tahunTbs]); // <-- Dependency Logic untuk Mandor
+  }, [profile.kebun_id, tahunTbs]);
 
   // -----------------------------------------------------------------------------
   // FUNGSI: Menambah Rencana Kerja Manual (POST)
@@ -624,103 +681,179 @@ export default function DashboardMandor() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* FITUR 1: Luas Lahan */}
         <Card
-          title="Luas Lahan (Mineral & Gambut)"
+          title="Informasi Luas Lahan"
           icon={Map}
-          rightContent={
+          footer={
             <button
               onClick={() => navigate("/petani/luaslahan")}
-              className="bg-white hover:bg-[#B5302D] text-black hover:text-white px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all shadow-sm"
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
-              Tambah/Perbarui Lahan
+              Tambah/Perbarui Lahan &rarr;
             </button>
           }
         >
           <div className="space-y-4">
             {/* Bagian Lahan Mineral */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
-              <div className="flex justify-between items-center mb-1">
-                <p className="text-[10px] font-bold text-[#B5302D] uppercase">
-                  Lahan Mineral
-                </p>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              {/* Dekorasi Garis Kiri */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#EF8523] opacity-80" />
+
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-orange-50 p-2 rounded-lg text-[#EF8523]">
+                    <Layers className="w-4 h-4" />{" "}
+                    {/* Anda perlu import Layers dari lucide-react */}
+                  </div>
+                  <div>
+                    <h4 className="text-[13px] font-extrabold text-gray-900 uppercase tracking-wide">
+                      Lahan Mineral
+                    </h4>
+                    <p className="text-[10px] text-gray-500 font-medium">
+                      Tanah padat konvensional
+                    </p>
+                  </div>
+                </div>
                 {lahanData.lahan_mineral && (
                   <BadgeSengketa
                     isSengketa={lahanData.lahan_mineral.ada_sengketa}
                   />
                 )}
               </div>
-              <div className="flex justify-between text-sm">
-                <span>
-                  Total:{" "}
-                  <b>
+
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">
+                    Total Luas
+                  </p>
+                  <p className="text-sm font-black text-gray-900 mt-0.5">
                     {lahanData.lahan_mineral
                       ? lahanData.lahan_mineral.luas_total_lahan_mineral
                       : 0}{" "}
-                    ha
-                  </b>
-                </span>
-                <span className="text-green-600 font-bold">
-                  Digunakan:{" "}
-                  {lahanData.lahan_mineral
-                    ? lahanData.lahan_mineral.lahan_digunakan_mineral
-                    : 0}{" "}
-                  ha
-                </span>
+                    <span className="text-[10px] text-gray-500 font-semibold">
+                      Hektar
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">
+                    Telah Digunakan
+                  </p>
+                  <p className="text-sm font-black text-green-600 mt-0.5">
+                    {lahanData.lahan_mineral
+                      ? lahanData.lahan_mineral.lahan_digunakan_mineral
+                      : 0}{" "}
+                    <span className="text-[10px] text-gray-500 font-semibold">
+                      Hektar
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Bagian Lahan Gambut */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-[10px] font-bold text-[#B5302D] uppercase">
-                  Lahan Gambut
-                </p>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              {/* Dekorasi Garis Kiri */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#B5302D] opacity-80" />
+
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-red-50 p-2 rounded-lg text-[#B5302D]">
+                    <Droplets className="w-4 h-4" />{" "}
+                    {/* Anda perlu import Droplets dari lucide-react */}
+                  </div>
+                  <div>
+                    <h4 className="text-[13px] font-extrabold text-gray-900 uppercase tracking-wide">
+                      Lahan Gambut
+                    </h4>
+                    <p className="text-[10px] text-gray-500 font-medium">
+                      Area rawa & konservasi
+                    </p>
+                  </div>
+                </div>
                 {selectedGambutIndex !== null && (
                   <button
                     onClick={() => setSelectedGambutIndex(null)}
-                    className="text-[10px] font-bold text-blue-600 hover:underline"
+                    className="flex items-center gap-1 text-[10px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors"
                   >
-                    ← Kembali
+                    <ArrowLeft className="w-3 h-3" /> Kembali
                   </button>
                 )}
               </div>
 
               {lahanData.lahan_gambut && lahanData.lahan_gambut.length === 0 ? (
-                <p className="text-xs text-gray-400 italic text-center py-2">
-                  Tidak ada data lahan gambut.
-                </p>
+                <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <p className="text-xs text-gray-500 font-medium">
+                    Tidak ada data lahan gambut terdaftar.
+                  </p>
+                </div>
               ) : selectedGambutIndex === null ? (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200">
                   {lahanData.lahan_gambut.map((g, idx) => (
                     <div
                       key={idx}
                       onClick={() => setSelectedGambutIndex(idx)}
-                      className="cursor-pointer p-2 bg-white border border-gray-100 rounded-lg hover:border-[#EF8523] text-xs flex justify-between items-center"
+                      className="cursor-pointer group/item flex justify-between items-center p-3 bg-white border border-gray-100 rounded-lg hover:border-red-200 hover:bg-red-50/30 transition-all"
                     >
-                      <div className="flex flex-col">
-                        <span>{g.nama_lahan_gambut}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-bold text-gray-800 group-hover/item:text-[#B5302D] transition-colors">
+                          {g.nama_lahan_gambut}
+                        </span>
                         <BadgeSengketa isSengketa={g.ada_sengketa} />
                       </div>
-                      <span className="font-bold">
-                        {g.luas_total_diajukan} ha
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-gray-900">
+                          {g.luas_total_diajukan}{" "}
+                          <span className="font-normal text-gray-500 text-[10px]">
+                            ha
+                          </span>
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover/item:text-[#B5302D] transition-colors" />
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-xs space-y-2 bg-white p-3 rounded-lg border border-orange-100">
-                  <div className="flex justify-between items-start">
-                    <p className="font-bold text-gray-800">
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex justify-between items-start mb-3 border-b border-gray-200 pb-3">
+                    <p className="text-xs font-black text-gray-900">
                       {currentGambut.nama_lahan_gambut}
                     </p>
                     <BadgeSengketa isSengketa={currentGambut.ada_sengketa} />
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-gray-600">
-                    <p>Thn Buka: {currentGambut.tahun_buka_lahan}</p>
-                    <p>Konservasi: {currentGambut.luas_total_konservasi} ha</p>
-                    <p>
-                      Boleh Tanam: {currentGambut.luas_total_boleh_ditanam} ha
-                    </p>
-                    <p>Sisa: {currentGambut.lahan_tidak_digunakan_gambut} ha</p>
+
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-500 uppercase">
+                        Tahun Buka
+                      </p>
+                      <p className="text-xs font-bold text-gray-900 mt-0.5">
+                        {currentGambut.tahun_buka_lahan}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-500 uppercase">
+                        Area Konservasi
+                      </p>
+                      <p className="text-xs font-bold text-gray-900 mt-0.5">
+                        {currentGambut.luas_total_konservasi} ha
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-500 uppercase">
+                        Boleh Ditanam
+                      </p>
+                      <p className="text-xs font-bold text-green-600 mt-0.5">
+                        {currentGambut.luas_total_boleh_ditanam} ha
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-500 uppercase">
+                        Sisa Lahan
+                      </p>
+                      <p className="text-xs font-bold text-orange-500 mt-0.5">
+                        {currentGambut.lahan_tidak_digunakan_gambut} ha
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -729,7 +862,18 @@ export default function DashboardMandor() {
         </Card>
 
         {/* FITUR 2: Monitoring Sertifikasi ISPO (DINAMIS SESUAI BE MAHAR) */}
-        <Card title="Monitoring Sertifikasi ISPO" icon={Award}>
+        <Card
+          title="Monitoring Sertifikasi ISPO"
+          icon={Award}
+          footer={
+            <button
+              onClick={() => navigate("/petani/pantauISPO")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
+        >
           <div className="flex flex-col h-full justify-between">
             <div className="flex flex-wrap sm:flex-nowrap justify-center gap-y-3 gap-x-1 sm:gap-2 py-2 sm:py-4">
               {[1, 2, 3, 4, 5].map((num) => (
@@ -796,12 +940,6 @@ export default function DashboardMandor() {
                 </div>
               ))}
             </div>
-            <button
-              onClick={() => navigate("/petani/pantauISPO")}
-              className="w-full bg-[#B5302D] hover:bg-[#B5302D]/80 text-white py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-bold uppercase transition-all shadow-sm"
-            >
-              Lihat Lebih Detail
-            </button>
           </div>
         </Card>
 
@@ -809,12 +947,12 @@ export default function DashboardMandor() {
         <Card
           title="Daftar Kegiatan Kerja Hari Ini"
           icon={ClipboardList}
-          rightContent={
+          footer={
             <button
               onClick={() => setShowPopupRencana(true)}
-              className="bg-white hover:bg-[#B5302D] text-black hover:text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all shadow-sm flex items-center gap-1"
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
-              <Plus size={12} /> Tambah Kegiatan
+              Tambah Kegiatan &rarr;
             </button>
           }
         >
@@ -915,41 +1053,101 @@ export default function DashboardMandor() {
         </Card>
 
         {/* FITUR 4: Riwayat Penjualan */}
-        <Card
-          title="Riwayat Penjualan"
-          icon={TrendingUp}
-          rightContent={
-            <button
-              onClick={() => navigate("/petani/riwayatpenjualan")}
-              className="bg-white hover:bg-[#B5302D] text-black hover:text-white px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all shadow-sm"
-            >
-              Lihat Detail
-            </button>
-          }
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b text-[10px] text-gray-400 uppercase font-bold">
-                  <th className="pb-3">Tanggal</th>
-                  <th className="pb-3">Berat (kg)</th>
-                  <th className="pb-3 text-right">Total (Rp)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {riwayatPenjualan.slice(0, 5).map((r, i) => (
-                  <tr key={i} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-3 text-gray-600">{r.tanggal}</td>
-                    <td className="py-3 font-semibold">
-                      {r.berat.toLocaleString()} kg
-                    </td>
-                    <td className="py-3 text-right font-bold text-green-600">
-                      Rp {r.total.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <Card title="Riwayat Penjualan TBS (Selesai)" icon={TrendingUp}>
+          <div className="flex flex-col h-full relative">
+            <div className="space-y-4 flex-grow">
+              {isLoadingRiwayatMini ? (
+                <div className="h-full flex items-center justify-center text-gray-400 min-h-[150px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+                </div>
+              ) : riwayatPenjualanMini.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-200 min-h-[150px]">
+                  <p className="text-xs">
+                    Belum ada riwayat penjualan selesai.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 pb-4">
+                  {riwayatPenjualanMini.map((item) => {
+                    // KODE YANG BARU
+                    const tglPemeriksaan = item.pemeriksaan?.created_at
+                      ? new Date(
+                          item.pemeriksaan.created_at,
+                        ).toLocaleDateString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "-";
+
+                    const beratNetto =
+                      item.pemeriksaan?.final_weigh ||
+                      item.pemeriksaan?.netto ||
+                      0;
+                    const totalHarga = item.pemeriksaan?.harga_final || 0;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group"
+                      >
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                              Pabrik Tujuan
+                            </p>
+                            <p className="text-sm font-bold text-gray-800 leading-snug line-clamp-1 pr-2">
+                              {item.alamat_pengiriman_pabrik}
+                            </p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 bg-green-50 text-green-700 border-green-100">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Selesai
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                          <div>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase">
+                              Tgl Ditimbang
+                            </p>
+                            <p className="text-[11px] font-medium text-gray-700 flex items-center gap-1 mt-0.5">
+                              <Calendar className="w-3 h-3 text-gray-400" />{" "}
+                              {tglPemeriksaan}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase">
+                              Netto & Total
+                            </p>
+                            <div className="text-[11px] mt-0.5 flex flex-col gap-0.5">
+                              <p className="font-bold text-gray-700">
+                                {beratNetto.toLocaleString("id-ID")} Kg
+                              </p>
+                              <p className="font-bold text-green-600">
+                                Rp {totalHarga.toLocaleString("id-ID")}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Tombol Lihat Semua (Sticky Position agar selalu menempel di bawah) */}
+            <div className="pt-4 mt-auto border-t border-gray-50 bg-white shrink-0 sticky bottom-0 z-10">
+              <button
+                onClick={() => navigate("/petani/riwayatpenjualan")}
+                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+              >
+                Lihat Semua &rarr;
+              </button>
+            </div>
           </div>
         </Card>
 
@@ -1168,20 +1366,39 @@ export default function DashboardMandor() {
 
       {/* --- POPUP TAMBAH RENCANA (DINAMIS FORM) --- */}
       {showPopupRencana && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
-            <div className="bg-[#EF8523] px-6 py-4 flex justify-between items-center text-black font-bold">
-              <h3>Tambah Rencana Kegiatan</h3>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
+            {/* --- Header Modal --- */}
+            <div className="bg-[#EF8523] px-6 py-4 flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+                  <Calendar className="w-5 h-5 text-white" />{" "}
+                  {/* Tambahkan import Calendar jika belum ada */}
+                </div>
+                <h3 className="text-white font-bold text-lg tracking-wide">
+                  Tambah Rencana
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowPopupRencana(false)}
+                className="relative z-10 p-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">
-                  Nama Kegiatan
+
+            {/* --- Body Form --- */}
+            <div className="p-6 sm:p-8 space-y-5 bg-gray-50/30">
+              {/* Field: Nama Kegiatan */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider ml-1">
+                  Nama Kegiatan <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: Beli Pupuk NPK"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-black focus:border-[#EF8523] transition-colors"
+                  placeholder="Contoh: Beli Pupuk NPK / Pemupukan Lahan"
+                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none text-gray-900 text-sm font-medium focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all shadow-sm placeholder-gray-300"
                   value={newRencana.judul_kegiatan}
                   onChange={(e) =>
                     setNewRencana({
@@ -1192,13 +1409,14 @@ export default function DashboardMandor() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">
-                  Tanggal Pelaksanaan
+              {/* Field: Tanggal Pelaksanaan */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider ml-1">
+                  Tanggal Pelaksanaan <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-black focus:border-[#EF8523] transition-colors"
+                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none text-gray-900 text-sm font-medium focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all shadow-sm"
                   value={newRencana.tanggal_kerja}
                   onChange={(e) =>
                     setNewRencana({
@@ -1209,14 +1427,18 @@ export default function DashboardMandor() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">
-                  Deskripsi Detail
+              {/* Field: Deskripsi */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider ml-1 flex items-center justify-between">
+                  <span>Deskripsi Detail</span>
+                  <span className="text-[9px] font-medium text-gray-400 normal-case">
+                    (Opsional)
+                  </span>
                 </label>
                 <textarea
                   rows="3"
-                  placeholder="Contoh: Beli 2 sak di toko Pak Budi..."
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-black resize-none focus:border-[#EF8523] transition-colors"
+                  placeholder="Tuliskan rincian kegiatan di sini..."
+                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none text-gray-900 text-sm font-medium resize-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all shadow-sm placeholder-gray-300"
                   value={newRencana.kegiatan_kerja}
                   onChange={(e) =>
                     setNewRencana({
@@ -1226,21 +1448,22 @@ export default function DashboardMandor() {
                   }
                 />
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setShowPopupRencana(false)}
-                  className="flex-1 py-3 rounded-xl bg-gray-100 font-bold text-gray-500 hover:bg-gray-200 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleSaveRencana}
-                  className="flex-1 py-3 rounded-xl bg-[#B5302D] font-bold text-white hover:bg-black transition-all shadow-md"
-                >
-                  Simpan Rencana
-                </button>
-              </div>
+            {/* --- Footer Action Buttons --- */}
+            <div className="p-6 pt-0 bg-gray-50/30 flex gap-3">
+              <button
+                onClick={() => setShowPopupRencana(false)}
+                className="flex-1 py-3.5 rounded-xl bg-white border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors text-sm shadow-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveRencana}
+                className="flex-1 py-3.5 rounded-xl bg-[#B5302D] font-bold text-white hover:bg-red-800 transition-all shadow-md shadow-red-200 text-sm flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" /> Simpan Rencana
+              </button>
             </div>
           </div>
         </div>

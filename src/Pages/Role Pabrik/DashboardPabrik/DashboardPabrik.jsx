@@ -13,29 +13,31 @@ import {
   Package,
 } from "lucide-react";
 
-// --- Komponen Card Reusable ---
-const Card = ({ title, icon: Icon, children, rightContent }) => (
-  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-full overflow-hidden">
-    <div className="bg-[#EF8523] px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
-      <div className="flex items-center gap-3">
+const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
+  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-[320px] overflow-hidden">
+    <div className="bg-[#EF8523] px-4 py-3 sm:px-4 flex justify-between items-center flex-shrink-0">
+      <div className="flex items-center gap-2.5">
         {Icon && (
           <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-sm flex items-center justify-center">
-            <Icon className="text-white w-5 h-5" />
+            <Icon className="text-white w-4 h-4" />
           </div>
         )}
-        <h3 className="text-[14px] sm:text-[16px] font-bold text-white tracking-wide">
+        <h3 className="font-bold text-white text-sm sm:text-base tracking-wide">
           {title}
         </h3>
       </div>
-
-      {rightContent && (
-        <div className="scale-90 sm:scale-100 origin-right">{rightContent}</div>
-      )}
+      {rightContent && <div>{rightContent}</div>}
     </div>
 
-    <div className="p-4 sm:p-5 text-gray-800 bg-white h-64 sm:h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+    <div className="p-3 sm:p-4 flex-grow flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
       {children}
     </div>
+
+    {footer && (
+      <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-100 text-sm text-gray-500 flex-shrink-0">
+        {footer}
+      </div>
+    )}
   </div>
 );
 
@@ -137,7 +139,7 @@ export default function DashboardPabrik() {
 
   // --- FETCH KETIGA DATA (TRUK AKTIF, STOK RAM, & PRODUKSI) PARALEL ---
   useEffect(() => {
-const fetchDashboardData = async () => {
+    const fetchDashboardData = async () => {
       setIsLoadingAktif(true);
       setIsLoadingRAM(true);
       setIsLoadingSiklus(true);
@@ -148,11 +150,10 @@ const fetchDashboardData = async () => {
 
         // Tembak 3 API sekaligus agar performa dashboard sangat cepat
         const [resAktif, resRam, resSiklus] = await Promise.all([
-          fetch(
-            API_ENDPOINTS.TRACEABILITY.PABRIK.PEMERIKSAAN.DASHBOARD, 
-            { headers: { Authorization: `Bearer ${token}` } }
-          ).catch(() => null),
-          
+          fetch(API_ENDPOINTS.TRACEABILITY.PABRIK.PEMERIKSAAN.DASHBOARD, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => null),
+
           fetch(API_ENDPOINTS.TRACEABILITY.PABRIK.STOK_RAM, {
             headers: { Authorization: `Bearer ${token}` },
           }).catch(() => null),
@@ -168,10 +169,13 @@ const fetchDashboardData = async () => {
         // 1. Proses Data Aktif (Riwayat Pemeriksaan / Truk)
         if (resAktif && resAktif.ok) {
           const dataAktif = await resAktif.json();
-          
+
           // ---> [TAMBAHAN] CONSOLE LOG DATA AKTIF / PEMERIKSAAN <---
-          console.log("=== DATA DASHBOARD PEMERIKSAAN (DARI BE) ===", dataAktif);
-          
+          console.log(
+            "=== DATA DASHBOARD PEMERIKSAAN (DARI BE) ===",
+            dataAktif,
+          );
+
           const filteredAktif = dataAktif.filter(
             (item) => item.status_permintaan?.toLowerCase() === "diterima",
           );
@@ -181,10 +185,10 @@ const fetchDashboardData = async () => {
         // 2. Proses Data Kapasitas RAM
         if (resRam && resRam.ok) {
           const dataRam = await resRam.json();
-          
+
           // ---> [TAMBAHAN] CONSOLE LOG DATA STOK RAM <---
           console.log("=== DATA STOK RAM (DARI BE) ===", dataRam);
-          
+
           setKapasitasRAM({
             total: (dataRam.kuota_kapasitas_kg || 0) / 1000,
             terpakai: (dataRam.total_sisa_stok_tbs || 0) / 1000,
@@ -194,10 +198,13 @@ const fetchDashboardData = async () => {
         // 3. Proses Data Siklus Produksi Aktif
         if (resSiklus && resSiklus.ok) {
           const dataSiklus = await resSiklus.json();
-          
+
           // ---> [TAMBAHAN] CONSOLE LOG DATA SIKLUS PRODUKSI <---
-          console.log("=== DATA SIKLUS PRODUKSI AKTIF (DARI BE) ===", dataSiklus);
-          
+          console.log(
+            "=== DATA SIKLUS PRODUKSI AKTIF (DARI BE) ===",
+            dataSiklus,
+          );
+
           setSiklusAktif(dataSiklus);
         }
       } catch (error) {
@@ -325,8 +332,16 @@ const fetchDashboardData = async () => {
         {/* FITUR 1: RIWAYAT PEMERIKSAAN TBS       */}
         {/* ========================================================= */}
         <Card
-          title="Riwayat Transaksi TBS"
+          title="Periksa TBS Tiba"
           icon={Truck}
+          footer={
+            <button
+              onClick={() => navigate("/pabrik/penerimaanTBS")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
           rightContent={
             <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
               {pengirimanAktif.length} Antrian
@@ -444,23 +459,24 @@ const fetchDashboardData = async () => {
                 })
               )}
             </div>
-
-            {/* Tombol Sticky Footer */}
-            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-1 sm:mt-2 z-10 border-t border-gray-50 text-right">
-              <button
-                onClick={() => navigate("/pabrik/penerimaanTBS")}
-                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
-              >
-                Lihat Semua &rarr;
-              </button>
-            </div>
           </div>
         </Card>
 
         {/* ========================================================= */}
         {/* FITUR 2: Monitoring Stok RAM (TERHUBUNG API)              */}
         {/* ========================================================= */}
-        <Card title="Monitoring Stok RAM" icon={Database}>
+        <Card
+          title="Monitoring Stok RAM"
+          icon={Database}
+          footer={
+            <button
+              onClick={() => navigate("/pabrik/stokram")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
+        >
           <div className="space-y-3 h-full flex flex-col">
             <div className="flex-grow flex flex-col justify-center space-y-4">
               {isLoadingRAM ? (
@@ -541,16 +557,6 @@ const fetchDashboardData = async () => {
                 </>
               )}
             </div>
-
-            {/* Tombol Sticky Footer Konsisten */}
-            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-2 z-10 border-t border-gray-50 text-right">
-              <button
-                onClick={() => navigate("/pabrik/stokram")}
-                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
-              >
-                Lihat Detail &rarr;
-              </button>
-            </div>
           </div>
         </Card>
 
@@ -560,6 +566,14 @@ const fetchDashboardData = async () => {
         <Card
           title="Produksi Yang Berjalan"
           icon={Factory}
+                    footer={
+            <button
+              onClick={() => navigate("/pabrik/produksi")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
           rightContent={
             <span className="bg-white text-black text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full shadow-sm">
               {siklusAktif.length} Siklus
@@ -641,16 +655,6 @@ const fetchDashboardData = async () => {
                   </div>
                 ))
               )}
-            </div>
-
-            {/* Tombol Sticky Footer */}
-            <div className="sticky -bottom-4 sm:-bottom-5 bg-white pt-3 pb-4 mt-1 sm:mt-2 z-10 border-t border-gray-50 text-right">
-              <button
-                onClick={() => navigate("/pabrik/produksi")}
-                className="text-xs font-bold text-[#B5302D] hover:text-black hover:underline transition-all inline-block"
-              >
-                Lihat Semua &rarr;
-              </button>
             </div>
           </div>
         </Card>
