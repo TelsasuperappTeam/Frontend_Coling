@@ -14,8 +14,10 @@ import {
   XCircle,
   ShoppingCart,
 } from "lucide-react";
-// Pastikan path API_ENDPOINTS Anda benar
+
 import { API_ENDPOINTS, NOTIF_MESSAGES } from "../../config/constants";
+
+import { showToast, confirmDialog } from "../../utils/notif";
 
 // ==========================================
 // DEKLARASI KOMPONEN UTAMA
@@ -85,15 +87,20 @@ const TransaksiTBS = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Rencana kebutuhan berhasil diperbarui!");
+        // UBAH ALERT INI
+        showToast.success("Rencana kebutuhan berhasil diperbarui!");
         setEditingKebutuhanId(null);
-        fetchKebutuhanAktif(); // Refresh data terbaru
+        fetchKebutuhanAktif();
       } else {
-        alert("Gagal memperbarui: " + (data.detail || "Error Server"));
+        // UBAH ALERT INI
+        showToast.error(
+          "Gagal memperbarui: " + (data.detail || "Error Server"),
+        );
       }
     } catch (error) {
       console.error("Edit Error:", error);
-      alert("Terjadi kesalahan jaringan.");
+      // UBAH ALERT INI
+      showToast.error("Terjadi kesalahan jaringan.");
     } finally {
       setIsLoadingList(false);
     }
@@ -126,13 +133,16 @@ const TransaksiTBS = () => {
       }
     } catch (error) {
       console.error("Fetch Error:", error);
+      // TAMBAHKAN TOAST ERROR INI:
+      showToast.error(
+        "Gagal memuat rencana kebutuhan aktif. Periksa koneksi Anda.",
+      );
     } finally {
       setIsLoadingList(false);
     }
   };
 
-
-// --- STATE LIST PENAWARAN MASUK ---
+  // --- STATE LIST PENAWARAN MASUK ---
   const [penawaranMasuk, setPenawaranMasuk] = useState([]);
   const [isLoadingPenawaran, setIsLoadingPenawaran] = useState(false);
 
@@ -156,13 +166,18 @@ const TransaksiTBS = () => {
       console.log("Data mentah dari API:", data);
 
       if (response.ok) {
-        console.log("Fetch berhasil! Menyimpan data ke state penawaranMasuk:", data);
+        console.log(
+          "Fetch berhasil! Menyimpan data ke state penawaranMasuk:",
+          data,
+        );
         setPenawaranMasuk(data);
       } else {
         console.error("Gagal memuat penawaran:", data);
       }
     } catch (error) {
       console.error("Gagal memuat penawaran:", error);
+      // TAMBAHKAN TOAST ERROR INI:
+      showToast.error("Gagal memuat daftar penawaran masuk dari kebun.");
     } finally {
       setIsLoadingPenawaran(false);
     }
@@ -171,22 +186,30 @@ const TransaksiTBS = () => {
   // --- STATE ACTION PABRIK ---
   const [processingActionId, setProcessingActionId] = useState(null);
 
-  // Fungsi PATCH ke API untuk Terima / Tolak Penawaran
   const handleActionPenawaran = async (grupId, isAccepted) => {
-    const confirmMsg = isAccepted
+    // 1. TENTUKAN TEKS PERINGATAN
+    const textMsg = isAccepted
       ? "Apakah Anda yakin ingin MENERIMA penawaran ini? Kuota pabrik akan otomatis terpotong."
       : "Apakah Anda yakin ingin MENOLAK penawaran ini?";
 
-    if (!window.confirm(confirmMsg)) return;
+    // 2. CEGAT USER DENGAN KONFIRMASI (Ganti window.confirm)
+    const isSetuju = await confirmDialog({
+      title: isAccepted ? "Terima Penawaran?" : "Tolak Penawaran?",
+      text: textMsg,
+      confirmText: isAccepted ? "Ya, Terima!" : "Ya, Tolak!",
+      isDanger: !isAccepted, // Tombol jadi merah BUKAN saat diterima, tapi saat ditolak
+    });
+
+    // 3. JIKA USER BATALKAN, STOP FUNGSI DI SINI
+    if (!isSetuju) return;
 
     setProcessingActionId(grupId);
     try {
       const token = localStorage.getItem("token");
 
-      // Payload sesuai skema ActionPabrikRequest di BE
       const payload = {
         status_pengajuan: isAccepted ? "DISETUJUI" : "DITOLAK",
-        catatan_dari_pabrik: null, // Opsional, bisa diisi jika fitur catatan diaktifkan nanti
+        catatan_dari_pabrik: null,
       };
 
       const response = await fetch(
@@ -204,15 +227,21 @@ const TransaksiTBS = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert(`Penawaran berhasil ${isAccepted ? "diterima" : "ditolak"}!`);
-        fetchPenawaranMasuk(); // Refresh list penawaran
-        fetchKebutuhanAktif(); // Refresh kuota pabrik (karena kuota berkurang jika diterima)
+        // GANTI ALERT JADI TOAST SUCCESS
+        showToast.success(
+          `Penawaran berhasil ${isAccepted ? "diterima" : "ditolak"}!`,
+        );
+        fetchPenawaranMasuk();
+        fetchKebutuhanAktif();
       } else {
-        alert("Gagal memproses penawaran: " + (data.detail || "Error Server"));
+        // GANTI ALERT JADI TOAST ERROR
+        showToast.error(
+          "Gagal memproses penawaran: " + (data.detail || "Error Server"),
+        );
       }
     } catch (error) {
       console.error("Action Error:", error);
-      alert("Terjadi kesalahan jaringan.");
+      showToast.error("Terjadi kesalahan jaringan.");
     } finally {
       setProcessingActionId(null);
     }
@@ -257,7 +286,8 @@ const TransaksiTBS = () => {
       !formRencana.harga_beli ||
       !formRencana.kapasitas_ton
     ) {
-      alert(
+      // UBAH ALERT VALIDASI JADI TOAST ERROR
+      showToast.error(
         NOTIF_MESSAGES?.ERROR?.INCOMPLETE_FORM ||
           "Harap lengkapi Tanggal Mulai, Tanggal Selesai, Harga, dan Kapasitas!",
       );
@@ -292,7 +322,8 @@ const TransaksiTBS = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert(
+        // UBAH ALERT SUKSES JADI TOAST SUCCESS
+        showToast.success(
           data.message ||
             NOTIF_MESSAGES?.SUCCESS?.SAVE_DATA ||
             "Rencana Kebutuhan berhasil diterbitkan!",
@@ -308,14 +339,16 @@ const TransaksiTBS = () => {
         setActiveSubRencana(null);
         fetchKebutuhanAktif();
       } else {
-        alert(
+        showToast.error(
           (NOTIF_MESSAGES?.ERROR?.SERVER_ERROR || "Gagal: ") +
             (data.detail || "Terjadi kesalahan pada server."),
         );
       }
     } catch (error) {
       console.error("Submit Error:", error);
-      alert(NOTIF_MESSAGES?.ERROR?.NETWORK || "Terjadi kesalahan jaringan.");
+      showToast.error(
+        NOTIF_MESSAGES?.ERROR?.NETWORK || "Terjadi kesalahan jaringan.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -552,7 +585,6 @@ const TransaksiTBS = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {kebutuhanAktif.map((item) => {
-                    
                     console.log("Data Card Rencana Aktif:", item);
 
                     // Konversi Harga

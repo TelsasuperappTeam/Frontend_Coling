@@ -12,8 +12,9 @@ import {
   X,
 } from "lucide-react";
 
-// PASTIKAN PATH IMPORT INI SESUAI DENGAN STRUKTUR FOLDER ANDA
 import { API_ENDPOINTS } from "../../config/constants.js";
+
+import { showToast, confirmDialog } from "../../utils/notif";
 
 // --- KOMPONEN SECTION CARD ---
 const SectionCard = ({ title, children }) => (
@@ -97,6 +98,10 @@ export default function Produksi() {
       }
     } catch (error) {
       console.error("Error fetching siklus produksi:", error);
+      // TAMBAHKAN TOAST ERROR INI:
+      showToast.error(
+        "Gagal memuat data siklus produksi. Periksa koneksi Anda.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -115,9 +120,21 @@ export default function Produksi() {
       isNaN(parseFloat(jumlahTBS)) ||
       parseFloat(jumlahTBS) <= 0
     ) {
-      alert("Masukkan jumlah TBS yang valid (lebih dari 0)!");
+      // 1. UBAH ALERT VALIDASI JADI TOAST ERROR
+      showToast.error("Masukkan jumlah TBS yang valid (lebih dari 0)!");
       return;
     }
+
+    // 2. TAMBAHKAN CEGATAN KONFIRMASI DI SINI
+    const isSetuju = await confirmDialog({
+      title: "Mulai Siklus Produksi?",
+      text: `Anda akan memproses ${jumlahTBS} Kg TBS. Stok akan otomatis terpotong dari RAM.`,
+      confirmText: "Ya, Mulai!",
+      isDanger: false, // Bukan aksi destruktif (hapus), jadi tidak perlu merah
+    });
+
+    // JIKA USER BATALKAN, STOP FUNGSI DI SINI
+    if (!isSetuju) return;
 
     setIsSubmitting(true);
     try {
@@ -127,8 +144,6 @@ export default function Produksi() {
       const payload = {
         jumlah_tbs_digunakan: parseFloat(jumlahTBS),
       };
-
-      console.log("=== PAYLOAD MULAI SIKLUS ===", payload);
 
       const res = await fetch(url, {
         method: "POST",
@@ -142,19 +157,22 @@ export default function Produksi() {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Siklus Produksi berhasil dimulai!");
+        // 3. UBAH ALERT SUKSES JADI TOAST SUCCESS
+        showToast.success("Siklus Produksi berhasil dimulai!");
         setJumlahTBS("");
-        fetchSiklusData(); // Refresh data layar
+        fetchSiklusData();
       } else {
         const errMsg = data.detail
           ? typeof data.detail === "string"
             ? data.detail
             : JSON.stringify(data.detail)
           : "Gagal memulai produksi.";
-        alert("Gagal: " + errMsg);
+        // 4. UBAH ALERT ERROR JADI TOAST ERROR
+        showToast.error("Gagal: " + errMsg);
       }
     } catch {
-      alert("Terjadi kesalahan jaringan.");
+      // 5. UBAH ALERT CATCH JADI TOAST ERROR
+      showToast.error("Terjadi kesalahan jaringan.");
     } finally {
       setIsSubmitting(false);
     }
@@ -177,6 +195,23 @@ export default function Produksi() {
   };
 
   const handleSelesaikanSiklus = async () => {
+    // (Opsional) Validasi ringan: minimal CPO harus diisi
+    if (!hasilForm.cpo || hasilForm.cpo <= 0) {
+      showToast.error("Hasil CPO tidak boleh kosong atau 0!");
+      return;
+    }
+
+    // TAMBAHKAN CEGATAN KONFIRMASI (Final Check)
+    const isSetuju = await confirmDialog({
+      title: "Generate Resi CPO?",
+      text: "Pastikan angka timbangan sudah benar. Data yang disimpan akan menerbitkan Resi Produksi dan tidak dapat diubah lagi.",
+      confirmText: "Ya, Generate Resi!",
+      isDanger: false,
+    });
+
+    // Jika batal, hentikan proses
+    if (!isSetuju) return;
+
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
@@ -192,8 +227,6 @@ export default function Produksi() {
         pome: parseFloat(hasilForm.pome) || 0.0,
       };
 
-      console.log("=== PAYLOAD SELESAIKAN SIKLUS ===", payload);
-
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -206,19 +239,19 @@ export default function Produksi() {
       const data = await res.json();
 
       if (res.ok) {
-        alert(data.message || "Produksi berhasil diselesaikan!");
+        showToast.success(data.message || "Produksi berhasil diselesaikan!");
         setShowModal(false);
-        fetchSiklusData(); // Refresh data layar
+        fetchSiklusData();
       } else {
         const errMsg = data.detail
           ? typeof data.detail === "string"
             ? data.detail
             : JSON.stringify(data.detail)
           : "Gagal menyelesaikan produksi.";
-        alert("Gagal: " + errMsg);
+        showToast.error("Gagal: " + errMsg);
       }
     } catch {
-      alert("Terjadi kesalahan jaringan.");
+      showToast.error("Terjadi kesalahan jaringan.");
     } finally {
       setIsSubmitting(false);
     }

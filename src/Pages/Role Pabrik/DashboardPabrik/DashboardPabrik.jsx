@@ -13,6 +13,8 @@ import {
   Package,
 } from "lucide-react";
 
+import { showToast } from "../../../utils/notif";
+
 const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
   <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-[320px] overflow-hidden">
     <div className="bg-[#EF8523] px-4 py-3 sm:px-4 flex justify-between items-center flex-shrink-0">
@@ -129,6 +131,8 @@ export default function DashboardPabrik() {
         });
       } catch (error) {
         console.error("Error fetching profile:", error);
+        // TAMBAHKAN TOAST ERROR INI:
+        showToast.error("Gagal memuat profil pabrik. Periksa koneksi Anda.");
       } finally {
         setIsLoadingProfile(false);
       }
@@ -209,6 +213,8 @@ export default function DashboardPabrik() {
         }
       } catch (error) {
         console.error("Fatal Error fetching dashboard data:", error);
+        // TAMBAHKAN TOAST ERROR INI:
+        showToast.error("Gagal memuat data utama dashboard.");
       } finally {
         setIsLoadingAktif(false);
         setIsLoadingRAM(false);
@@ -566,7 +572,7 @@ export default function DashboardPabrik() {
         <Card
           title="Produksi Yang Berjalan"
           icon={Factory}
-                    footer={
+          footer={
             <button
               onClick={() => navigate("/pabrik/produksi")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"

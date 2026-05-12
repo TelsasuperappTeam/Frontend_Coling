@@ -8,6 +8,7 @@ import {
   FileText,
   AlertTriangle,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 // Pastikan getFileUrl di-export dari constants.js
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
@@ -607,7 +608,7 @@ const KemitraanPetani = () => {
               )}
             </SectionCard>
 
-            {/* 3. VALIDASI DOKUMEN  (Dummy data) */}
+            {/* 3. VALIDASI DOKUMEN */}
             <SectionCard title="Validasi Dokumen Sertifikasi">
               <p className="text-xs text-gray-500 mb-6 -mt-4">
                 Tabel pengajuan dokumen sertifikasi oleh petani yang harus dicek
@@ -620,17 +621,30 @@ const KemitraanPetani = () => {
                     <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
                       <th className="p-4 font-bold rounded-tl-xl">No</th>
                       <th className="p-4 font-bold">Nama Petani</th>
-                      <th className="p-4 font-bold">Jenis Dokumen</th>
+                      <th className="p-4 font-bold">Nama Dokumen</th>
                       <th className="p-4 font-bold">Prinsip ISPO</th>
                       <th className="p-4 font-bold">File Dokumen</th>
-                      <th className="p-4 font-bold">Catatan</th>
+                      <th className="p-4 font-bold">Status</th>
                       <th className="p-4 font-bold text-center rounded-tr-xl">
                         Aksi
                       </th>
                     </tr>
                   </thead>
                   <tbody className="text-xs text-gray-700 bg-white">
-                    {pendingDokumen.length === 0 ? (
+                    {/* 1. CEK KONDISI LOADING DULU */}
+                    {loading ? (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="p-8 text-center text-gray-400"
+                        >
+                          <div className="text-center py-10 text-gray-400 text-xs">
+                            Memuat data validasi ISPO petani...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : pendingDokumen.length === 0 ? (
+                      /* 2. JIKA TIDAK LOADING & DATA KOSONG */
                       <tr>
                         <td
                           colSpan="7"
@@ -640,6 +654,7 @@ const KemitraanPetani = () => {
                         </td>
                       </tr>
                     ) : (
+                      /* 3. JIKA TIDAK LOADING & DATA ADA */
                       pendingDokumen.map((item, index) => (
                         <tr
                           key={item.id}
@@ -649,21 +664,21 @@ const KemitraanPetani = () => {
                             {index + 1}
                           </td>
 
-                          {/* Nama Petani tidak ada di BE response, gunakan Profile ID sementara */}
+                          {/* MENGGUNAKAN NAMA PETANI DARI BE */}
                           <td className="p-4 font-bold text-[#B5302D]">
-                            Petani ID: {item.user_id}
+                            {item.nama_petani || "Tidak Diketahui"}
                           </td>
 
+                          {/* MENGGUNAKAN JENIS DOKUMEN DARI BE */}
                           <td className="p-4 font-medium">
-                            {item.requirement_code}
+                            {item.jenis_dokumen || item.requirement_code}
                           </td>
-                          <td className="p-4 text-gray-500">
-                            {/* Ambil Prinsip dari awalan string requirement_code, misal P1, P2 */}
-                            Prinsip{" "}
-                            {item.requirement_code
-                              .split("_")[0]
-                              .replace("P", "")}
+
+                          {/* MENGGUNAKAN PRINSIP ISPO DARI BE */}
+                          <td className="p-4 text-gray-500 font-semibold">
+                            {item.prinsip_ispo || "-"}
                           </td>
+
                           <td className="p-4">
                             <a
                               href={getFileUrl(item.file_url, "ISPO")}
@@ -674,9 +689,14 @@ const KemitraanPetani = () => {
                               <FileText className="w-3 h-3" /> Buka File
                             </a>
                           </td>
+
+                          {/* MENGGUNAKAN STATUS DARI BE DENGAN GAYA BADGE */}
                           <td className="p-4 italic text-gray-400">
-                            {item.catatan_revisi || "-"}
+                            <span className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-2 py-1 rounded-md text-[10px] font-bold not-italic">
+                              {item.status || "PENDING"}
+                            </span>
                           </td>
+
                           <td className="p-4">
                             <div className="flex items-center justify-center gap-3">
                               <button
@@ -738,7 +758,7 @@ const KemitraanPetani = () => {
 
       {/* ================= MODAL POPUP REJECT ================= */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
             {/* Header Modal */}
             <div className="flex items-center gap-3 mb-4">

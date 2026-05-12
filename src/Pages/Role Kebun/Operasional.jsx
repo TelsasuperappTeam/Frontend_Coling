@@ -96,7 +96,6 @@ const DOKUMEN_CONFIG = [
     code: "P2_2_3_1_SOP_LAHAN", // SESUAIKAN DENGAN BE
   },
 
-  // BE BELUM ADA,
   {
     id: 8,
     prinsip: "Prinsip 2. Penerapan Praktik Pertanian yang Baik",
@@ -106,7 +105,7 @@ const DOKUMEN_CONFIG = [
     label: "Bukti sosialisasi informasi benih",
     deskripsi:
       "Upload dokumen/foto/video bukti sosialisasi informasi benih melalui kelompok tani.",
-    code: "P2_2_3_1_SOP_LAHANnNNN", // BELUM ADA
+    code: "P2_2_3_9_SOSIALISASI_BENIH", // SUDAH
   },
 
   {
@@ -229,7 +228,7 @@ const DOKUMEN_CONFIG = [
     label: "Informasi area rawan kebakaran",
     deskripsi:
       "Upload dokumen yang memuat: Peta atau data lokasi area rawan kebakaran dan Cakupan seluruh lahan anggota kelompok.",
-    code: "P3_1_PETA_RAWAN", // BE BELUM
+    code: "P3_3_2_4_AREAL_RAWAN_KEBAKARAN", // SUDAH
   },
 
   // BE BELUM ADA
@@ -241,7 +240,7 @@ const DOKUMEN_CONFIG = [
     label: "Dokumentasi simulasi tanggap darurat",
     deskripsi:
       "Upload bukti bahwa telah dilakukan simulasi kebakaran, seperti: Foto, laporan, atau berita acara kegiatan.",
-    code: "P3_1_SIMULASI", // BE BELUM
+    code: "P3_3_2_5_SIMULASI_TANGGAP_DARURAT", // BE BELUM
   },
 
   // Kriteria 3.2
@@ -274,7 +273,7 @@ const DOKUMEN_CONFIG = [
     kriteria: "Kriteria 4.1 Penjualan dan Kesepakatan Harga TBS",
     label: "Informasi harga TBS dari pemerintah",
     deskripsi:
-      "Upload dokumen yang memuat: Harga TBS terbaru sesuai standar pemerintah, Sumber resmi (dokumen pemerintah), dan Catatan harga untuk kebutuhan monitoring (misalnya grafik).",
+      "Upload dokumen yang memuat: Harga TBS terbaru sesuai standar pemerintah, Sumber resmi (dokumen pemerintah), dan Catatan harga untuk kebutuhan monitoring. Hasil input akan di tampilkan dalam grafik di halaman tampilan utama",
     code: "P4_1_HARGA", // SESUAIKAN DENGAN BE
   },
   {
@@ -284,7 +283,7 @@ const DOKUMEN_CONFIG = [
     label: "Dokumen kerja sama kemitraan",
     deskripsi:
       "Upload dokumen yang menjelaskan: Bentuk kerja sama dengan mitra serta Hak dan kewajiban masing-masing pihak.",
-    code: "P4_1_KEMITRAAN", // SESUAIKAN DENGAN BE
+    code: "P4_4_2_KERJASAMA_KEMITRAAN", // SESUAIKAN DENGAN BE
   },
 
   // Kriteria 4.2
@@ -295,7 +294,7 @@ const DOKUMEN_CONFIG = [
     label: "SOP pelayanan informasi",
     deskripsi:
       "Upload dokumen yang menjelaskan: Prosedur permintaan dan pemberian informasi serta Mekanisme pelayanan kepada pihak terkait.",
-    code: "P3_4_1_SOP_PELAYANAN_INFORMASI", // SESUAIKAN DENGAN BE
+    code: "P4_4_1_SOP_PELAYANAN_INFORMASI", // SUDAH
   },
 
   // --- Prinsip 5. Peningkatan Usaha Secara Berkelanjutan ---
@@ -307,7 +306,7 @@ const DOKUMEN_CONFIG = [
     label: "Rencana aksi peningkatan produksi kelapa sawit",
     deskripsi:
       "Upload dokumen yang memuat: Rencana peningkatan produksi kelapa sawit, Langkah atau strategi yang akan dilakukan, dan Bukti bahwa rencana dibagikan ke seluruh anggota.",
-    code: "P3_4_1_SOP_PELAYANAN_INFORMASI", // SESUAIKAN DENGAN BE
+    code: "BELUM ADA CODE", // SESUAIKAN DENGAN BE
   },
 ];
 
@@ -520,6 +519,20 @@ const Operasional = () => {
     // Kita gunakan forEach agar setiap fetch jalan sendiri-sendiri secara paralel,
     // tanpa memblokir atau menunggu dokumen yang lain selesai (Promise.all dihapus).
     DOKUMEN_CONFIG.forEach(async (docConfig, index) => {
+      if (docConfig.code === "P4_1_HARGA") {
+        setDokumenStatus((prevDocs) => {
+          const newDocs = [...prevDocs];
+          newDocs[index] = {
+            ...newDocs[index],
+            isFetchingData: false, // Langsung matikan loading
+            file_url: null,
+            status: "SISTEM", // Status penanda
+          };
+          return newDocs;
+        });
+        return; // Hentikan eksekusi di sini agar tidak memanggil fetch() ke bawah
+      }
+
       try {
         const url = `${API_ENDPOINTS.ISPO.KEBUN.SUBMISSION}/${docConfig.code}`;
         const response = await fetch(url, {
@@ -1398,9 +1411,14 @@ const Operasional = () => {
                                               {doc.deskripsi}
                                             </p>
 
-                                            {/* Status Badge Minimalist (Ini yang jadi penanda utama) */}
+                                            {/* --- UPDATE STATUS BADGE DI SINI --- */}
                                             <div className="pt-1.5">
-                                              {doc.isFetchingData ? (
+                                              {doc.code === "P4_1_HARGA" ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
+                                                  <FileText className="w-3 h-3" />{" "}
+                                                  Dikelola via Input Manual
+                                                </span>
+                                              ) : doc.isFetchingData ? (
                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-500 border border-blue-100">
                                                   <Loader2 className="w-3 h-3 animate-spin" />{" "}
                                                   Memeriksa status...

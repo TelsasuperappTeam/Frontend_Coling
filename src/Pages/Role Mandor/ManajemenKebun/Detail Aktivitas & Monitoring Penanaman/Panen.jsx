@@ -10,61 +10,46 @@ import {
   CheckCircle,
   Truck,
   FileText,
-  Leaf,
   Loader2,
   AlertCircle,
   ChevronDown,
+  Leaf,
+  ClipboardList,
+  // --- IMPORT TAMBAHAN UNTUK LOGIKA SIKLUS ---
+  History,
+  Eye,
+  RefreshCw,
 } from "lucide-react";
 
-// Mengimpor konfigurasi API BE MAHAR
-import { API_ENDPOINTS } from "../../../../config/constants";
-
-/**
- * KOMPONEN PANEN
- * Fitur: Manajemen Rencana Panen & Pencatatan Realisasi Panen (Log Harian)
- * Integrasi: BE Mahar (Python FastApi)
- */
+// --- IMPORT KONSTANTA BE MAHAR (DITAMBAH API_BASE_URLS UNTUK SIKLUS) ---
+import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
 
 export default function Panen() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // ID Blok aktif (default 1 jika tidak ada params)
   const ACTIVE_BLOK_ID = id ? parseInt(id) : 1;
 
-  // ================= STATE MANAGEMENT =================
-
-  // DATA BLOK (Header Info)
+  // ================= STATE MANAGEMENT PANEN LAMA =================
   const [blokData, setBlokData] = useState(null);
   const [loadingBlok, setLoadingBlok] = useState(true);
-
-  // DATA RENCANA PANEN & REALISASI
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
-
-  // DATA RIWAYAT PEMANENAN
   const [harvestLogs, setHarvestLogs] = useState([]);
 
-  // STATE MODALS & UI
   const [activeModal, setActiveModal] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // STATE TAMPILAN (ACCORDION / TOGGLE SECTION)
-  // REVISI LOGIKA: Deteksi layar. Jika Mobile (<768px) default FALSE (Tutup), Desktop default TRUE (Buka).
   const [openSection, setOpenSection] = useState({
     rencana: window.innerWidth >= 768,
     realisasi: window.innerWidth >= 768,
   });
 
-  // FORM STATES
-  // Buat Rencana Panen Baru SESUAI PERMINTAAN BE MAHAR
   const [formPlan, setFormPlan] = useState({
     tanggal: "",
     estimasi: "",
     luas: "",
   });
-
-  // Log Realisasi (Catatan Harian / Per Pemanen) SESUAI PERMINTAAN BE MAHAR
   const [formLog, setFormLog] = useState({
     selectedPlanId: "",
     tanggal: "",
@@ -74,24 +59,85 @@ export default function Panen() {
     jumlahTandan: "",
     kondisiKebun: "",
   });
-
-  // Finalisasi Hasil (Tutup Buku) SESUAI PERMINTAAN BE MAHAR
   const [formResult, setFormResult] = useState({
     planId: null,
     brondolan: "",
     kualitas: "",
   });
 
-  // ================= FETCH DATA =================
+  // ================= STATE MANAGEMENT SIKLUS =================
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyList, setHistoryList] = useState([]);
+  const [selectedCycleDetail, setSelectedCycleDetail] = useState(null);
+  const [currentCycleInfo, setCurrentCycleInfo] = useState({
+    nomorSiklus: 0,
+    isFinished: false,
+    sisaLuas: 0,
+  });
 
+  // ================= FETCH DATA (API INTEGRATION) =================
+
+  // 1. Fetch Detail Blok & Cek Status Siklus
   const fetchBlokDetail = useCallback(async () => {
     setLoadingBlok(true);
     try {
       const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
       const url =
         API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_BLOK_DETAIL(ACTIVE_BLOK_ID);
+      const response = await fetch(url, { method: "GET", headers });
 
-      const response = await fetch(url, {
+      if (!response.ok) throw new Error("Gagal mengambil detail blok");
+      const data = await response.json();
+
+      // --- LOGIKA CEK STATUS SIKLUS ---
+      let isSiklusSelesai = false;
+      try {
+        const statusRes = await fetch(
+          API_ENDPOINTS.FARM.PETANI.ACTIVITY.CEK_STATUS_SIKLUS(ACTIVE_BLOK_ID),
+          { headers },
+        );
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          // BE mengembalikan {"bisa_ganti": true/false}
+          isSiklusSelesai = statusData.bisa_ganti;
+        }
+      } catch (err) {
+        console.error("Gagal cek status ganti siklus", err);
+      }
+
+      setBlokData({
+        ...data,
+        isCycleFinished: data.is_siklus_finished,
+      });
+
+      setCurrentCycleInfo((prev) => ({
+        ...prev,
+        isFinished: isSiklusSelesai,
+      }));
+    } catch (error) {
+      console.error("Error fetching blok detail:", error);
+    } finally {
+      setLoadingBlok(false);
+    }
+  }, [ACTIVE_BLOK_ID]);
+
+  // 2. Fetch List Arsip Siklus (PINDAHAN)
+  const fetchHistoryList = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const token = localStorage.getItem("token");
+      const endpoint =
+        API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ARSIP_SIKLUS_LIST(
+          ACTIVE_BLOK_ID,
+        );
+
+      const response = await fetch(endpoint, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -99,25 +145,67 @@ export default function Panen() {
         },
       });
 
-      if (!response.ok) throw new Error("Gagal mengambil detail blok");
+      if (response.ok) {
+        const data = await response.json();
+        setHistoryList(data);
 
-      const data = await response.json();
-      setBlokData({
-        ...data,
-        isCycleFinished: data.is_siklus_finished,
-      });
+        // Cari siklus aktif
+        let activeCycleNum = 1;
+        if (data.length > 0) {
+          const isAnyActive = data.find(
+            (item) =>
+              item.status &&
+              !item.status.toUpperCase().includes("ARSIP") &&
+              !item.status.toUpperCase().includes("SELESAI"),
+          );
+
+          if (isAnyActive) {
+            activeCycleNum = isAnyActive.nomor_siklus;
+          } else {
+            activeCycleNum = Math.max(...data.map((d) => d.nomor_siklus)) + 1;
+          }
+        }
+
+        setCurrentCycleInfo((prev) => ({
+          ...prev,
+          nomorSiklus: activeCycleNum,
+        }));
+      }
     } catch (error) {
-      console.error("Error fetching blok detail:", error);
-      setBlokData({
-        id: ACTIVE_BLOK_ID,
-        nama_blok: "Blok (Data Tidak Tersedia)",
-        nama_unit: "-",
-      });
+      console.error("Error fetching history list:", error);
     } finally {
-      setLoadingBlok(false);
+      setLoadingHistory(false);
     }
   }, [ACTIVE_BLOK_ID]);
 
+  // 3. Fetch Detail Satu Siklus (PINDAHAN)
+  const fetchCycleDetail = async (nomorSiklus) => {
+    setLoadingHistory(true);
+    try {
+      const token = localStorage.getItem("token");
+      const endpoint = `${API_BASE_URLS.FARM}/farm/me/blok/${ACTIVE_BLOK_ID}/arsip/${nomorSiklus}`;
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedCycleDetail(data);
+      }
+    } catch (error) {
+      console.error("Error fetching cycle detail:", error);
+      alert("Gagal mengambil detail siklus.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // 4. Fetch Rencana Panen
   const fetchRencanaPanen = useCallback(async () => {
     setLoadingPlans(true);
     try {
@@ -127,7 +215,7 @@ export default function Panen() {
         Authorization: `Bearer ${token}`,
       };
 
-      // --- 1. MENCARI TAHU SIKLUS AKTIF SAAT INI DARI ARSIP BE ---
+      // Cari siklus aktif untuk filter
       let activeCycleNum = 1;
       try {
         const arsipUrl =
@@ -144,19 +232,16 @@ export default function Panen() {
                 !item.status.toUpperCase().includes("ARSIP") &&
                 !item.status.toUpperCase().includes("SELESAI"),
             );
-            if (isAnyActive) {
-              activeCycleNum = isAnyActive.nomor_siklus;
-            } else {
+            if (isAnyActive) activeCycleNum = isAnyActive.nomor_siklus;
+            else
               activeCycleNum =
                 Math.max(...arsipData.map((d) => d.nomor_siklus)) + 1;
-            }
           }
         }
       } catch (e) {
         console.error("Gagal get arsip", e);
       }
 
-      // --- 2. AMBIL SELURUH DATA PANEN DARI BE ---
       const url =
         API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_RENCANA_PANEN_LIST(
           ACTIVE_BLOK_ID,
@@ -165,8 +250,6 @@ export default function Panen() {
       if (!response.ok) throw new Error("Gagal mengambil data rencana panen");
 
       const data = await response.json();
-
-      // --- 3. FILTER HANYA DATA UNTUK SIKLUS AKTIF SAJA ---
       const activeCycleData = data.filter(
         (item) => item.nomor_siklus === activeCycleNum,
       );
@@ -211,34 +294,31 @@ export default function Panen() {
     }
   }, [ACTIVE_BLOK_ID]);
 
-  
   useEffect(() => {
     if (ACTIVE_BLOK_ID) {
       fetchBlokDetail();
+      fetchHistoryList();
       fetchRencanaPanen();
     }
-  }, [ACTIVE_BLOK_ID, fetchBlokDetail, fetchRencanaPanen]);
+  }, [ACTIVE_BLOK_ID, fetchBlokDetail, fetchHistoryList, fetchRencanaPanen]);
 
   // ================= HANDLERS =================
 
   const handleSavePlan = async () => {
-    if (!formPlan.tanggal || !formPlan.luas || !formPlan.estimasi) {
+    // ... (Logika handleSavePlan tetap sama) ...
+    if (!formPlan.tanggal || !formPlan.luas || !formPlan.estimasi)
       return alert("Mohon lengkapi Tanggal, Luas Lahan, dan Estimasi!");
-    }
-
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
       const url =
         API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_RENCANA_PANEN(ACTIVE_BLOK_ID);
-
       const payload = {
         tanggal_rencana_panen: formPlan.tanggal,
         luas_lahan_dipanen: parseFloat(formPlan.luas),
         estimasi_total_tbs_kg: parseFloat(formPlan.estimasi),
       };
-
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -246,33 +326,30 @@ export default function Panen() {
         },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Gagal membuat rencana panen");
+      if (res.ok) {
+        alert("Rencana panen berhasil diajukan!");
+        setActiveModal(null);
+        setFormPlan({ tanggal: "", estimasi: "", luas: "" });
+        fetchRencanaPanen();
+      } else {
+        const err = await res.json();
+        alert(`Gagal: ${err.detail || "Terjadi kesalahan"}`);
       }
-
-      alert("Rencana Panen Berhasil Dibuat!");
-      fetchRencanaPanen();
-      setFormPlan({ tanggal: "", estimasi: "", luas: "" });
-      setActiveModal(null);
-    } catch (error) {
-      console.error("Gagal submit rencana:", error);
-      alert(`Gagal: ${error.message}`);
+    } catch {
+      alert("Error jaringan saat menyimpan rencana panen.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSaveLog = async () => {
+    // ... (Logika handleSaveLog tetap sama) ...
     if (!formLog.selectedPlanId || !formLog.namaPetani || !formLog.jumlahTandan)
       return alert("Mohon lengkapi Rencana, Nama Pemanen, dan Jumlah Tandan!");
-
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
       const url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_REALISASI_PANEN;
-
       const payload = {
         rencana_panen_id: parseInt(formLog.selectedPlanId),
         nama_pemanen: formLog.namaPetani,
@@ -282,8 +359,7 @@ export default function Panen() {
         jumlah_tandan_dipanen: parseFloat(formLog.jumlahTandan),
         kondisi_kebun: formLog.kondisiKebun || "",
       };
-
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -291,55 +367,49 @@ export default function Panen() {
         },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || "Gagal menyimpan catatan.");
+      if (res.ok) {
+        alert("Catatan berhasil disimpan!");
+        setActiveModal(null);
+        setFormLog({
+          selectedPlanId: "",
+          tanggal: "",
+          namaPetani: "",
+          jamMulai: "",
+          jamSelesai: "",
+          jumlahTandan: "",
+          kondisiKebun: "",
+        });
+        fetchRencanaPanen();
+      } else {
+        const err = await res.json();
+        alert(`Gagal: ${err.detail || "Cek isian kembali"}`);
       }
-
-      alert("Catatan pemanenan berhasil disimpan!");
-      fetchRencanaPanen();
-      setFormLog({
-        selectedPlanId: "",
-        tanggal: "",
-        namaPetani: "",
-        jamMulai: "",
-        jamSelesai: "",
-        jumlahTandan: "",
-        kondisiKebun: "",
-      });
-      setActiveModal(null);
-    } catch (error) {
-      console.error("Gagal save log:", error);
-      alert(`Error: ${error.message}`);
+    } catch {
+      alert("Gagal koneksi ke server.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const openResultModal = (planId) => {
-    setFormResult({
-      planId: planId,
-      brondolan: "",
-      kualitas: "",
-    });
+    setFormResult({ planId: planId, brondolan: "", kualitas: "" });
     setActiveModal("result");
   };
 
   const handleSaveResult = async () => {
+    // ... (Logika handleSaveResult tetap sama) ...
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      const planId = formResult.planId;
-      const url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.FINALISASI_PANEN(planId);
-
+      const url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.FINALISASI_PANEN(
+        formResult.planId,
+      );
       const payload = {
         kualitas_tbs: formResult.kualitas,
         banyak_berondolan_dikumpulkan: parseInt(formResult.brondolan) || 0,
         catatan_list: [],
       };
-
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -347,29 +417,74 @@ export default function Panen() {
         },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || "Gagal finalisasi panen.");
+      if (res.ok) {
+        alert(
+          "Panen Berhasil Diselesaikan! Data ditutup dan masuk riwayat selesai.",
+        );
+        setActiveModal(null);
+        fetchBlokDetail();
+        fetchRencanaPanen();
+      } else {
+        const err = await res.json();
+        alert(`Gagal finalisasi: ${err.detail || err.message}`);
       }
-
-      alert("Panen berhasil diselesaikan & ditutup!");
-      fetchRencanaPanen();
-      setActiveModal(null);
-    } catch (error) {
-      console.error("Gagal finalisasi:", error);
-      alert(`Error: ${error.message}`);
+    } catch {
+      alert("Error jaringan.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Helper Toggle Section
+  // 5. Fungsi Buat Siklus Baru (PINDAHAN DARI CatatAktivitas)
+  const handleNewCycle = async () => {
+    if (!currentCycleInfo.isFinished) {
+      alert(
+        `Siklus ke-${currentCycleInfo.nomorSiklus} saat ini belum selesai. Tidak bisa memulai siklus baru.`,
+      );
+      return;
+    }
+
+    const confirmMsg = `Anda akan menutup Siklus Ke-${currentCycleInfo.nomorSiklus} dan memulai siklus baru.\n\nData sebelumnya akan diarsipkan. Lanjutkan?`;
+
+    if (confirm(confirmMsg)) {
+      try {
+        const token = localStorage.getItem("token");
+        const endpoint =
+          API_ENDPOINTS.FARM.PETANI.ACTIVITY.BUAT_SIKLUS_BARU(ACTIVE_BLOK_ID);
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          alert(result.message || "Siklus baru berhasil dimulai!");
+
+          // Refresh semua data
+          await fetchBlokDetail();
+          fetchHistoryList();
+          fetchRencanaPanen();
+
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          const errorData = await response.json();
+          alert(
+            `Gagal membuat siklus baru: ${errorData.detail || errorData.message}`,
+          );
+        }
+      } catch (error) {
+        console.error("Error trigger siklus baru:", error);
+        alert("Terjadi kesalahan jaringan saat mencoba membuat siklus baru.");
+      }
+    }
+  };
+
   const toggleSection = (section) => {
-    setOpenSection((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+    setOpenSection((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   const getStatusColor = (status) => {
@@ -383,13 +498,238 @@ export default function Panen() {
     return "bg-gray-100 text-gray-600";
   };
 
+  // ================= MODAL RIWAYAT SIKLUS (PINDAHAN) =================
+  const renderHistoryPopup = () => {
+    if (!showHistoryModal) return null;
+
+    const meta = selectedCycleDetail?.meta;
+    const tanam = selectedCycleDetail?.data_tanam;
+    const panen = selectedCycleDetail?.data_panen || [];
+    const monitoring = selectedCycleDetail?.data_monitoring;
+
+    const totalTbsSiklusIni = panen.reduce((total, p) => {
+      return total + (p.hasil_panen?.jumlah_total_tbs_terkumpul || 0);
+    }, 0);
+
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-3xl flex flex-col max-h-[85vh]">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+            <div>
+              <h3 className="text-sm sm:text-lg font-bold text-[#B5302D]">
+                {selectedCycleDetail
+                  ? `Detail Arsip Siklus Ke-${meta?.siklus_yang_ditampilkan || "-"}`
+                  : "Daftar Riwayat Siklus"}
+              </h3>
+              <p className="text-[10px] sm:text-xs text-gray-500">
+                {selectedCycleDetail
+                  ? `Unit: ${meta?.blok_nama}`
+                  : "Pilih siklus untuk melihat detail arsip"}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {selectedCycleDetail && (
+                <button
+                  onClick={() => setSelectedCycleDetail(null)}
+                  className="px-3 py-1.5 text-xs font-bold bg-gray-200 hover:bg-gray-300 rounded-lg text-black transition"
+                >
+                  Kembali
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowHistoryModal(false);
+                  setSelectedCycleDetail(null);
+                }}
+                className="p-1.5 hover:bg-red-100 hover:text-red-600 rounded-full transition"
+              >
+                <X className="w-5 h-5 text-gray-500 hover:text-red-600" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
+            {loadingHistory ? (
+              <div className="text-center py-10">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#EF8523]" />
+                <p className="text-xs text-gray-500 mt-2 font-medium">
+                  Membongkar Arsip...
+                </p>
+              </div>
+            ) : selectedCycleDetail ? (
+              <div className="space-y-5 animate-fadeIn">
+                {/* 1. INFORMASI TANAM & STATUS */}
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                  <h4 className="font-bold text-blue-900 text-sm mb-3 border-b border-blue-200 pb-2">
+                    Informasi Penanaman
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Status Siklus</p>
+                      <p className="font-bold text-black bg-white px-2 py-1 rounded inline-block border border-gray-200">
+                        {tanam?.status || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Tanggal Tanam</p>
+                      <p className="font-bold text-black">
+                        {tanam?.tanggal_tanam || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Bibit Digunakan</p>
+                      <p className="font-bold text-black">
+                        {tanam?.jenis_bibit} ({tanam?.varietas})
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Jumlah Pohon Awal</p>
+                      <p className="font-bold text-black">
+                        {tanam?.jumlah_pohon_awal || 0} Pokok
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. RANGKUMAN PANEN */}
+                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                  <div className="flex justify-between items-center mb-3 border-b border-green-200 pb-2">
+                    <h4 className="font-bold text-green-900 text-sm">
+                      Hasil Produksi Panen
+                    </h4>
+                    <span className="font-extrabold text-green-700 bg-white px-3 py-1 rounded-full text-xs shadow-sm">
+                      Total: {totalTbsSiklusIni} Kg
+                    </span>
+                  </div>
+                  {panen.length === 0 ? (
+                    <p className="text-xs text-gray-500 italic">
+                      Belum ada riwayat panen di siklus ini.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {panen.map((p, idx) => (
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center bg-white p-2 rounded-lg text-xs border border-green-100"
+                        >
+                          <div>
+                            <span className="font-bold text-gray-700">
+                              {p.tanggal_rencana_panen}
+                            </span>
+                            <span className="text-gray-500 ml-2">
+                              ({p.status})
+                            </span>
+                          </div>
+                          <span className="font-bold text-green-600">
+                            + {p.hasil_panen?.jumlah_total_tbs_terkumpul || 0}{" "}
+                            Kg
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. REKAP MONITORING */}
+                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                  <h4 className="font-bold text-orange-900 text-sm mb-3 border-b border-orange-200 pb-2">
+                    Rekapitulasi Perawatan
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.pupuk?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Kali Pemupukan
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.pestisida?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Kali Semprot Hama
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.sanitasi?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Kegiatan Sanitasi
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
+                      <p className="text-2xl font-black text-[#EF8523]">
+                        {monitoring?.piringan?.length || 0}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
+                        Cek Piringan
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : historyList.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                <History className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-400 font-medium text-xs sm:text-sm">
+                  Belum ada riwayat siklus yang diarsipkan.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {historyList.map((item) => (
+                  <div
+                    key={item.nomor_siklus}
+                    onClick={() => fetchCycleDetail(item.nomor_siklus)}
+                    className={`border rounded-xl p-4 flex justify-between items-center transition cursor-pointer shadow-sm hover:shadow-md ${
+                      item.status === "AKTIF"
+                        ? "bg-green-50 border-green-200 hover:bg-green-100"
+                        : "bg-white border-gray-200 hover:border-[#EF8523]"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-extrabold text-black text-sm sm:text-base">
+                          Siklus Ke-{item.nomor_siklus}
+                        </p>
+                        {item.status === "AKTIF" && (
+                          <span className="text-[9px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">
+                            Berjalan
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] sm:text-xs text-gray-500 font-medium">
+                        Mulai: {item.tanggal_mulai} • Produksi:{" "}
+                        <span className="font-bold text-black">
+                          {item.total_produksi} Kg
+                        </span>
+                      </p>
+                    </div>
+                    <button className="text-gray-400 hover:text-[#EF8523] bg-gray-50 hover:bg-orange-50 p-2 rounded-full transition">
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ================= MAIN RENDER =================
+
   if (loadingBlok) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-[#EF8523] animate-spin" />
           <p className="text-xs sm:text-sm font-medium text-gray-500">
-            Memuat Data Panen...
+            Memuat Data Panen & Siklus...
           </p>
         </div>
       </div>
@@ -397,22 +737,66 @@ export default function Panen() {
   }
 
   return (
-    <div className="p-4 sm:p-6 min-h-screen font-sans text-gray-800 pb-24">
-      {/* Header Navigasi */}
-      <div className="max-w-7xl mx-auto mb-4 sm:mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-600 hover:text-[#EF8523] transition px-2 py-1.5 rounded-md hover:bg-gray-100 w-fit"
-        >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          Kembali
-        </button>
-      </div>
+    <div className="p-4 sm:p-10 min-h-screen font-sans">
+      <div className="max-w-7xl mx-auto">
+        {/* === HEADER NAVIGASI === */}
+        <div className="flex justify-between items-center mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-600 hover:text-[#EF8523] transition px-2 py-1.5 rounded-lg hover:bg-white"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" /> Kembali
+          </button>
 
-      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+          {/* TOMBOL RIWAYAT SIKLUS (PINDAHAN) */}
+          <button
+            onClick={() => {
+              setShowHistoryModal(true);
+              fetchHistoryList();
+            }}
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-600 bg-white border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 hover:text-[#B5302D] transition shadow-sm active:scale-95 transform"
+          >
+            <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Riwayat Siklus
+          </button>
+        </div>
+
+        {/* === HEADER HERO (TITLE PAGE) === */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6 sm:mb-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-green-50 rounded-2xl shadow-sm border border-green-100 shrink-0">
+              <Leaf className="text-green-700" size={28} />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-green-700">
+                Pemanenan & Siklus
+              </h1>
+              {/* SUBTITLE SIKLUS (PINDAHAN) */}
+              <p className="text-xs md:text-sm text-gray-500 mt-1">
+                Siklus Saat Ini:{" "}
+                <span className="font-bold text-black">
+                  #{currentCycleInfo.nomorSiklus}
+                </span>{" "}
+                • Status:{" "}
+                {currentCycleInfo.isFinished ? (
+                  <span className="text-green-600 font-bold">
+                    Selesai (Panen Final)
+                  </span>
+                ) : (
+                  <span className="text-blue-600 font-bold">Berjalan</span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <span className="self-start lg:self-auto bg-white border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-[10px] sm:text-sm shadow-sm font-medium tracking-wide">
+            Unit: {blokData?.nama_unit || "..."}
+          </span>
+        </div>
+
+        <hr className="border-gray-200 mb-6 sm:mb-8" />
+
         {/* ================= SECTION 1 RENCANA PANEN ================= */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          {/* Header Section (Clickable) */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6 sm:mb-8">
           <div
             className="p-4 sm:p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4 bg-gradient-to-r from-white to-gray-50 cursor-pointer hover:bg-gray-50 transition-colors"
             onClick={() => toggleSection("rencana")}
@@ -429,8 +813,6 @@ export default function Panen() {
                   </span>
                 </p>
               </div>
-
-              {/* Ikon Chevron (Hanya visual mobile agar tau bisa diklik) */}
               <div
                 className={`transform transition-transform duration-300 ml-3 md:hidden ${
                   openSection.rencana ? "rotate-180" : ""
@@ -446,7 +828,7 @@ export default function Panen() {
               onClick={(e) => {
                 if (blokData?.isCycleFinished) {
                   alert(
-                    "Siklus saat ini sudah selesai. Silakan mulai siklus baru di menu Aktivitas/Realisasi.",
+                    "Siklus saat ini sudah selesai. Silakan mulai siklus baru di bawah halaman.",
                   );
                   return;
                 }
@@ -465,7 +847,7 @@ export default function Panen() {
             </button>
           </div>
 
-          {/* Bagian Section (Hidden/Shown based on state) */}
+          {/* Rencana Panen Map */}
           {openSection.rencana && (
             <div className="p-4 sm:p-6 bg-gray-50/30 animate-fadeIn">
               {loadingPlans ? (
@@ -473,7 +855,7 @@ export default function Panen() {
                   <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D] animate-spin" />
                 </div>
               ) : plans.length === 0 ? (
-                <EmptyState text="Belum ada rencana panen yang dibuat pada blok ini." />
+                <EmptyState text="Belum ada rencana panen yang dibuat pada siklus ini." />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                   {plans.map((plan) => (
@@ -481,19 +863,13 @@ export default function Panen() {
                       key={plan.id}
                       className={`
                         border rounded-xl p-4 sm:p-5 hover:shadow-lg transition-all duration-300 bg-white relative overflow-hidden group flex flex-col justify-between
-                        ${
-                          plan.status === "DITOLAK"
-                            ? "border-red-200 bg-red-50/20"
-                            : "border-gray-200"
-                        }
+                        ${plan.status === "DITOLAK" ? "border-red-200 bg-red-50/20" : "border-gray-200"}
                         ${plan.status === "SELESAI" ? "opacity-80" : ""}
                       `}
                     >
                       <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
                         <span
-                          className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border shadow-sm ${getStatusColor(
-                            plan.status,
-                          )}`}
+                          className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border shadow-sm ${getStatusColor(plan.status)}`}
                         >
                           {plan.status || "PENDING"}
                         </span>
@@ -564,14 +940,15 @@ export default function Panen() {
         </div>
 
         {/* ================= SECTION 2 REALISASI PANEN ================= */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6 sm:mb-8">
           <div
             className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition-colors"
             onClick={() => toggleSection("realisasi")}
           >
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-[#B5302D] flex items-center gap-2">
-                <Truck className="w-5 h-5 sm:w-6 sm:h-6" /> Realisasi Panen
+                <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6" /> Realisasi
+                Panen
               </h2>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
                 Pencatatan aktivitas pemanenan dan hasil panen aktual.
@@ -586,7 +963,6 @@ export default function Panen() {
             </div>
           </div>
 
-          {/* Content Section (Hidden/Shown) */}
           {openSection.realisasi && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 min-h-[400px] sm:min-h-[500px] animate-fadeIn">
               {/* --- CATATAN PEMANENAN --- */}
@@ -615,9 +991,6 @@ export default function Panen() {
                       <p className="text-xs sm:text-sm text-gray-500">
                         Belum ada catatan aktivitas panen.
                       </p>
-                      <p className="text-[10px] sm:text-xs text-gray-400">
-                        Klik "Tambah Catatan" untuk mulai.
-                      </p>
                     </div>
                   ) : (
                     <div className="relative border-l-2 border-gray-200 ml-2 sm:ml-3 space-y-4 sm:space-y-6 pb-4">
@@ -627,7 +1000,6 @@ export default function Panen() {
                           className="relative pl-5 sm:pl-6 animate-fadeIn"
                         >
                           <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-[#EF8523]"></div>
-
                           <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-[#EF8523] transition-all group">
                             <div className="flex justify-between items-start mb-2">
                               <span className="text-[10px] sm:text-xs font-bold text-[#EF8523] bg-orange-50 px-2 py-0.5 rounded border border-orange-100">
@@ -637,7 +1009,6 @@ export default function Panen() {
                                 PLAN ID: {log.planId}
                               </span>
                             </div>
-
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-bold text-gray-600">
                                 {log.namaPetani.charAt(0).toUpperCase()}
@@ -651,7 +1022,6 @@ export default function Panen() {
                                 </p>
                               </div>
                             </div>
-
                             <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-xs text-gray-600 bg-gray-50 p-2 rounded-md">
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3 text-gray-400" />
@@ -664,7 +1034,6 @@ export default function Panen() {
                                 <span>{log.jumlahTandan} Tandan</span>
                               </div>
                             </div>
-
                             {log.kondisiKebun && (
                               <div className="mt-2 pt-2 border-t border-gray-100">
                                 <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
@@ -683,7 +1052,7 @@ export default function Panen() {
                 </div>
               </div>
 
-              {/* ---FINALISASI / HASIL PANEN --- */}
+              {/* --- FINALISASI / HASIL PANEN --- */}
               <div className="flex flex-col h-full bg-white">
                 <div className="p-4 sm:p-5 border-b border-gray-100 sticky top-0 z-10 bg-white">
                   <h3 className="font-bold text-gray-800 text-xs sm:text-sm uppercase tracking-wide">
@@ -698,8 +1067,8 @@ export default function Panen() {
                   {/* PENDING FINALISASI */}
                   <div>
                     <h4 className="text-[10px] sm:text-xs font-bold text-gray-500 mb-2 sm:mb-3 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500"></span>
-                      MENUNGGU FINALISASI (DISETUJUI)
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500"></span>{" "}
+                      MENUNGGU FINALISASI
                     </h4>
 
                     {plans.filter(
@@ -711,7 +1080,7 @@ export default function Panen() {
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-2 sm:space-y-3">
+                      <div className="flex flex-col gap-3 sm:gap-4">
                         {plans
                           .filter(
                             (p) => p.status === "DISETUJUI" && !p.hasil_panen,
@@ -739,10 +1108,33 @@ export default function Panen() {
                                 </p>
                               </div>
                               <button
-                                onClick={() => openResultModal(plan.id)}
-                                className="text-[10px] sm:text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold transition shadow-sm whitespace-nowrap"
+                                onClick={() => {
+                                  if (
+                                    !plan.catatan_pemanenan ||
+                                    plan.catatan_pemanenan.length === 0
+                                  ) {
+                                    alert(
+                                      "Harap isi Catatan Aktivitas terlebih dahulu sebelum menyelesaikan panen!",
+                                    );
+                                    return;
+                                  }
+                                  openResultModal(plan.id);
+                                }}
+                                disabled={
+                                  !plan.catatan_pemanenan ||
+                                  plan.catatan_pemanenan.length === 0
+                                }
+                                className={`text-[10px] sm:text-xs px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold transition shadow-sm whitespace-nowrap ${
+                                  !plan.catatan_pemanenan ||
+                                  plan.catatan_pemanenan.length === 0
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                                }`}
                               >
-                                Selesaikan Panen
+                                {!plan.catatan_pemanenan ||
+                                plan.catatan_pemanenan.length === 0
+                                  ? "Catat Aktivitas Dulu"
+                                  : "Selesaikan Panen"}
                               </button>
                             </div>
                           ))}
@@ -753,8 +1145,8 @@ export default function Panen() {
                   {/* RIWAYAT SELESAI */}
                   <div>
                     <h4 className="text-[10px] sm:text-xs font-bold text-gray-500 mb-2 sm:mb-3 flex items-center gap-2 pt-4 border-t border-gray-100">
-                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500"></span>
-                      RIWAYAT SELESAI (CLOSED)
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500"></span>{" "}
+                      RIWAYAT SELESAI
                     </h4>
 
                     {plans.filter((p) => p.hasil_panen).length === 0 ? (
@@ -762,7 +1154,7 @@ export default function Panen() {
                         Belum ada riwayat panen selesai.
                       </p>
                     ) : (
-                      <div className="space-y-2 sm:space-y-3">
+                      <div className="flex flex-col gap-3 sm:gap-4">
                         {plans
                           .filter((p) => p.hasil_panen)
                           .map((plan) => (
@@ -783,7 +1175,6 @@ export default function Panen() {
                                   </div>
                                 </div>
                               </div>
-
                               <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-white p-2.5 sm:p-3 rounded border border-green-100">
                                 <div>
                                   <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
@@ -810,15 +1201,6 @@ export default function Panen() {
                                   </p>
                                 </div>
                               </div>
-
-                              {plan.hasil_panen.kualitas_tbs && (
-                                <div className="mt-2 text-[10px] sm:text-xs text-gray-600 px-1">
-                                  <span className="font-bold text-gray-500">
-                                    Kualitas:{" "}
-                                  </span>
-                                  {plan.hasil_panen.kualitas_tbs}
-                                </div>
-                              )}
                             </div>
                           ))}
                       </div>
@@ -829,9 +1211,38 @@ export default function Panen() {
             </div>
           )}
         </div>
+
+        {/* ================= SECTION 3 AKSI SIKLUS (PINDAHAN) ================= */}
+        <div className="mt-8 pt-4 border-t border-gray-200">
+          <h3 className="text-xs sm:text-sm font-bold text-black mb-3 uppercase tracking-wide">
+            Aksi Manajemen Siklus
+          </h3>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleNewCycle}
+              disabled={!currentCycleInfo.isFinished}
+              className={`flex-1 flex items-center justify-center gap-3 px-4 py-3 sm:py-3 rounded-lg shadow-sm transition-all active:scale-[0.98] ${
+                currentCycleInfo.isFinished
+                  ? "bg-green-50 border border-green-200 text-green-800 hover:bg-green-100 cursor-pointer"
+                  : "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              <RefreshCw className="w-5 h-5" />
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-sm font-bold">Mulai Siklus Baru</span>
+                <span className="text-[10px] font-normal opacity-70 mt-0.5">
+                  {currentCycleInfo.isFinished
+                    ? "Siklus saat ini selesai"
+                    : "Tunggu Panen Selesai"}
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ================= MODALS ================= */}
+      {renderHistoryPopup()}
 
       {/* BUAT TAMBAH RENCANA */}
       {activeModal === "plan" && (
@@ -853,7 +1264,6 @@ export default function Panen() {
               readOnly={true}
             />
           </div>
-
           <InputField
             label="Tanggal Rencana"
             type="date"
@@ -862,7 +1272,6 @@ export default function Panen() {
               setFormPlan({ ...formPlan, tanggal: e.target.value })
             }
           />
-
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <InputField
               label="Luas Lahan (Ha)"
@@ -921,12 +1330,7 @@ export default function Panen() {
                   </option>
                 ))}
             </select>
-            <p className="text-[9px] sm:text-[10px] text-gray-400 mt-1">
-              *Hanya rencana berstatus "DISETUJUI" yang dapat ditambahkan
-              catatan.
-            </p>
           </div>
-
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <InputField
               label="Tanggal Panen"
@@ -991,7 +1395,7 @@ export default function Panen() {
         </ModalLayout>
       )}
 
-      {/* 3. MODAL INPUT HASIL (FINALISASI) */}
+      {/* MODAL INPUT HASIL (FINALISASI) */}
       {activeModal === "result" && (
         <ModalLayout
           title="Finalisasi Panen (Tutup Buku)"
@@ -1006,12 +1410,10 @@ export default function Panen() {
               <p>
                 Anda akan menyelesaikan Rencana ID:{" "}
                 <strong>{formResult.planId}</strong>. Total Berat (Kg) akan
-                dihitung otomatis oleh sistem berdasarkan akumulasi jumlah
-                tandan dan rata-rata berat janjang (BJR).
+                dihitung otomatis oleh sistem.
               </p>
             </div>
           </div>
-
           <div className="space-y-3 sm:space-y-4">
             <InputField
               label="Total Brondolan Dikumpulkan (Kg)"
@@ -1029,7 +1431,7 @@ export default function Panen() {
               <textarea
                 rows="3"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] outline-none transition-all"
-                placeholder="Contoh: Buah mentah 2%, Tangkai panjang, Kematangan pas..."
+                placeholder="Contoh: Buah mentah 2%..."
                 value={formResult.kualitas}
                 onChange={(e) =>
                   setFormResult({ ...formResult, kualitas: e.target.value })
@@ -1047,7 +1449,7 @@ export default function Panen() {
 
 function ModalLayout({ title, onClose, onSave, children, loading }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3 sm:p-4 animate-fadeIn">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-3 sm:p-4 animate-fadeIn">
       <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto flex flex-col transform transition-all scale-100">
         <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-100">
           <h3 className="text-base sm:text-lg font-bold text-gray-800">
@@ -1113,13 +1515,7 @@ function InputField({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className={`w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#EF8523] transition-all
-          ${
-            readOnly
-              ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
-              : "bg-white hover:border-gray-400"
-          }
-        `}
+        className={`w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#EF8523] transition-all ${readOnly ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200" : "bg-white hover:border-gray-400"}`}
       />
     </div>
   );

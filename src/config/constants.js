@@ -344,10 +344,16 @@ export const API_ENDPOINTS = {
     PETANI: {
       // (POST) Download dokumen rencana operasional ISPO di Halaman Pantau ISPO
       GENERATE_DOKUMEN_ISPO_OPERASIONAL: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/rencana-operasional`,
+
+      // (POST) Download dokumen rencana operasional ISPO di Halaman Pantau ISPO
+      GENERATE_DOKUMEN_SPPL: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/laporan-sppl`,
+
+      // (POST) Download dokumen rencana operasional ISPO di Halaman Pantau ISPO
+      GENERATE_DOKUMEN_PENJUALAN: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/laporan-sppl`,
+
       // (GET) Progres ISPO Petani di Halaman Dashboard
       GET_PROGRES_ISPO_PETANI: `${API_BASE_URLS.ISPO}/ispo/progress`,
 
-      //belum dipakai
       // Endpoint POST ajukan submission dokumen ISPO dari petani ke kebun
       AJUKAN_DOKUMEN_ISPO: `${API_BASE_URLS.ISPO}/ispo/submission/{id}/submit`,
     },
@@ -362,7 +368,7 @@ export const API_ENDPOINTS = {
       // Melihat seluruh submission ISPO berstatus PENDING milik petani binaan
       GET_PETANI_PENDING_SUBMISSION_ISPO: `${API_BASE_URLS.ISPO}/ispo/kebun/pending-approvals`,
 
-      // Review Dokumen ISPO
+      // Review Dokumen ISPO TERIMA ATAU TOLAK ISPO PETANI
       REVIEW_DOKUMEN_ISPO: `${API_BASE_URLS.ISPO}/ispo/submission/{id}/review`,
     },
   },
@@ -436,6 +442,14 @@ export const API_ENDPOINTS = {
       
       // DONE! Dropdown Grup ID yang pernah dipakai sebelumnya untuk mengajukan ke logistik
       GET_USED_GRUP_IDS: `${API_BASE_URLS.TRACEABILITY}/logistik/used-grup-ids`,
+
+      // [GET] Mengambil data awal untuk merender Form Bagi Hasil
+      GET_METADATA_BAGI_HASIL: (pengirimanId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/pengiriman/${pengirimanId}/bagi-hasil/metadata`,
+
+      // [POST] Menyimpan struk gaji/bagi hasil petani
+      SUBMIT_BAGI_HASIL: (pengirimanId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/pengiriman/${pengirimanId}/bagi-hasil`,
     },
 
     // --- PABRIK POV ---

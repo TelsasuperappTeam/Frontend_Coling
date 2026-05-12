@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Database, History, Loader2 } from "lucide-react";
 
 import { API_ENDPOINTS } from "../../config/constants.js";
+import { showToast } from "../../utils/notif";
 
 export default function StokRam() {
   const [isLoading, setIsLoading] = useState(false);
@@ -92,6 +93,7 @@ export default function StokRam() {
       setHistoryStock(histori);
     } catch (error) {
       console.error("Error fetching Stok RAM:", error);
+      showToast.error("Gagal memuat data Stok RAM. Periksa koneksi Anda.");
     } finally {
       setIsLoading(false);
     }
@@ -101,6 +103,13 @@ export default function StokRam() {
   useEffect(() => {
     fetchStokRam();
   }, [fetchStokRam]);
+
+  // TAMBAHKAN FUNGSI INI KHUSUS UNTUK TOMBOL REFRESH
+  const handleManualRefresh = async () => {
+    await fetchStokRam();
+    // Berikan feedback halus ke user bahwa data sudah berhasil diperbarui
+    showToast.success("Data stok berhasil diperbarui!");
+  };
 
   // Kolom Tabel
   const columns = [
@@ -129,14 +138,15 @@ export default function StokRam() {
               Stok Ram
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
-              Pantau kapasitas dan daftar stok TBS yang tersedia untuk diproduksi.
+              Pantau kapasitas dan daftar stok TBS yang tersedia untuk
+              diproduksi.
             </p>
           </div>
         </div>
 
         {/* Tombol Refresh Manual */}
         <button
-          onClick={fetchStokRam}
+          onClick={handleManualRefresh}
           disabled={isLoading}
           className="w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 shrink-0"
         >

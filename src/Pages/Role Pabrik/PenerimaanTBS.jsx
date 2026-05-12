@@ -22,6 +22,8 @@ import {
 
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 
+import { showToast, confirmDialog } from "../../utils/notif";
+
 const PenerimaanTBS = () => {
   // --- STATE TAB (Aktif vs Histori) ---
   const [activeTab, setActiveTab] = useState("aktif");
@@ -90,6 +92,10 @@ const PenerimaanTBS = () => {
       setShipments(filteredData.sort((a, b) => b.id - a.id));
     } catch (error) {
       console.error("Error fetching shipments:", error);
+      // TAMBAHKAN TOAST ERROR INI:
+      showToast.error(
+        "Gagal memuat daftar truk. Periksa koneksi internet Anda.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +124,8 @@ const PenerimaanTBS = () => {
       setHistoryData(data.sort((a, b) => b.id - a.id));
     } catch (error) {
       console.error("Error fetching history:", error);
+      // TAMBAHKAN TOAST ERROR INI:
+      showToast.error("Gagal memuat riwayat pemeriksaan.");
     } finally {
       setIsLoadingHistory(false);
     }
@@ -137,6 +145,17 @@ const PenerimaanTBS = () => {
   // 3. ACTION KONFIRMASI TRUK TIBA
   // ====================================================================
   const handleTerimaPesanan = async (id) => {
+    // 1. TAMBAHKAN CEGATAN KONFIRMASI (Mencegah Kepencet)
+    const isSetuju = await confirmDialog({
+      title: "Konfirmasi Truk Tiba?",
+      text: "Apakah Anda yakin truk armada ini telah benar-benar tiba di area pabrik?",
+      confirmText: "Ya, Truk Tiba!",
+      isDanger: false,
+    });
+
+    // Jika batal, hentikan fungsi
+    if (!isSetuju) return;
+
     setLoadingTerimaId(id);
     try {
       const token = localStorage.getItem("token");
@@ -151,17 +170,17 @@ const PenerimaanTBS = () => {
       });
 
       if (!res.ok) throw new Error("Gagal mengkonfirmasi penerimaan");
-      alert(
-        "Truk dikonfirmasi tiba! Silakan lanjutkan mengisi hasil Timbangan & Sortasi TBS.",
+
+      // 2. UBAH ALERT SUKSES JADI TOAST SUCCESS
+      showToast.success(
+        "Truk dikonfirmasi tiba! Silakan lanjutkan mengisi hasil Timbangan.",
       );
 
-      // Re-fetch data aktif. Truk akan tetap ada di sini karena belum di-inspeksi.
       await fetchShipments();
-
-      // Tetap buka popup otomatis agar memanjakan user (UX Plus)
       openModalPemeriksaan(id);
     } catch (error) {
-      alert(error.message);
+      // 3. UBAH ALERT ERROR JADI TOAST ERROR
+      showToast.error(error.message);
     } finally {
       setLoadingTerimaId(null);
     }
@@ -187,6 +206,18 @@ const PenerimaanTBS = () => {
 
   const handleSubmitPemeriksaan = async (e) => {
     e.preventDefault();
+
+    // 1. TAMBAHKAN CEGATAN KONFIRMASI (Final Check Finansial)
+    const isSetuju = await confirmDialog({
+      title: "Simpan Data Pemeriksaan?",
+      text: "Pastikan data timbangan (Bruto & Tarra) serta persentase sortasi sudah benar. Data ini akan menentukan nominal akhir pembayaran ke pihak kebun.",
+      confirmText: "Ya, Simpan & Kunci Data!",
+      isDanger: false,
+    });
+
+    // Jika batal, hentikan fungsi sebelum masuk ke state loading
+    if (!isSetuju) return;
+
     setIsSubmittingForm(true);
     try {
       const token = localStorage.getItem("token");
@@ -236,13 +267,13 @@ const PenerimaanTBS = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Gagal submit pemeriksaan");
 
-      alert("Data Pemeriksaan & Timbangan Berhasil Disimpan!");
+      // 2. UBAH ALERT SUKSES JADI TOAST SUCCESS
+      showToast.success("Data Pemeriksaan & Timbangan Berhasil Disimpan!");
       setShowModalForm(false);
-
-      // UX PLUS: Langsung pindahkan user ke Tab Riwayat agar mereka bisa melihat hasilnya
       setActiveTab("riwayat");
     } catch (error) {
-      alert("Error: " + error.message);
+      // 3. UBAH ALERT ERROR JADI TOAST ERROR
+      showToast.error("Error: " + error.message);
     } finally {
       setIsSubmittingForm(false);
     }

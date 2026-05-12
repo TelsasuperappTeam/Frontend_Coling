@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   MapPin,
   Warehouse,
+  FileCheck,
 } from "lucide-react";
 
 export const menuConfig = {
@@ -28,7 +29,7 @@ export const menuConfig = {
     { label: "Tampilan Utama", path: "/petani/dashboard", icon: LayoutDashboard },
     { label: "Manajemen Kebun", path: "/petani/manajemenkebun", icon: Sprout },
     { label: "Riwayat Penjualan", path: "/petani/riwayatpenjualan", icon: History },
-    { label: "Pantau ISPO", path: "/petani/pantauISPO", icon: CheckSquare },
+    { label: "Pantau ISPO", path: "/petani/pantauISPO", icon: FileCheck },
   ],
   [ROLES.KEBUN]: [
     { label: "Tampilan Utama", path: "/kebun/dashboard", icon: LayoutDashboard },

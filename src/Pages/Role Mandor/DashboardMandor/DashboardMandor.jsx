@@ -28,6 +28,7 @@ import {
   X,
   Save,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 // --- Komponen Card Reusable ---
@@ -36,7 +37,7 @@ const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
     <div className="bg-[#EF8523] px-4 py-3 sm:px-4 flex justify-between items-center flex-shrink-0">
       <div className="flex items-center gap-2.5">
         {Icon && (
-          <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-sm flex items-center justify-center">
+          <div className="bg-white/20 p-1.5 rounded-lg shadow-sm flex items-center justify-center">
             <Icon className="text-white w-4 h-4" />
           </div>
         )}
@@ -115,7 +116,11 @@ export default function DashboardMandor() {
   const [isLoadingHargaTbs, setIsLoadingHargaTbs] = useState(false);
   const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear());
 
-  // --- State Widget Lain (Dummy: Penjualan) ---
+  // --- STATE NAVIGASI WIDGET LUAS LAHAN ---
+  const [showModalMineral, setShowModalMineral] = useState(false);
+  const [selectedMineralIndex, setSelectedMineralIndex] = useState(null);
+
+  const [showModalGambut, setShowModalGambut] = useState(false);
   const [selectedGambutIndex, setSelectedGambutIndex] = useState(null);
 
   // --- State Progress ISPO (Dinamis) ---
@@ -557,6 +562,11 @@ export default function DashboardMandor() {
       if (!response.ok) return;
 
       const realData = await response.json();
+
+      // --- TAMBAHKAN CONSOLE.LOG DI SINI ---
+      console.log("Data Lahan dari BE:", realData);
+      // -------------------------------------
+
       setLahanData({
         lahan_mineral: realData.lahan_mineral,
         lahan_gambut: realData.lahan_gambut || [],
@@ -591,11 +601,6 @@ export default function DashboardMandor() {
     </div>
   );
 
-  const currentGambut =
-    selectedGambutIndex !== null
-      ? lahanData.lahan_gambut[selectedGambutIndex]
-      : null;
-
   return (
     <div className="space-y-6 sm:space-y-8 p-4 sm:p-10 min-h-screen font-sans bg-white">
       {/* SECTION 1: DATA DIRI (Custom Layout, tidak pakai Card reusable) */}
@@ -608,7 +613,7 @@ export default function DashboardMandor() {
             </h3>
             <button
               onClick={() => setShowPopupDataDiri(true)}
-              className="bg-white/20 backdrop-blur-md text-black/80 border border-white/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold hover:bg-white hover:text-[#EF8523] transition-all duration-300"
+              className="bg-white/20 text-black/80 border border-white/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold hover:bg-white hover:text-[#EF8523] transition-all duration-300"
             >
               {isProfileIncomplete(profile)
                 ? "Lengkapi Data Diri"
@@ -627,7 +632,7 @@ export default function DashboardMandor() {
             <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
               {/* --- BAGIAN FOTO PROFIL (YANG DIUBAH) --- */}
               <div className="flex-shrink-0 mx-auto md:mx-0">
-                <div className="p-1 bg-white/20 rounded-2xl backdrop-blur-sm">
+                <div className="p-1 bg-white/20 rounded-2xl">
                   {profile.foto ? (
                     /* Jika ada foto, tampilkan IMG */
                     <img
@@ -679,7 +684,7 @@ export default function DashboardMandor() {
 
       {/* --- SECTION 2: WIDGETS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* FITUR 1: Luas Lahan */}
+        {/* FITUR 1: Luas Lahan (Versi Ringkas) */}
         <Card
           title="Informasi Luas Lahan"
           icon={Map}
@@ -693,16 +698,13 @@ export default function DashboardMandor() {
           }
         >
           <div className="space-y-4">
-            {/* Bagian Lahan Mineral */}
+            {/* --- BAGIAN 1: LAHAN MINERAL (HANYA SUMMARY) --- */}
             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-              {/* Dekorasi Garis Kiri */}
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#EF8523] opacity-80" />
-
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-orange-50 p-2 rounded-lg text-[#EF8523]">
-                    <Layers className="w-4 h-4" />{" "}
-                    {/* Anda perlu import Layers dari lucide-react */}
+                    <Layers className="w-4 h-4" />
                   </div>
                   <div>
                     <h4 className="text-[13px] font-extrabold text-gray-900 uppercase tracking-wide">
@@ -713,53 +715,56 @@ export default function DashboardMandor() {
                     </p>
                   </div>
                 </div>
-                {lahanData.lahan_mineral && (
-                  <BadgeSengketa
-                    isSengketa={lahanData.lahan_mineral.ada_sengketa}
-                  />
-                )}
+                {/* Tombol Buka Pop-up Mineral */}
+                <button
+                  onClick={() => setShowModalMineral(true)}
+                  className="flex items-center gap-1 text-[10px] font-bold text-[#EF8523] bg-orange-50 hover:bg-orange-100 px-2 py-1.5 rounded transition-colors"
+                >
+                  Lihat Detail <ChevronRight className="w-3 h-3" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase">
-                    Total Luas
-                  </p>
-                  <p className="text-sm font-black text-gray-900 mt-0.5">
-                    {lahanData.lahan_mineral
-                      ? lahanData.lahan_mineral.luas_total_lahan_mineral
-                      : 0}{" "}
-                    <span className="text-[10px] text-gray-500 font-semibold">
-                      Hektar
-                    </span>
+              {!lahanData.lahan_mineral ? (
+                <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 text-center">
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Tidak ada data lahan mineral.
                   </p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase">
-                    Telah Digunakan
-                  </p>
-                  <p className="text-sm font-black text-green-600 mt-0.5">
-                    {lahanData.lahan_mineral
-                      ? lahanData.lahan_mineral.lahan_digunakan_mineral
-                      : 0}{" "}
-                    <span className="text-[10px] text-gray-500 font-semibold">
-                      Hektar
-                    </span>
-                  </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase">
+                      Total Luas
+                    </p>
+                    <p className="text-sm font-black text-gray-900 mt-0.5">
+                      {lahanData.lahan_mineral.luas_total_lahan_mineral || 0}{" "}
+                      <span className="text-[10px] text-gray-500 font-semibold">
+                        Ha
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase">
+                      Telah Digunakan
+                    </p>
+                    <p className="text-sm font-black text-green-600 mt-0.5">
+                      {lahanData.lahan_mineral.lahan_digunakan_mineral || 0}{" "}
+                      <span className="text-[10px] text-gray-500 font-semibold">
+                        Ha
+                      </span>
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Bagian Lahan Gambut */}
+            {/* --- BAGIAN 2: LAHAN GAMBUT (HANYA SUMMARY) --- */}
             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-              {/* Dekorasi Garis Kiri */}
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#B5302D] opacity-80" />
-
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-red-50 p-2 rounded-lg text-[#B5302D]">
-                    <Droplets className="w-4 h-4" />{" "}
-                    {/* Anda perlu import Droplets dari lucide-react */}
+                    <Droplets className="w-4 h-4" />
                   </div>
                   <div>
                     <h4 className="text-[13px] font-extrabold text-gray-900 uppercase tracking-wide">
@@ -770,90 +775,50 @@ export default function DashboardMandor() {
                     </p>
                   </div>
                 </div>
-                {selectedGambutIndex !== null && (
-                  <button
-                    onClick={() => setSelectedGambutIndex(null)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors"
-                  >
-                    <ArrowLeft className="w-3 h-3" /> Kembali
-                  </button>
-                )}
+                {/* Tombol Buka Pop-up Gambut */}
+                <button
+                  onClick={() => setShowModalGambut(true)}
+                  className="flex items-center gap-1 text-[10px] font-bold text-[#B5302D] bg-red-50 hover:bg-red-100 px-2 py-1.5 rounded transition-colors"
+                >
+                  Lihat Detail <ChevronRight className="w-3 h-3" />
+                </button>
               </div>
 
-              {lahanData.lahan_gambut && lahanData.lahan_gambut.length === 0 ? (
-                <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <p className="text-xs text-gray-500 font-medium">
-                    Tidak ada data lahan gambut terdaftar.
+              {!lahanData.lahan_gambut ||
+              lahanData.lahan_gambut.length === 0 ? (
+                <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 text-center">
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Tidak ada data lahan gambut.
                   </p>
                 </div>
-              ) : selectedGambutIndex === null ? (
-                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200">
-                  {lahanData.lahan_gambut.map((g, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => setSelectedGambutIndex(idx)}
-                      className="cursor-pointer group/item flex justify-between items-center p-3 bg-white border border-gray-100 rounded-lg hover:border-red-200 hover:bg-red-50/30 transition-all"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-bold text-gray-800 group-hover/item:text-[#B5302D] transition-colors">
-                          {g.nama_lahan_gambut}
-                        </span>
-                        <BadgeSengketa isSengketa={g.ada_sengketa} />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-gray-900">
-                          {g.luas_total_diajukan}{" "}
-                          <span className="font-normal text-gray-500 text-[10px]">
-                            ha
-                          </span>
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover/item:text-[#B5302D] transition-colors" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
               ) : (
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="flex justify-between items-start mb-3 border-b border-gray-200 pb-3">
-                    <p className="text-xs font-black text-gray-900">
-                      {currentGambut.nama_lahan_gambut}
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase">
+                      Jumlah Unit
                     </p>
-                    <BadgeSengketa isSengketa={currentGambut.ada_sengketa} />
+                    <p className="text-sm font-black text-gray-900 mt-0.5">
+                      {lahanData.lahan_gambut.length}{" "}
+                      <span className="text-[10px] text-gray-500 font-semibold">
+                        Blok
+                      </span>
+                    </p>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase">
-                        Tahun Buka
-                      </p>
-                      <p className="text-xs font-bold text-gray-900 mt-0.5">
-                        {currentGambut.tahun_buka_lahan}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase">
-                        Area Konservasi
-                      </p>
-                      <p className="text-xs font-bold text-gray-900 mt-0.5">
-                        {currentGambut.luas_total_konservasi} ha
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase">
-                        Boleh Ditanam
-                      </p>
-                      <p className="text-xs font-bold text-green-600 mt-0.5">
-                        {currentGambut.luas_total_boleh_ditanam} ha
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase">
-                        Sisa Lahan
-                      </p>
-                      <p className="text-xs font-bold text-orange-500 mt-0.5">
-                        {currentGambut.lahan_tidak_digunakan_gambut} ha
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase">
+                      Total Luas
+                    </p>
+                    <p className="text-sm font-black text-[#B5302D] mt-0.5">
+                      {lahanData.lahan_gambut
+                        .reduce(
+                          (sum, item) => sum + (item.luas_total_diajukan || 0),
+                          0,
+                        )
+                        .toFixed(2)}{" "}
+                      <span className="text-[10px] text-gray-500 font-semibold">
+                        Ha
+                      </span>
+                    </p>
                   </div>
                 </div>
               )}
@@ -870,7 +835,7 @@ export default function DashboardMandor() {
               onClick={() => navigate("/petani/pantauISPO")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
-              Lihat Semua &rarr;
+              Lihat Rincian &rarr;
             </button>
           }
         >
@@ -1053,7 +1018,18 @@ export default function DashboardMandor() {
         </Card>
 
         {/* FITUR 4: Riwayat Penjualan */}
-        <Card title="Riwayat Penjualan TBS (Selesai)" icon={TrendingUp}>
+        <Card
+          title="Riwayat Penjualan TBS (Selesai)"
+          icon={TrendingUp}
+          footer={
+            <button
+              onClick={() => navigate("/petani/riwayatpenjualan")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
+        >
           <div className="flex flex-col h-full relative">
             <div className="space-y-4 flex-grow">
               {isLoadingRiwayatMini ? (
@@ -1137,16 +1113,6 @@ export default function DashboardMandor() {
                   })}
                 </div>
               )}
-            </div>
-
-            {/* Tombol Lihat Semua (Sticky Position agar selalu menempel di bawah) */}
-            <div className="pt-4 mt-auto border-t border-gray-50 bg-white shrink-0 sticky bottom-0 z-10">
-              <button
-                onClick={() => navigate("/petani/riwayatpenjualan")}
-                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
-              >
-                Lihat Semua &rarr;
-              </button>
             </div>
           </div>
         </Card>
@@ -1372,7 +1338,7 @@ export default function DashboardMandor() {
             <div className="bg-[#EF8523] px-6 py-4 flex justify-between items-center relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
               <div className="flex items-center gap-3 relative z-10">
-                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+                <div className="bg-white/20 p-2 rounded-xl">
                   <Calendar className="w-5 h-5 text-white" />{" "}
                   {/* Tambahkan import Calendar jika belum ada */}
                 </div>
@@ -1463,6 +1429,396 @@ export default function DashboardMandor() {
                 className="flex-1 py-3.5 rounded-xl bg-[#B5302D] font-bold text-white hover:bg-red-800 transition-all shadow-md shadow-red-200 text-sm flex items-center justify-center gap-2"
               >
                 <Save className="w-4 h-4" /> Simpan Rencana
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================= */}
+      {/* POPUP: MODAL LAHAN MINERAL */}
+      {/* ======================================================= */}
+      {showModalMineral && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="w-full max-w-2xl bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Header Modal */}
+            <div className="bg-gray-50 px-6 py-5 border-b border-gray-100 flex justify-between items-center relative">
+              <div className="flex items-center gap-3">
+                {selectedMineralIndex !== null ? (
+                  <button
+                    onClick={() => setSelectedMineralIndex(null)}
+                    className="p-2 bg-white rounded-full border border-gray-200 hover:bg-gray-100 text-gray-600 transition shadow-sm"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <div className="bg-orange-100 p-2.5 rounded-xl text-[#EF8523]">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-[#EF8523] font-black text-lg">
+                    {selectedMineralIndex !== null
+                      ? "Rincian Batch Lahan"
+                      : "Daftar Lahan Mineral"}
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    {selectedMineralIndex !== null
+                      ? "Spesifikasi penggunaan tanah"
+                      : "Pilih salah satu batch untuk melihat detail"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowModalMineral(false);
+                  setSelectedMineralIndex(null);
+                }}
+                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body Modal */}
+            <div className="p-6 overflow-y-auto bg-white flex-1 custom-scrollbar">
+              {selectedMineralIndex === null ? (
+                // DAFTAR LIST MINERAL
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                  {lahanData.lahan_mineral?.detail_batch?.map((batch, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedMineralIndex(idx)}
+                      className="cursor-pointer group flex flex-col p-4 bg-white border border-gray-200 rounded-2xl hover:border-[#EF8523] hover:shadow-md transition-all relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-[#EF8523] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-gray-800 text-sm sm:text-base group-hover:text-[#EF8523]">
+                          {batch.nama_lahan_mineral}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#EF8523]" />
+                      </div>
+                      <BadgeSengketa isSengketa={batch.ada_sengketa} />
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-end">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">
+                          Luas Lahan
+                        </p>
+                        <p className="text-sm font-black text-gray-900">
+                          {batch.luas_batch}{" "}
+                          <span className="text-[10px] text-gray-500 font-semibold">
+                            Ha
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // DETAIL SPESIFIK MINERAL
+                <div className="bg-orange-50/40 p-5 rounded-2xl border border-orange-100 animate-in zoom-in-95 duration-200">
+                  <div className="flex justify-between items-start mb-5 border-b border-orange-200/60 pb-4">
+                    <div>
+                      <p className="text-xs font-bold text-[#EF8523] uppercase tracking-wider mb-1">
+                        Nama Lahan
+                      </p>
+                      <h4 className="text-lg font-black text-gray-900">
+                        {
+                          lahanData.lahan_mineral.detail_batch[
+                            selectedMineralIndex
+                          ]?.nama_lahan_mineral
+                        }
+                      </h4>
+                    </div>
+                    <BadgeSengketa
+                      isSengketa={
+                        lahanData.lahan_mineral.detail_batch[
+                          selectedMineralIndex
+                        ]?.ada_sengketa
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-orange-100/50 shadow-sm">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                        Total Luas Batch
+                      </p>
+                      <p className="text-base font-black text-gray-900">
+                        {
+                          lahanData.lahan_mineral.detail_batch[
+                            selectedMineralIndex
+                          ]?.luas_batch
+                        }{" "}
+                        Ha
+                      </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-orange-100/50 shadow-sm">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                        Status Penggunaan
+                      </p>
+                      <p className="text-base font-black text-gray-900">
+                        {
+                          lahanData.lahan_mineral.detail_batch[
+                            selectedMineralIndex
+                          ]?.status_label
+                        }
+                      </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm">
+                      <p className="text-[10px] font-bold text-green-600 uppercase mb-1">
+                        Luas Terpakai
+                      </p>
+                      <p className="text-base font-black text-green-600">
+                        {
+                          lahanData.lahan_mineral.detail_batch[
+                            selectedMineralIndex
+                          ]?.luas_terpakai
+                        }{" "}
+                        Ha
+                      </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-orange-200 shadow-sm">
+                      <p className="text-[10px] font-bold text-orange-500 uppercase mb-1">
+                        Sisa Lahan Kosong
+                      </p>
+                      <p className="text-base font-black text-orange-600">
+                        {
+                          lahanData.lahan_mineral.detail_batch[
+                            selectedMineralIndex
+                          ]?.luas_sisa
+                        }{" "}
+                        Ha
+                      </p>
+                    </div>
+                  </div>
+                  {/* --- TAMBAHAN LOGIKA SENGKETA MINERAL --- */}
+                  {lahanData.lahan_mineral.detail_batch[selectedMineralIndex]
+                    ?.ada_sengketa && (
+                    <div className="mt-5 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
+                      <div>
+                        <h4 className="font-extrabold text-red-800 text-sm flex items-center gap-2">
+                          <AlertCircle className="w-5 h-5 text-red-600" />
+                          Lahan Dalam Status Sengketa!
+                        </h4>
+                        <p className="text-[11px] sm:text-xs text-red-600/90 mt-1 leading-relaxed max-w-lg">
+                          Lahan ini tidak dapat digunakan maksimal dan terhambat
+                          proses ISPO. Silakan unggah dokumen progres (Peta
+                          Konflik/Mediasi) atau selesaikan sengketa.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => navigate(`/petani/manajemensengketa`)}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-transform active:scale-95 whitespace-nowrap"
+                      >
+                        Kelola Sengketa &rarr;
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowModalMineral(false);
+                  setSelectedMineralIndex(null);
+                }}
+                className="px-6 py-2.5 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================= */}
+      {/* POPUP: MODAL LAHAN GAMBUT */}
+      {/* ======================================================= */}
+      {showModalGambut && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="w-full max-w-2xl bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Header Modal */}
+            <div className="bg-gray-50 px-6 py-5 border-b border-gray-100 flex justify-between items-center relative">
+              <div className="flex items-center gap-3">
+                {selectedGambutIndex !== null ? (
+                  <button
+                    onClick={() => setSelectedGambutIndex(null)}
+                    className="p-2 bg-white rounded-full border border-gray-200 hover:bg-gray-100 text-gray-600 transition shadow-sm"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <div className="bg-red-100 p-2.5 rounded-xl text-[#B5302D]">
+                    <Droplets className="w-5 h-5" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-[#B5302D] font-black text-lg">
+                    {selectedGambutIndex !== null
+                      ? "Rincian Lahan Gambut"
+                      : "Daftar Lahan Gambut"}
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    {selectedGambutIndex !== null
+                      ? "Spesifikasi perizinan rawa"
+                      : "Pilih salah satu area untuk melihat detail"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowModalGambut(false);
+                  setSelectedGambutIndex(null);
+                }}
+                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body Modal */}
+            <div className="p-6 overflow-y-auto bg-white flex-1 custom-scrollbar">
+              {selectedGambutIndex === null ? (
+                // DAFTAR LIST GAMBUT
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                  {lahanData.lahan_gambut?.map((g, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedGambutIndex(idx)}
+                      className="cursor-pointer group flex flex-col p-4 bg-white border border-gray-200 rounded-2xl hover:border-[#B5302D] hover:shadow-md transition-all relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-gray-800 text-sm sm:text-base group-hover:text-[#B5302D]">
+                          {g.nama_lahan_gambut}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#B5302D]" />
+                      </div>
+                      <BadgeSengketa isSengketa={g.ada_sengketa} />
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-end">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">
+                          Luas Lahan
+                        </p>
+                        <p className="text-sm font-black text-[#B5302D]">
+                          {g.luas_total_diajukan}{" "}
+                          <span className="text-[10px] text-gray-500 font-semibold">
+                            Ha
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // DETAIL SPESIFIK GAMBUT
+                <div className="bg-red-50/40 p-5 rounded-2xl border border-red-100 animate-in zoom-in-95 duration-200">
+                  <div className="flex justify-between items-start mb-5 border-b border-red-200/60 pb-4">
+                    <div>
+                      <p className="text-xs font-bold text-[#B5302D] uppercase tracking-wider mb-1">
+                        Nama Area
+                      </p>
+                      <h4 className="text-lg font-black text-gray-900">
+                        {
+                          lahanData.lahan_gambut[selectedGambutIndex]
+                            ?.nama_lahan_gambut
+                        }
+                      </h4>
+                    </div>
+                    <BadgeSengketa
+                      isSengketa={
+                        lahanData.lahan_gambut[selectedGambutIndex]
+                          ?.ada_sengketa
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-red-100/50 shadow-sm">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                        Tahun Buka Lahan
+                      </p>
+                      <p className="text-base font-black text-gray-900">
+                        {
+                          lahanData.lahan_gambut[selectedGambutIndex]
+                            ?.tahun_buka_lahan
+                        }
+                      </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm">
+                      <p className="text-[10px] font-bold text-green-600 uppercase mb-1">
+                        Luas Boleh Ditanam
+                      </p>
+                      <p className="text-base font-black text-green-600">
+                        {
+                          lahanData.lahan_gambut[selectedGambutIndex]
+                            ?.luas_total_boleh_ditanam
+                        }{" "}
+                        Ha
+                      </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                      <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">
+                        Area Konservasi
+                      </p>
+                      <p className="text-base font-black text-blue-600">
+                        {
+                          lahanData.lahan_gambut[selectedGambutIndex]
+                            ?.luas_total_konservasi
+                        }{" "}
+                        Ha
+                      </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-orange-200 shadow-sm">
+                      <p className="text-[10px] font-bold text-orange-500 uppercase mb-1">
+                        Lahan Belum Dipakai
+                      </p>
+                      <p className="text-base font-black text-orange-600">
+                        {
+                          lahanData.lahan_gambut[selectedGambutIndex]
+                            ?.lahan_tidak_digunakan_gambut
+                        }{" "}
+                        Ha
+                      </p>
+                    </div>
+                  </div>
+                  {/* --- TAMBAHAN LOGIKA SENGKETA GAMBUT --- */}
+                  {lahanData.lahan_gambut[selectedGambutIndex]
+                    ?.ada_sengketa && (
+                    <div className="mt-5 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
+                      <div>
+                        <h4 className="font-extrabold text-red-800 text-sm flex items-center gap-2">
+                          <AlertCircle className="w-5 h-5 text-red-600" />
+                          Area Dalam Status Sengketa!
+                  ter      </h4>
+                        <p className="text-[11px] sm:text-xs text-red-600/90 mt-1 leading-relaxed max-w-lg">
+                          Area gambut ini sedang bermasalah. Anda wajib
+                          melaporkan progres mediasi atau mengunggah berita
+                          acara penyelesaian agar data diteruskan ke pusat.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => navigate(`/petani/manajemensengketa`)}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-transform active:scale-95 whitespace-nowrap"
+                      >
+                        Tindak Lanjuti &rarr;
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowModalGambut(false);
+                  setSelectedGambutIndex(null);
+                }}
+                className="px-6 py-2.5 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Tutup
               </button>
             </div>
           </div>

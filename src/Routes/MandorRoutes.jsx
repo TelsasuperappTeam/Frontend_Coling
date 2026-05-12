@@ -1,30 +1,25 @@
-// src/routes/MandorRoutes.jsx
-// -------------------------------------------------------------
-// File ini mengatur semua route (halaman) untuk role MANDOR.
-// -------------------------------------------------------------
-
 import { Routes, Route } from "react-router-dom";
 import PrivateRoute from "../components/PrivateRoute";
 import MandorLayout from "../layouts/MandorLayout";
 import { ROLES } from "../config/constants";
 
-// Import halaman khusus role MANDOR
 import DashboardMandor from "../Pages/Role Mandor/DashboardMandor/DashboardMandor";
 import LuasLahan from "../Pages/Role Mandor/DashboardMandor/LuasLahan";
 import PantauISPO from "../Pages/Role Mandor/PantauISPO";
 import Riwayatpenjualan from "../Pages/Role Mandor/Riwayatpenjualan";
 import ManajemenKebun from "../Pages/Role Mandor/ManajemenKebun/ManajemenKebun";
-import DetailRencanaTanam from "../Pages/Role Mandor/ManajemenKebun/DetailRencanaTanam";
-import BudidayaMonitoring from "../Pages/Role Mandor/ManajemenKebun/BudidayaMonitoring";
+import ManajemenSengketa from "../Pages/Role Mandor/DashboardMandor/ManajemenSengketa";
+
+// === IMPORT HALAMAN BUDIDAYA DAN MONITORING ===
 import CatatAktivitas from "../Pages/Role Mandor/ManajemenKebun/Detail Aktivitas & Monitoring Penanaman/CatatAktivitas";
+import MonitoringGAP from "../Pages/Role Mandor/ManajemenKebun/Detail Aktivitas & Monitoring Penanaman/MonitoringGAP";
 import Panen from "../Pages/Role Mandor/ManajemenKebun/Detail Aktivitas & Monitoring Penanaman/Panen";
+import DetailRencanaTanam from "../Pages/Role Mandor/ManajemenKebun/DetailRencanaTanam";
 
 const MandorRoutes = () => {
   return (
     <Routes>
-      {/* Semua halaman Mandor dibungkus dalam layout MandorLayout */}
       <Route element={<MandorLayout />}>
-        {/* Default ke dashboard */}
         <Route
           index
           element={
@@ -33,8 +28,6 @@ const MandorRoutes = () => {
             </PrivateRoute>
           }
         />
-
-        {/* Dashboard */}
         <Route
           path="dashboard"
           element={
@@ -43,34 +36,6 @@ const MandorRoutes = () => {
             </PrivateRoute>
           }
         />
-
-        {/* Manajemen Kebun */}
-        <Route
-          path="manajemenkebun"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
-              <ManajemenKebun />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Detail Rencana Tanam */}
-        <Route
-          path="manajemenkebun/budidayamonitoring/detailrencanatanam/:id"
-          element={<DetailRencanaTanam />}
-        />
-
-        {/* Budidaya Monitoring */}
-        <Route
-          path="budidayamonitoring"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
-              <BudidayaMonitoring />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Riwayat Penjualan */}
         <Route
           path="riwayatpenjualan"
           element={
@@ -79,8 +44,6 @@ const MandorRoutes = () => {
             </PrivateRoute>
           }
         />
-
-        {/* Luas Lahan */}
         <Route
           path="luaslahan"
           element={
@@ -89,8 +52,6 @@ const MandorRoutes = () => {
             </PrivateRoute>
           }
         />
-
-        {/* kelengkapan ISPO */}
         <Route
           path="PantauISPO"
           element={
@@ -101,7 +62,25 @@ const MandorRoutes = () => {
         />
 
         <Route
-          path="/manajemenkebun/budidayamonitoring/catataktivitas/:id"
+          path="manajemensengketa"
+          element={
+            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
+              <ManajemenSengketa />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="manajemenkebun/budidayamonitoring/detailrencanatanam/:id"
+          element={
+            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
+              <DetailRencanaTanam />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="manajemenkebun/budidayamonitoring/realisasitanam/:id"
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
               <CatatAktivitas />
@@ -109,7 +88,15 @@ const MandorRoutes = () => {
           }
         />
         <Route
-          path="/manajemenkebun/budidayamonitoring/catataktivitas/panen/:id"
+          path="manajemenkebun/budidayamonitoring/monitoring/:id"
+          element={
+            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
+              <MonitoringGAP />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="manajemenkebun/budidayamonitoring/panen/:id"
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
               <Panen />
@@ -117,7 +104,7 @@ const MandorRoutes = () => {
           }
         />
 
-        {/* Manajemen Kebun */}
+        {/* Manajemen Kebun (Halaman Utama yang ada Tab-nya) */}
         <Route
           path="manajemenkebun/*"
           element={

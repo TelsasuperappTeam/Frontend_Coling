@@ -122,7 +122,7 @@ export default function DetailRencanaTanam() {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          }
+          },
         );
         if (response.ok) {
           const data = await response.json();
@@ -158,7 +158,16 @@ export default function DetailRencanaTanam() {
           },
         });
 
+        // Pastikan response sukses (status 200-299)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Parse data JSON dari Backend
         const data = await response.json();
+
+        // --- TAMBAHKAN CONSOLE.LOG DI SINI ---
+        console.log("Data Detail Rencana Tanam dari BE:", data);
 
         if (response.ok) {
           setDetailData(data);
@@ -277,7 +286,7 @@ export default function DetailRencanaTanam() {
       }
       totalDiambil = formData.keranjang_lahan_mineral.reduce(
         (sum, item) => sum + parseFloat(item.luas_diambil || 0),
-        0
+        0,
       );
     } else if (isGambut) {
       if (formData.keranjang_lahan_gambut.length === 0) {
@@ -286,7 +295,7 @@ export default function DetailRencanaTanam() {
       }
       totalDiambil = formData.keranjang_lahan_gambut.reduce(
         (sum, item) => sum + parseFloat(item.luas_diambil || 0),
-        0
+        0,
       );
       if (formData.gambut_lapisan_mineral.length === 0) {
         alert("Untuk lahan Gambut, wajib memilih Lapisan Mineral!");
@@ -300,7 +309,7 @@ export default function DetailRencanaTanam() {
 
     if (Math.abs(totalDiambil - targetLuas) > 0.01) {
       alert(
-        `Total luas lahan yang diambil (${totalDiambil} Ha) tidak sama dengan Luas Unit Blok (${targetLuas} Ha)!`
+        `Total luas lahan yang diambil (${totalDiambil} Ha) tidak sama dengan Luas Unit Blok (${targetLuas} Ha)!`,
       );
       return;
     }
@@ -358,12 +367,12 @@ export default function DetailRencanaTanam() {
         // PAYLOAD GAMBUT
         gambut_lapisan_mineral: isGambut
           ? formData.gambut_lapisan_mineral?.map(
-              (item) => MAPPING_LAPISAN_MINERAL[item]
+              (item) => MAPPING_LAPISAN_MINERAL[item],
             )
           : [],
         gambut_kematangan: isGambut
           ? formData.gambut_kematangan?.map(
-              (item) => MAPPING_KEMATANGAN_GAMBUT[item]
+              (item) => MAPPING_KEMATANGAN_GAMBUT[item],
             )
           : [],
 
@@ -607,23 +616,70 @@ export default function DetailRencanaTanam() {
               Form Pengajuan Kembali
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              
-              <FormInput label="Nama Unit" name="nama_unit" value={formData.nama_unit} onChange={handleInputChange} />
-              <FormInput label="Tanggal Tanam" type="date" name="tanggal_tanam_blok" value={formData.tanggal_tanam_blok} onChange={handleInputChange} />
-              <FormInput label="Luas Unit (Ha)" type="number" name="luas_unit" value={formData.luas_unit} onChange={handleInputChange} />
-              <FormInput label="Jumlah Bibit" type="number" name="jumlah_total_tanaman" value={formData.jumlah_total_tanaman} onChange={handleInputChange} />
-              <FormInput label="Tanaman/ha" type="number" name="jumlah_tanaman_per_ha" value={formData.jumlah_tanaman_per_ha} onChange={handleInputChange} />
+              <FormInput
+                label="Nama Unit"
+                name="nama_unit"
+                value={formData.nama_unit}
+                onChange={handleInputChange}
+              />
+              <FormInput
+                label="Tanggal Tanam"
+                type="date"
+                name="tanggal_tanam_blok"
+                value={formData.tanggal_tanam_blok}
+                onChange={handleInputChange}
+              />
+              <FormInput
+                label="Luas Unit (Ha)"
+                type="number"
+                name="luas_unit"
+                value={formData.luas_unit}
+                onChange={handleInputChange}
+              />
+              <FormInput
+                label="Jumlah Bibit"
+                type="number"
+                name="jumlah_total_tanaman"
+                value={formData.jumlah_total_tanaman}
+                onChange={handleInputChange}
+              />
+              <FormInput
+                label="Tanaman/ha"
+                type="number"
+                name="jumlah_tanaman_per_ha"
+                value={formData.jumlah_tanaman_per_ha}
+                onChange={handleInputChange}
+              />
 
-              <FormSelect label="Jenis Tanah" name="jenis_tanah" value={formData.jenis_tanah} onChange={handleInputChange} options={["Mineral", "Gambut"]} />
+              <FormSelect
+                label="Jenis Tanah"
+                name="jenis_tanah"
+                value={formData.jenis_tanah}
+                onChange={handleInputChange}
+                options={["Mineral", "Gambut"]}
+              />
 
               {formData.jenis_tanah !== "Gambut" && (
-                <FormSelect label="Jenis Lahan" name="jenis_lahan" value={formData.jenis_lahan} onChange={handleJenisLahanChange} options={["Datar", "Miring", "Konservasi"]} />
+                <FormSelect
+                  label="Jenis Lahan"
+                  name="jenis_lahan"
+                  value={formData.jenis_lahan}
+                  onChange={handleJenisLahanChange}
+                  options={["Datar", "Miring", "Konservasi"]}
+                />
               )}
 
               {/* Jarak Tanam Dinamis */}
               <div className="w-full">
-                <label className="block font-semibold text-gray-700 text-sm sm:text-base mb-1.5">Jarak Tanam</label>
-                <select name="jarak_tanam" value={formData.jarak_tanam} onChange={handleInputChange} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#EF8523] focus:border-[#EF8523]">
+                <label className="block font-semibold text-gray-700 text-sm sm:text-base mb-1.5">
+                  Jarak Tanam
+                </label>
+                <select
+                  name="jarak_tanam"
+                  value={formData.jarak_tanam}
+                  onChange={handleInputChange}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#EF8523] focus:border-[#EF8523]"
+                >
                   <option value="">Pilih</option>
                   <option value="8x9">8 x 9 Meter</option>
                   <option value="9x9">9 x 9 Meter</option>
@@ -631,24 +687,57 @@ export default function DetailRencanaTanam() {
                   <option value="Lainnya">Lainnya</option>
                 </select>
                 {formData.jarak_tanam === "Lainnya" && (
-                  <input name="jarak_tanam_lainnya" value={formData.jarak_tanam_lainnya} onChange={handleInputChange} type="text" placeholder="Tuliskan Jarak Tanam" className="w-full mt-3 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#EF8523] focus:border-[#EF8523]" />
+                  <input
+                    name="jarak_tanam_lainnya"
+                    value={formData.jarak_tanam_lainnya}
+                    onChange={handleInputChange}
+                    type="text"
+                    placeholder="Tuliskan Jarak Tanam"
+                    className="w-full mt-3 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#EF8523] focus:border-[#EF8523]"
+                  />
                 )}
               </div>
 
               {/* Jenis Bibit & Varietas Dinamis */}
-              <FormSelect label="Jenis Bibit *" name="jenis_bibit" value={formData.jenis_bibit} onChange={handleInputChange} options={["Dura", "Tenera", "Pisifera"]} />
-              
+              <FormSelect
+                label="Jenis Bibit *"
+                name="jenis_bibit"
+                value={formData.jenis_bibit}
+                onChange={handleInputChange}
+                options={["Dura", "Tenera", "Pisifera"]}
+              />
+
               {formData.jenis_bibit === "Tenera" && (
                 <div className="flex flex-col">
-                  <label className="block font-semibold text-gray-700 text-sm sm:text-base mb-1.5">Varietas Bibit *</label>
-                  <select name="varietas_bibit_nama" value={formData.varietas_bibit_nama} onChange={handleInputChange} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#EF8523] focus:border-[#EF8523]" required>
-                    <option value="" disabled>-- Pilih Varietas --</option>
-                    {Array.isArray(listInventarisBibit) && listInventarisBibit.length > 0 ? (
-                      listInventarisBibit.filter((bibit) => bibit.jenis_bibit === "Tenera").map((bibit, index) => (
-                        <option key={bibit.id || index} value={bibit.nama_varietas}>{bibit.nama_varietas}</option>
-                      ))
+                  <label className="block font-semibold text-gray-700 text-sm sm:text-base mb-1.5">
+                    Varietas Bibit *
+                  </label>
+                  <select
+                    name="varietas_bibit_nama"
+                    value={formData.varietas_bibit_nama}
+                    onChange={handleInputChange}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#EF8523] focus:border-[#EF8523]"
+                    required
+                  >
+                    <option value="" disabled>
+                      -- Pilih Varietas --
+                    </option>
+                    {Array.isArray(listInventarisBibit) &&
+                    listInventarisBibit.length > 0 ? (
+                      listInventarisBibit
+                        .filter((bibit) => bibit.jenis_bibit === "Tenera")
+                        .map((bibit, index) => (
+                          <option
+                            key={bibit.id || index}
+                            value={bibit.nama_varietas}
+                          >
+                            {bibit.nama_varietas}
+                          </option>
+                        ))
                     ) : (
-                      <option value="" disabled>Stok kosong...</option>
+                      <option value="" disabled>
+                        Stok kosong...
+                      </option>
                     )}
                   </select>
                 </div>
@@ -657,32 +746,74 @@ export default function DetailRencanaTanam() {
               {/* SECTION GAMBUT (KERANJANG & MULTI-SELECT) */}
               {formData.jenis_tanah === "Gambut" && (
                 <div className="col-span-1 sm:col-span-2 bg-emerald-50 p-4 rounded-xl border border-emerald-200 space-y-4 mt-2">
-                  <p className="text-sm font-bold text-emerald-800 mb-2">Data Lahan Gambut (Wajib)</p>
+                  <p className="text-sm font-bold text-emerald-800 mb-2">
+                    Data Lahan Gambut (Wajib)
+                  </p>
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-1.5 text-sm">Pilih Lahan Gambut & Luas (Ha) *</label>
+                    <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
+                      Pilih Lahan Gambut & Luas (Ha) *
+                    </label>
                     <div className="space-y-3 bg-white p-3 rounded-lg border border-emerald-200 max-h-60 overflow-y-auto">
                       {listLahanGambut.map((lahan) => {
-                        const selectedItem = formData.keranjang_lahan_gambut.find((item) => item.id === lahan.id);
+                        const selectedItem =
+                          formData.keranjang_lahan_gambut.find(
+                            (item) => item.id === lahan.id,
+                          );
                         const isChecked = !!selectedItem;
-                        const sisaGambut = lahan.lahan_tidak_digunakan_gambut ?? lahan.luas_total_boleh_ditanam ?? 0;
+                        const sisaGambut =
+                          lahan.lahan_tidak_digunakan_gambut ??
+                          lahan.luas_total_boleh_ditanam ??
+                          0;
                         return (
-                          <div key={lahan.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border-b border-gray-100 last:border-0">
+                          <div
+                            key={lahan.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border-b border-gray-100 last:border-0"
+                          >
                             <label className="flex items-center gap-2 cursor-pointer">
-                              <input type="checkbox" checked={isChecked} onChange={(e) => {
-                                setFormData((prev) => ({
-                                  ...prev, keranjang_lahan_gambut: e.target.checked 
-                                    ? [...prev.keranjang_lahan_gambut, { id: lahan.id, luas_diambil: "" }] 
-                                    : prev.keranjang_lahan_gambut.filter((item) => item.id !== lahan.id)
-                                }));
-                              }} className="w-4 h-4 text-emerald-600 rounded border-gray-300" />
-                              <span className="text-sm font-medium text-gray-700">{lahan.nama_lahan_gambut} (Sisa: {sisaGambut} Ha)</span>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    keranjang_lahan_gambut: e.target.checked
+                                      ? [
+                                          ...prev.keranjang_lahan_gambut,
+                                          { id: lahan.id, luas_diambil: "" },
+                                        ]
+                                      : prev.keranjang_lahan_gambut.filter(
+                                          (item) => item.id !== lahan.id,
+                                        ),
+                                  }));
+                                }}
+                                className="w-4 h-4 text-emerald-600 rounded border-gray-300"
+                              />
+                              <span className="text-sm font-medium text-gray-700">
+                                {lahan.nama_lahan_gambut} (Sisa: {sisaGambut}{" "}
+                                Ha)
+                              </span>
                             </label>
                             {isChecked && (
-                              <input type="number" placeholder="Luas (Ha)" value={selectedItem.luas_diambil} onChange={(e) => {
-                                setFormData((prev) => ({
-                                  ...prev, keranjang_lahan_gambut: prev.keranjang_lahan_gambut.map((item) => item.id === lahan.id ? { ...item, luas_diambil: e.target.value } : item)
-                                }));
-                              }} className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-emerald-500" />
+                              <input
+                                type="number"
+                                placeholder="Luas (Ha)"
+                                value={selectedItem.luas_diambil}
+                                onChange={(e) => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    keranjang_lahan_gambut:
+                                      prev.keranjang_lahan_gambut.map((item) =>
+                                        item.id === lahan.id
+                                          ? {
+                                              ...item,
+                                              luas_diambil: e.target.value,
+                                            }
+                                          : item,
+                                      ),
+                                  }));
+                                }}
+                                className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-emerald-500"
+                              />
                             )}
                           </div>
                         );
@@ -691,11 +822,26 @@ export default function DetailRencanaTanam() {
                   </div>
                   {/* Lapisan Mineral */}
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-2 text-sm">Lapisan Mineral</label>
+                    <label className="block font-semibold text-gray-700 mb-2 text-sm">
+                      Lapisan Mineral
+                    </label>
                     <div className="flex flex-wrap gap-3">
                       {Object.keys(MAPPING_LAPISAN_MINERAL).map((opt) => (
-                        <label key={opt} className="flex items-center gap-2 text-sm bg-white px-2 py-1 rounded border">
-                          <input type="checkbox" value={opt} checked={formData.gambut_lapisan_mineral.includes(opt)} onChange={(e) => handleCheckboxGambut(e, "gambut_lapisan_mineral")} className="w-4 h-4 text-emerald-600 rounded" />
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-sm bg-white px-2 py-1 rounded border"
+                        >
+                          <input
+                            type="checkbox"
+                            value={opt}
+                            checked={formData.gambut_lapisan_mineral.includes(
+                              opt,
+                            )}
+                            onChange={(e) =>
+                              handleCheckboxGambut(e, "gambut_lapisan_mineral")
+                            }
+                            className="w-4 h-4 text-emerald-600 rounded"
+                          />
                           {opt}
                         </label>
                       ))}
@@ -703,11 +849,24 @@ export default function DetailRencanaTanam() {
                   </div>
                   {/* Kematangan Gambut */}
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-2 text-sm">Kematangan Gambut</label>
+                    <label className="block font-semibold text-gray-700 mb-2 text-sm">
+                      Kematangan Gambut
+                    </label>
                     <div className="flex flex-wrap gap-3">
                       {Object.keys(MAPPING_KEMATANGAN_GAMBUT).map((opt) => (
-                        <label key={opt} className="flex items-center gap-2 text-sm bg-white px-2 py-1 rounded border">
-                          <input type="checkbox" value={opt} checked={formData.gambut_kematangan.includes(opt)} onChange={(e) => handleCheckboxGambut(e, "gambut_kematangan")} className="w-4 h-4 text-emerald-600 rounded" />
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-sm bg-white px-2 py-1 rounded border"
+                        >
+                          <input
+                            type="checkbox"
+                            value={opt}
+                            checked={formData.gambut_kematangan.includes(opt)}
+                            onChange={(e) =>
+                              handleCheckboxGambut(e, "gambut_kematangan")
+                            }
+                            className="w-4 h-4 text-emerald-600 rounded"
+                          />
                           {opt}
                         </label>
                       ))}
@@ -719,30 +878,68 @@ export default function DetailRencanaTanam() {
               {/* SECTION MINERAL (KERANJANG MULTI-SELECT) */}
               {formData.jenis_tanah === "Mineral" && (
                 <div className="col-span-1 sm:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 mt-2 mb-4">
-                  <label className="block font-semibold text-gray-700 mb-1.5 text-sm">Pilih Lahan Mineral & Luas (Ha) *</label>
+                  <label className="block font-semibold text-gray-700 mb-1.5 text-sm">
+                    Pilih Lahan Mineral & Luas (Ha) *
+                  </label>
                   <div className="space-y-3 bg-white p-3 rounded-lg border border-gray-300 max-h-60 overflow-y-auto">
                     {listLahanMineral.map((lahan) => {
-                      const selectedItem = formData.keranjang_lahan_mineral.find((item) => item.id === lahan.id);
+                      const selectedItem =
+                        formData.keranjang_lahan_mineral.find(
+                          (item) => item.id === lahan.id,
+                        );
                       const isChecked = !!selectedItem;
                       const labelLuas = lahan.luas_sisa ?? 0;
                       return (
-                        <div key={lahan.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border-b border-gray-100 last:border-0">
+                        <div
+                          key={lahan.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border-b border-gray-100 last:border-0"
+                        >
                           <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={isChecked} onChange={(e) => {
-                              setFormData((prev) => ({
-                                ...prev, keranjang_lahan_mineral: e.target.checked 
-                                  ? [...prev.keranjang_lahan_mineral, { id: lahan.id, luas_diambil: "" }] 
-                                  : prev.keranjang_lahan_mineral.filter((item) => item.id !== lahan.id)
-                              }));
-                            }} className="w-4 h-4 text-[#EF8523] rounded border-gray-300" />
-                            <span className="text-sm font-medium text-gray-700">{lahan.nama_lahan_mineral || `Lahan ID: ${lahan.id}`} (Sisa: {labelLuas} Ha)</span>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  keranjang_lahan_mineral: e.target.checked
+                                    ? [
+                                        ...prev.keranjang_lahan_mineral,
+                                        { id: lahan.id, luas_diambil: "" },
+                                      ]
+                                    : prev.keranjang_lahan_mineral.filter(
+                                        (item) => item.id !== lahan.id,
+                                      ),
+                                }));
+                              }}
+                              className="w-4 h-4 text-[#EF8523] rounded border-gray-300"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                              {lahan.nama_lahan_mineral ||
+                                `Lahan ID: ${lahan.id}`}{" "}
+                              (Sisa: {labelLuas} Ha)
+                            </span>
                           </label>
                           {isChecked && (
-                            <input type="number" placeholder="Luas (Ha)" value={selectedItem.luas_diambil} onChange={(e) => {
-                              setFormData((prev) => ({
-                                ...prev, keranjang_lahan_mineral: prev.keranjang_lahan_mineral.map((item) => item.id === lahan.id ? { ...item, luas_diambil: e.target.value } : item)
-                              }));
-                            }} className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-[#EF8523]" />
+                            <input
+                              type="number"
+                              placeholder="Luas (Ha)"
+                              value={selectedItem.luas_diambil}
+                              onChange={(e) => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  keranjang_lahan_mineral:
+                                    prev.keranjang_lahan_mineral.map((item) =>
+                                      item.id === lahan.id
+                                        ? {
+                                            ...item,
+                                            luas_diambil: e.target.value,
+                                          }
+                                        : item,
+                                    ),
+                                }));
+                              }}
+                              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-[#EF8523]"
+                            />
                           )}
                         </div>
                       );
@@ -777,7 +974,7 @@ export default function DetailRencanaTanam() {
                               </span>
                               <a
                                 href={getFileUrl(
-                                  formData.dok_bukti_terasering_url
+                                  formData.dok_bukti_terasering_url,
                                 )}
                                 target="_blank"
                                 rel="noreferrer"
@@ -818,7 +1015,7 @@ export default function DetailRencanaTanam() {
                               </span>
                               <a
                                 href={getFileUrl(
-                                  formData.dok_bukti_drainase_url
+                                  formData.dok_bukti_drainase_url,
                                 )}
                                 target="_blank"
                                 rel="noreferrer"

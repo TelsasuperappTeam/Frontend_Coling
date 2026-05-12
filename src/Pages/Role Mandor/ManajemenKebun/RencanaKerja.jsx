@@ -1,12 +1,56 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { API_BASE_URLS, getFileUrl } from "../../../config/constants";
 
-export default function RencanaKerja({ 
-  fileUrl, // Hapus default value agar bisa dicek kosong atau tidak
-  fileName 
-}) {
+export default function RencanaKerja() {
+  const [fileUrl, setFileUrl] = useState(null);
+  const [fileName, setFileName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ==========================================================================
+  // LOGIKA FETCH DOKUMEN P2_2_2_RENCANA_KERJA
+  // ==========================================================================
+  useEffect(() => {
+    const fetchDokumenSOP = async () => {
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const reqCode = "P2_2_2_RENCANA_KERJA";
+        
+        // Endpoint sama persis dengan yang ada di PantauISPO
+        const url = `${API_BASE_URLS.ISPO}/ispo/submission/${reqCode}`;
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Jika dokumen ada dan statusnya APPROVED / PENDING
+          if (data && data.file_url) {
+            // Ambil URL lengkap menggunakan helper getFileUrl
+            const fullUrl = getFileUrl(data.file_url, "ISPO");
+            setFileUrl(fullUrl);
+            
+            // Ekstrak nama file dari URL (opsional) atau gunakan default
+            const extractedName = data.file_url.split('/').pop() || "Rencana_Operasional_Kebun.pdf";
+            setFileName(extractedName);
+          }
+        }
+      } catch (error) {
+        console.error("Gagal mengambil dokumen SOP Rencana Kerja:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDokumenSOP();
+  }, []);
+
   return (
     <div className="bg-white border border-gray-300 rounded-2xl shadow-md p-5 sm:p-8">
-      {/* Bagian judul dan deskripsi dibiarkan sesuai permintaan */}
       <h2 className="text-[#B5302D] font-semibold text-lg mb-3">
         Informasi SOP Rencana Kegiatan Operasional dari Kebun
       </h2>
@@ -16,9 +60,17 @@ export default function RencanaKerja({
         dan rencana peremajaan.
       </p>
 
-      {/* Conditional Rendering: Cek apakah fileUrl ada datanya */}
-      {fileUrl ? (
-        /* TAMPILAN JIKA DATA FILE ADA (Tampilan Sekarang) */
+      {/* Conditional Rendering: Cek Status Loading & Ketersediaan URL */}
+      {isLoading ? (
+        /* TAMPILAN JIKA SEDANG LOADING */
+        <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+          <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin mb-3" />
+          <p className="text-sm font-medium text-gray-500">
+            Mengecek ketersediaan dokumen SOP...
+          </p>
+        </div>
+      ) : fileUrl ? (
+        /* TAMPILAN JIKA DATA FILE ADA */
         <div className="flex items-center p-4 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
           <svg
             className="w-10 h-10 text-red-500 mr-4 flex-shrink-0"
@@ -31,7 +83,7 @@ export default function RencanaKerja({
           
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-medium text-gray-800 truncate">
-              {fileName || "Dokumen SOP.pdf"}
+              {fileName}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">
               Klik tombol di samping untuk melihat dokumen lengkap
@@ -48,7 +100,7 @@ export default function RencanaKerja({
           </a>
         </div>
       ) : (
-        /* TAMPILAN JIKA DATA FILE KOSONG (Simulasi Kosong) */
+        /* TAMPILAN JIKA DATA FILE KOSONG (Belum Diupload Kebun) */
         <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
           <svg 
             className="w-12 h-12 text-gray-400 mb-3" 
@@ -63,7 +115,7 @@ export default function RencanaKerja({
             Belum ada dokumen yang tersedia
           </p>
           <p className="text-xs text-gray-400 mt-1 text-center max-w-xs">
-            Dokumen SOP rencana kegiatan operasional akan muncul di sini setelah diunggah oleh kebun.
+            Dokumen SOP rencana kegiatan operasional akan muncul di sini setelah diunggah oleh pihak kebun.
           </p>
         </div>
       )}
