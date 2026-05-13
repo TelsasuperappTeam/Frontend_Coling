@@ -264,8 +264,8 @@ const MONITORING_CONFIG = {
       },
       {
         key: "jenis_tanaman_penutup_lainnya",
-        label: "Jenis Lainnya",
-        placeholder: "Jika pilih Lainnya",
+        label: "Opsional Untuk Jenis Lainnya",
+        placeholder: "Jika pilih Lainnya Pada Jenis LCC",
       },
       {
         key: "kondisi_tanaman",

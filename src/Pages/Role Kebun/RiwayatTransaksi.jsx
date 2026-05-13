@@ -441,14 +441,20 @@ const ProgressItem = ({
     if (item.pemeriksaan) {
       if (!item.bagi_hasil) {
         colorClass = "bg-orange-50 text-[#EF8523] border-orange-200";
-        label = "Menunggu Bagi Hasil";
+        label = "Lakukan Bagi Hasil";
       } else {
         colorClass = "bg-green-50 text-green-700 border-green-100";
         label = "Selesai (Tutup Buku)";
       }
     } else {
-      colorClass = "bg-blue-50 text-blue-700 border-blue-100";
-      label = item.progress_publik || "Dalam Perjalanan";
+      // --- PERUBAHAN DI SINI: Deteksi jika truk sudah tiba tapi belum diperiksa ---
+      if (pDB === "terima") {
+        colorClass = "bg-blue-50 text-blue-700 border-blue-100";
+        label = "Sedang Pabrik Proses";
+      } else {
+        colorClass = "bg-blue-50 text-blue-700 border-blue-100";
+        label = item.progress_publik || "Dalam Perjalanan";
+      }
     }
   }
 
@@ -689,13 +695,13 @@ const ProgressItem = ({
                 </div>
                 <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-gray-100">
                   <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                    Total Potongan Sortasi
+                    Total Persentase Potongan Sortasi
                   </p>
                   <p className="text-xs sm:text-sm font-black text-red-600">
                     {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") ||
                       0}{" "}
                     <span className="text-[9px] font-bold text-red-400">
-                      Kg
+                      %
                     </span>
                   </p>
                 </div>
@@ -947,9 +953,9 @@ const ProgressItem = ({
                     </p>
                   </div>
                   <div
-                    className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center ${pDB === "terima" ? "bg-green-50 text-green-600 border border-green-100" : "bg-orange-50 text-[#EF8523] border border-orange-100"}`}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center shadow-sm ${colorClass}`}
                   >
-                    {item.progress_publik || label}
+                    {label}
                   </div>
                 </div>
               </div>
@@ -981,23 +987,27 @@ const BagiHasilModal = ({
 }) => {
   if (!isOpen) return null;
 
-  // 1. Hitung Pendapatan Bersih
+  // 1. Logika Perhitungan Transparansi
   const totalHargaPabrik =
     metadata?.harga_final_diterima_kebun ||
     metadata?.pemeriksaan?.harga_final ||
     0;
-  const biayaKirim = metadata?.biaya_final || 0;
-  const pajak = parseFloat(formData.total_pajak_rupiah) || 0;
-  const pendapatanBersih = totalHargaPabrik - biayaKirim - pajak;
 
-  // 2. LOGIKA BARU: Hitung Total Input Distribusi & Sisa Dana
+  // --- Sesuaikan dengan key respon BE Anda ---
+  const biayaKirim = metadata?.biaya_pengiriman || metadata?.biaya_final || 0;
+
+  // Dana awal sebelum dipotong kebun
+  const danaTersedia = totalHargaPabrik - biayaKirim;
+
+  const pajak = parseFloat(formData.total_pajak_rupiah) || 0; //
+  const pendapatanBersih = danaTersedia - pajak;
+
+  // 2. Logika Distribusi Petani
   const totalAlokasiPetani = formData.detail_petani.reduce(
     (sum, p) => sum + (parseFloat(p.upah_dibayar_rupiah) || 0),
-    0
-  );
+    0,
+  ); //
   const sisaDana = pendapatanBersih - totalAlokasiPetani;
-  
-  // Validasi Kunci: Sisa harus 0, dan Pendapatan Bersih harus di atas 0
   const isAlokasiPas = sisaDana === 0 && pendapatanBersih > 0;
 
   return (
@@ -1008,7 +1018,7 @@ const BagiHasilModal = ({
           <div>
             <h3 className="text-base sm:text-lg font-black text-[#B5302D] flex items-center gap-2">
               <Wallet className="w-5 h-5 text-[#B5302D]" />
-              Form Input Bagi Hasil
+              Form Transparansi Bagi Hasil
             </h3>
             <p className="text-[11px] sm:text-xs text-gray-500 font-medium mt-1.5 flex items-center gap-1.5">
               <Hash className="w-3.5 h-3.5" /> Resi:{" "}
@@ -1019,7 +1029,7 @@ const BagiHasilModal = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 rounded-full text-gray-400 hover:text-red-500 transition-all shadow-sm"
+            className="p-2 bg-white border border-gray-200 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-all shadow-sm"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
@@ -1036,35 +1046,53 @@ const BagiHasilModal = ({
             </div>
           ) : (
             <>
-              {/* Ringkasan Keuangan (Hanya Harga Final Pabrik) */}
-              <div className="bg-red-50/50 p-4 sm:p-5 rounded-2xl border border-red-100 shadow-sm relative overflow-hidden flex items-center gap-3">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D]"></div>
-                <div className="p-2 bg-white rounded-xl shadow-sm border border-red-100 shrink-0">
-                  <Wallet className="w-5 h-5 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-0.5">
-                    Harga Final Pabrik
+              {/* RINCIAN BIAYA AWAL (Transparansi Pabrik & Logistik) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Harga Dari Pabrik
                   </p>
-                  <p className="font-black text-gray-900 text-lg sm:text-xl">
+                  <p className="font-bold text-gray-900 text-sm">
                     Rp {totalHargaPabrik.toLocaleString("id-ID")}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Biaya Logistik (Pengiriman)
+                  </p>
+                  <p className="font-bold text-red-600 text-sm">
+                    - Rp {biayaKirim.toLocaleString("id-ID")}
+                  </p>
+                </div>
+
+                {/* Dana Tersedia Setelah Logistik */}
+                <div className="sm:col-span-2 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Info className="w-4 h-4 text-blue-500" />
+                    <p className="text-[11px] font-bold text-blue-700 uppercase">
+                      Dana Dari Pabrik - Biaya Logistik
+                    </p>
+                  </div>
+                  <p className="font-black text-blue-700 text-base">
+                    Rp {danaTersedia.toLocaleString("id-ID")}
                   </p>
                 </div>
               </div>
 
-              {/* Input Pajak & Output Pendapatan Bersih */}
-              <div className="space-y-3">
+              {/* INPUT POTONGAN KEBUN */}
+              <div className="space-y-3 pt-2 border-t border-dashed border-gray-200">
                 <div>
                   <label className="block text-[11px] sm:text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">
-                    Potongan Kebun / Pajak Administrasi
+                    Potongan Kebun / Pajak Administrasi (Rp)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm sm:text-base">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">
                       Rp
                     </span>
                     <input
                       type="number"
-                      className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 text-sm sm:text-base font-black text-gray-800 focus:ring-2 focus:ring-[#EF8523] focus:border-[#EF8523] outline-none transition-all bg-gray-50 focus:bg-white"
+                      placeholder="0"
+                      className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 text-sm sm:text-base font-black text-gray-800 focus:ring-2 focus:ring-[#EF8523] outline-none transition-all bg-gray-50"
                       value={formData.total_pajak_rupiah}
                       onChange={(e) =>
                         setFormData({
@@ -1076,53 +1104,55 @@ const BagiHasilModal = ({
                   </div>
                 </div>
 
-                {/* Pendapatan Bersih (Hanya muncul jika input pajak > 0) */}
-                {formData.total_pajak_rupiah && parseFloat(formData.total_pajak_rupiah) > 0 ? (
-                  <div className="flex justify-between items-center bg-green-50 px-4 py-3 sm:py-4 rounded-xl border border-green-200 animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm">
-                    <p className="text-[10px] sm:text-xs font-bold text-green-700 uppercase tracking-wider">
-                      Pendapatan Bersih <br className="block sm:hidden" />(Setelah Potongan)
-                    </p>
-                    <p className="font-black text-green-600 text-sm sm:text-base text-right">
+                {/* PENDAPATAN BERSIH AKHIR (Hanya muncul jika pajak diisi) */}
+                {formData.total_pajak_rupiah &&
+                parseFloat(formData.total_pajak_rupiah) > 0 ? (
+                  <div className="flex justify-between items-center bg-green-600 px-5 py-4 rounded-2xl shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div>
+                      <p className="text-[10px] font-bold text-white uppercase tracking-widest">
+                        Pendapatan Bersih Akhir
+                      </p>
+                      <p className="text-[9px] text-white italic">
+                        *Dana yang siap dibagikan ke petani
+                      </p>
+                    </div>
+                    <p className="font-black text-white text-lg">
                       Rp {pendapatanBersih.toLocaleString("id-ID")}
                     </p>
                   </div>
                 ) : null}
               </div>
 
-              {/* List Petani & Indikator Validasi Alokasi */}
+              {/* LIST DISTRIBUSI PETANI & VALIDASI PAS */}
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2">
                   <p className="text-[11px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    Input Distribusi Petani
+                    Alokasi ke Petani
                   </p>
                   <span className="bg-orange-100 text-[#EF8523] text-[10px] font-bold px-2.5 py-1 rounded-md">
                     {formData.detail_petani.length} Petani
                   </span>
                 </div>
 
-                {/* --- INDIKATOR SISA SALDO (REAL-TIME RECONCILIATION) --- */}
+                {/* Indikator Sisa Saldo */}
                 {pendapatanBersih > 0 && (
-                  <div className={`p-4 rounded-2xl border flex items-center justify-between shadow-sm transition-all duration-500 animate-in zoom-in-95 ${
-                      sisaDana === 0 ? 'bg-green-50 border-green-200' :
-                      sisaDana > 0 ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'
-                  }`}>
-                    <div>
-                      <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mb-0.5 ${
-                        sisaDana === 0 ? 'text-green-700' :
-                        sisaDana > 0 ? 'text-blue-700' : 'text-red-700'
-                      }`}>
-                        {sisaDana === 0 ? '✓ Pembagian Pas' : sisaDana > 0 ? 'Sisa Dana Belum Dibagi' : 'Kelebihan Pembagian'}
-                      </p>
-                      <p className={`text-lg sm:text-xl font-black ${
-                        sisaDana === 0 ? 'text-green-600' :
-                        sisaDana > 0 ? 'text-blue-600' : 'text-red-600'
-                      }`}>
-                        {sisaDana < 0 ? "-" : ""}Rp {Math.abs(sisaDana).toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                    <div className="text-right bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-inner">
-                      <p className="text-[9px] text-gray-400 font-bold uppercase">Total Input Anda</p>
-                      <p className="text-xs sm:text-sm font-bold text-gray-800">Rp {totalAlokasiPetani.toLocaleString("id-ID")}</p>
+                  <div
+                    className={`p-4 rounded-2xl border flex items-center justify-between transition-all duration-500 ${
+                      sisaDana === 0
+                        ? "bg-emerald-50 border-green-200"
+                        : "bg-orange-50 border-orange-200"
+                    }`}
+                  >
+                    <p
+                      className={`text-[11px] font-bold uppercase ${sisaDana === 0 ? "text-green-700" : "text-orange-700"}`}
+                    >
+                      {sisaDana === 0
+                        ? "✓ Pembagian Sudah Pas"
+                        : `Sisa Dana: Rp ${sisaDana.toLocaleString("id-ID")}`}
+                    </p>
+                    <div className="bg-white px-3 py-1 rounded-lg shadow-inner text-[10px] font-bold text-gray-500">
+                      Total Input: Rp{" "}
+                      {totalAlokasiPetani.toLocaleString("id-ID")}
                     </div>
                   </div>
                 )}
@@ -1131,34 +1161,33 @@ const BagiHasilModal = ({
                   {formData.detail_petani.map((petani, idx) => (
                     <div
                       key={idx}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-gray-200 p-3.5 sm:p-4 rounded-2xl shadow-sm hover:border-[#EF8523] hover:shadow-md transition-all gap-3 sm:gap-4 group"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-gray-200 p-3.5 sm:p-4 rounded-2xl hover:border-[#EF8523] transition-all gap-3"
                     >
-                      <div className="flex items-center gap-3 sm:gap-4 flex-1">
-                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 text-[#EF8523] flex items-center justify-center font-black shadow-inner border border-orange-200/50 shrink-0 group-hover:scale-110 transition-transform">
-                          {petani.nama_petani?.charAt(0).toUpperCase() || "P"}
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 text-[#EF8523] flex items-center justify-center font-black border border-orange-200/50">
+                          {petani.nama_petani?.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-gray-800 text-sm sm:text-base leading-tight mb-1 truncate">
+                          <p className="font-bold text-gray-800 text-sm truncate">
                             {petani.nama_petani}
                           </p>
-                          <p className="text-[10px] sm:text-xs text-gray-500 font-medium">
+                          <p className="text-[10px] text-gray-500 font-medium">
                             Sumbangan:{" "}
-                            <span className="text-gray-800 font-bold">
+                            <span className="font-bold">
                               {petani.tbs_disumbangkan_kg} Kg
                             </span>{" "}
                             TBS
                           </p>
                         </div>
                       </div>
-
-                      <div className="w-full sm:w-2/5 relative shrink-0">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs sm:text-sm">
+                      <div className="w-full sm:w-2/5 relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">
                           Rp
                         </span>
                         <input
                           type="number"
-                          placeholder="0"
-                          className="w-full border border-gray-300 rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-sm sm:text-base font-black text-green-700 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all bg-gray-50 focus:bg-white"
+                          placeholder="Upah"
+                          className="w-full border border-gray-300 rounded-xl pl-9 pr-3 py-2 text-sm font-black text-green-700 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500"
                           value={petani.upah_dibayar_rupiah}
                           onChange={(e) => {
                             const newDetails = [...formData.detail_petani];
@@ -1183,18 +1212,17 @@ const BagiHasilModal = ({
         <div className="p-5 sm:p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="w-full sm:w-auto px-6 py-2.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all"
+            className="px-6 py-2.5 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-500"
           >
             Batal
           </button>
           <button
             onClick={onSave}
             disabled={loading || !isAlokasiPas}
-            title={!isAlokasiPas ? "Sisa dana harus Rp 0 untuk dapat menyimpan" : "Simpan & Bagikan"}
-            className={`w-full sm:w-auto px-8 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
+            className={`px-8 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all flex items-center gap-2 ${
               loading || !isAlokasiPas
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed" // Warna Pucat jika belum Pas
-                : "bg-[#B5302D] hover:bg-[#962624] text-white active:scale-95" // Warna Nyala jika Pas
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-[#B5302D] hover:bg-[#962624] text-white"
             }`}
           >
             <CheckCircle2 className="w-4 h-4" />

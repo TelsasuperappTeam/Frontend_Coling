@@ -14,6 +14,8 @@ import {
   Map as MapIcon,
   Package,
   Warehouse,
+  Factory,
+  Database,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../../config/constants";
 
@@ -55,7 +57,13 @@ export default function DataDiriPabrik({
   const [formProfile, setFormProfile] = useState({
     alamat: "",
     jenis_produksi: "",
+    kapasitas_ram_pabrik_ton: "",
   });
+
+  // --- STATE KHUSUS CHECKBOX JENIS PABRIK ---
+  const [jenisPabrikChecked, setJenisPabrikChecked] = useState([]);
+  const [isLainnyaChecked, setIsLainnyaChecked] = useState(false);
+  const [jenisPabrikLainnya, setJenisPabrikLainnya] = useState("");
 
   const [mapPos, setMapPos] = useState(null);
   const [fileFoto, setFileFoto] = useState(null);
@@ -73,6 +81,8 @@ export default function DataDiriPabrik({
     alamat: false,
     koordinat: false,
     jenis_produksi: false,
+    jenis_pabrik: false,
+    kapasitas_ram_pabrik_ton: false,
   });
 
   // --- EFFECT: Load Data Awal (BAGIAN YANG DIPERBAIKI) ---
@@ -80,29 +90,54 @@ export default function DataDiriPabrik({
     if (initialData) {
       console.log("Initial Data diterima di Popup:", initialData);
 
+      // Load data text & number
       setFormProfile({
-        // REVISI: Mengambil data dari 'alamat_pabrik' (bukan alamat_kebun)
         alamat: initialData.alamat_pabrik || initialData.alamat || "",
         jenis_produksi: initialData.jenis_produksi || "",
+        kapasitas_ram_pabrik_ton: initialData.kapasitas_ram_pabrik_ton || "",
       });
 
-      // REVISI: Mengambil foto profil
+      // LOGIKA PECAH STRING JENIS PABRIK (CHECKBOX) ---
+      if (initialData.jenis_pabrik && initialData.jenis_pabrik !== "-") {
+        const parts = initialData.jenis_pabrik.split(",").map((s) => s.trim());
+        const standard = [
+          "Plantation/Estate",
+          "Palm Oil Mill/PKS",
+          "KCP (Kernel Crushing Plant)",
+          "Refinery",
+        ];
+        const selectedStd = [];
+        const selectedLain = [];
+
+        parts.forEach((p) => {
+          if (standard.includes(p)) {
+            selectedStd.push(p);
+          } else if (p) {
+            selectedLain.push(p);
+          }
+        });
+
+        setJenisPabrikChecked(selectedStd);
+        if (selectedLain.length > 0) {
+          setIsLainnyaChecked(true);
+          setJenisPabrikLainnya(selectedLain.join(", "));
+        }
+      }
+
+      // Mengambil foto profil
       setPreviewFoto(initialData.foto || "");
 
       // Parsing Koordinat
-      if (initialData.koordinat_lahan) {
+      if (initialData.koordinat) {
         try {
-          const coords = initialData.koordinat_lahan;
-          if (typeof coords === "object") {
-            const lat = coords.y || coords.latitude || coords.lat;
-            const lng = coords.x || coords.longitude || coords.lng;
-            if (lat && lng)
-              setMapPos({ lat: parseFloat(lat), lng: parseFloat(lng) });
-          } else if (typeof coords === "string" && coords.includes(",")) {
+          const coords = initialData.koordinat;
+          if (typeof coords === "string" && coords.includes(",")) {
             const [lat, lng] = coords
               .split(",")
               .map((s) => parseFloat(s.trim()));
-            setMapPos({ lat, lng });
+            if (!isNaN(lat) && !isNaN(lng)) {
+              setMapPos({ lat, lng });
+            }
           }
         } catch (e) {
           console.error("Gagal parsing koordinat", e);
@@ -183,7 +218,7 @@ export default function DataDiriPabrik({
         else if (error.code === 3) msg = "Waktu permintaan habis.";
         setNotification({ type: "error", message: msg });
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   };
 
@@ -199,21 +234,46 @@ export default function DataDiriPabrik({
 
       const formData = new FormData();
 
-      if (!lockedFields.alamat && formProfile.alamat)
+      // 1. ALAMAT: Hanya kirim jika kolom tidak kosong (termasuk yg sudah terkunci)
+      if (formProfile.alamat && formProfile.alamat.trim() !== "") {
         formData.append("alamat", formProfile.alamat);
+      }
 
-      if (!lockedFields.koordinat && mapPos) {
+      // 2. KOORDINAT: Hanya kirim jika titik mapPos sudah ada
+      if (mapPos && mapPos.lat && mapPos.lng) {
         formData.append("latitude", String(mapPos.lat));
         formData.append("longitude", String(mapPos.lng));
       }
 
-      if (!lockedFields.foto && fileFoto)
+      // 3. FOTO PROFIL: Hanya kirim jika user BENAR-BENAR memilih file foto baru
+      if (fileFoto) {
         formData.append("foto_profil", fileFoto);
-
-      if (!lockedFields.jenis_produksi && formProfile.jenis_produksi) {
-        formData.append("jenis_produksi", formProfile.jenis_produksi);
       }
 
+      // 4. JENIS PABRIK: Hanya kirim jika ada checkbox yang dicentang
+      let finalJenisPabrikArr = [...jenisPabrikChecked];
+      if (isLainnyaChecked && jenisPabrikLainnya.trim()) {
+        finalJenisPabrikArr.push(jenisPabrikLainnya.trim());
+      }
+      const finalJenisPabrikStr = finalJenisPabrikArr.join(", ");
+
+      // Mencegah pengiriman string kosong "" ke Backend
+      if (finalJenisPabrikStr && finalJenisPabrikStr.trim() !== "") {
+        formData.append("jenis_pabrik", finalJenisPabrikStr);
+      }
+
+      // 5. KAPASITAS RAM: Hanya kirim jika kolom diisi angka
+      if (
+        formProfile.kapasitas_ram_pabrik_ton &&
+        String(formProfile.kapasitas_ram_pabrik_ton).trim() !== ""
+      ) {
+        formData.append(
+          "kapasitas_ram_pabrik_ton",
+          String(formProfile.kapasitas_ram_pabrik_ton),
+        );
+      }
+
+      // Eksekusi API
       const response = await fetch(API_ENDPOINTS.USER.UPDATE_ME, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
@@ -272,8 +332,8 @@ export default function DataDiriPabrik({
               notification.type === "error"
                 ? "bg-red-50 text-red-700 border-red-200"
                 : notification.type === "success"
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-blue-50 text-blue-700 border-blue-200"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-blue-50 text-blue-700 border-blue-200"
             }`}
           >
             <Info size={18} className="shrink-0 mt-0.5" />
@@ -500,48 +560,95 @@ export default function DataDiriPabrik({
 
         <div className="border-t border-gray-200 mx-4"></div>
 
-        {/* BAGIAN 4: JENIS PRODUKSI & KAPASITAS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Input 1: Jenis Hasil Produksi */}
+          {/* Input 1: Jenis Pengolahan Pabrik (Checkbox Multiple) */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
-              <Package size={18} className="text-[#EF8523]" />
-              Jenis Hasil Produksi
+              <Factory size={18} className="text-[#EF8523]" />
+              Jenis Pengolahan Pabrik
+            </label>
+
+            <div className="flex flex-col gap-3 p-3.5 border rounded-xl shadow-sm bg-white border-gray-200">
+              {/* Checkbox Standard */}
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  "Plantation/Estate",
+                  "Palm Oil Mill/PKS",
+                  "KCP (Kernel Crushing Plant)",
+                  "Refinery",
+                ].map((opt) => (
+                  <label
+                    key={opt}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={jenisPabrikChecked.includes(opt)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setJenisPabrikChecked((prev) => [...prev, opt]);
+                        } else {
+                          setJenisPabrikChecked((prev) =>
+                            prev.filter((item) => item !== opt),
+                          );
+                        }
+                      }}
+                      className="w-4 h-4 rounded text-[#EF8523] focus:ring-[#EF8523] border-gray-300"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+
+              {/* Checkbox Lainnya & Input Teks */}
+              <div className="border-t border-gray-100 pt-2 mt-1 space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isLainnyaChecked}
+                    onChange={(e) => {
+                      setIsLainnyaChecked(e.target.checked);
+                      if (!e.target.checked) setJenisPabrikLainnya(""); // Bersihkan teks jika batal dicentang
+                    }}
+                    className="w-4 h-4 rounded text-[#EF8523] focus:ring-[#EF8523] border-gray-300"
+                  />
+                  Lainnya (Ketik Manual)
+                </label>
+
+                {isLainnyaChecked && (
+                  <input
+                    type="text"
+                    value={jenisPabrikLainnya}
+                    onChange={(e) => setJenisPabrikLainnya(e.target.value)}
+                    placeholder="Sebutkan jenis pabrik..."
+                    className="w-full border rounded-lg px-3 py-2 text-sm transition-all outline-none bg-white border-gray-300 focus:border-[#EF8523] focus:ring-2 focus:ring-orange-50 text-gray-700 shadow-sm"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Input 2: Kapasitas RAM Pabrik (Angka) */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <Database size={18} className="text-[#EF8523]" />
+              Kapasitas RAM Pabrik (Ton)
             </label>
 
             <div className="relative group">
               <input
-                type="text"
-                value={formProfile.jenis_produksi}
-                disabled={lockedFields.jenis_produksi}
+                type="number"
+                value={formProfile.kapasitas_ram_pabrik_ton}
                 onChange={(e) => {
-                  if (lockedFields.jenis_produksi) {
-                    handleLockedClick("jenis_produksi", "Jenis Produksi");
-                    return;
-                  }
                   setFormProfile((s) => ({
                     ...s,
-                    jenis_produksi: e.target.value,
+                    kapasitas_ram_pabrik_ton: e.target.value,
                   }));
                 }}
-                placeholder={
-                  lockedFields.jenis_produksi
-                    ? "Data terkunci."
-                    : "Contoh: Kelapa Sawit, CPO, dll."
-                }
-                className={`w-full border rounded-xl px-4 py-3 text-sm transition-all outline-none 
-                  ${
-                    lockedFields.jenis_produksi
-                      ? "bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-white border-gray-200 focus:border-[#EF8523] focus:ring-4 focus:ring-orange-50 text-gray-700 placeholder-gray-300 shadow-sm"
-                  }`}
+                placeholder="Contoh: 150"
+                className="w-full border rounded-xl px-4 py-3 text-sm transition-all outline-none bg-white border-gray-200 focus:border-[#EF8523] focus:ring-4 focus:ring-orange-50 text-gray-700 placeholder-gray-300 shadow-sm"
               />
             </div>
-            {(lockedFields.jenis_produksi || warning.jenis_produksi) && (
-              <p className="text-xs text-[#B5302D] font-medium flex items-center gap-1.5 ml-1 animate-fade-in">
-                <Lock size={12} /> Data tidak dapat diubah lagi.
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -566,40 +673,31 @@ export default function DataDiriPabrik({
             Batal
           </button>
 
-          {!lockedFields.foto ||
-          !lockedFields.alamat ||
-          !lockedFields.koordinat ||
-          !lockedFields.jenis_produksi  ? (
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className={`flex-1 sm:flex-none px-6 sm:px-8 py-2.5 rounded-lg sm:rounded-xl text-sm font-bold text-white transition-all duration-300 shadow-sm shadow-red-200
-                flex items-center justify-center gap-2 transform active:scale-95
-                ${
-                  isSubmitting
-                    ? "bg-gray-400 cursor-not-allowed opacity-70"
-                    : "bg-gradient-to-r from-[#B5302D] to-[#d64541] hover:shadow-md hover:shadow-red-300 hover:-translate-y-0.5"
-                }
-              `}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="animate-spin" size={16} />
-                  <span>Proses...</span>
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  <span>Simpan</span>
-                </>
-              )}
-            </button>
-          ) : (
-            <div className="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 rounded-lg sm:rounded-xl bg-green-50 text-green-700 text-sm font-bold border border-green-200 flex items-center justify-center gap-2 cursor-default">
-              <CheckCircle2 size={16} className="text-green-600" />
-              <span>Data Lengkap</span>
-            </div>
-          )}
+          {/* Karena Jenis Pabrik & RAM selalu bisa diubah, tombol Simpan selalu aktif */}
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={`flex-1 sm:flex-none px-6 sm:px-8 py-2.5 rounded-lg sm:rounded-xl text-sm font-bold text-white transition-all duration-300 shadow-sm shadow-red-200
+              flex items-center justify-center gap-2 transform active:scale-95
+              ${
+                isSubmitting
+                  ? "bg-gray-400 cursor-not-allowed opacity-70"
+                  : "bg-gradient-to-r from-[#B5302D] to-[#d64541] hover:shadow-md hover:shadow-red-300 hover:-translate-y-0.5"
+              }
+            `}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="animate-spin" size={16} />
+                <span>Proses...</span>
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                <span>Simpan Perubahan</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 

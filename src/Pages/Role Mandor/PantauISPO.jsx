@@ -77,7 +77,7 @@ export default function PantauISPO() {
             "Jika lahan dalam sengketa, unggah melalui fitur luas tanah. Data akan otomatis ditampilkan di sini.",
           actionType: "sync",
           requirementCode: "--",
-          link: "/petani/luaslahan",
+          link: "/petani/manajemensengketa",
         },
 
         // Cek lagi apakah ada di DB apa tidak? karna tidak muncul
@@ -87,7 +87,7 @@ export default function PantauISPO() {
             "Diunggah melalui fitur luas tanah saat proses sengketa berlangsung atau selesai.",
           actionType: "sync",
           requirementCode: "P1_SENGKETA",
-          link: "/petani/luaslahan",
+          link: "/petani/manajemensengketa",
         },
       ],
     },
@@ -123,7 +123,7 @@ export default function PantauISPO() {
           link: "/petani/manajemenkebun/budidayamonitoring",
         },
         {
-          label: "Dokumen Laporan Pelaksanaan SPPL",
+          label: "Dokumen laporan pelaksanaan SPPL",
           deskripsi:
             "Laporan ini dibuat otomatis oleh sistem berdasarkan catatan pelaksanaan SPPL yang telah diinput di menu Pantau ISPO, dan petani harus mengajukan ke kebun dulu baru data bisa muncul di sini.",
           actionType: "auto",
@@ -434,7 +434,8 @@ export default function PantauISPO() {
         },
         {
           label: "Catatan daftar peralatan pencegah kebakaran",
-          deskripsi: "Tambahkan dan lihat daftar peralatan pemadam di fitur inventaris pada manajemen kebun.",
+          deskripsi:
+            "Tambahkan dan lihat daftar peralatan pemadam di fitur inventaris pada manajemen kebun.",
           actionType: "link",
           link: "/petani/manajemenkebun/inventaris",
         },
@@ -487,11 +488,12 @@ export default function PantauISPO() {
           deskripsi:
             "Dokumen ini dibuat otomatis oleh sistem berdasarkan transaksi selesai. Serta memerlukan pengajuan ke kebun untuk bisa muncul di menu ini.",
           actionType: "auto",
-          requirementCode: "BELUM",
+          requirementCode: "P4_4_3_DOKUMEN_REALISASI_PENJUALAN",
         },
         {
           label: "Informasi harga TBS dari pemerintah",
-          deskripsi: "Dokumen SK/Acuan harga terbaru (dari Kebun), silahkan lihat di menu tampilan utama pada bagian grafik harga TBS berdasarkan standar pemerintah wilayah.",
+          deskripsi:
+            "Dokumen SK/Acuan harga terbaru (dari Kebun), silahkan lihat di menu tampilan utama pada bagian grafik harga TBS berdasarkan standar pemerintah wilayah.",
           actionType: "link",
           link: "/petani/dashboard",
         },
@@ -526,7 +528,7 @@ export default function PantauISPO() {
           deskripsi:
             "Langkah/strategi peningkatan produksi kelapa sawit (dari Kebun).",
           actionType: "system",
-          requirementCode: "P5_1_RENCANA_PRODUKSI",
+          requirementCode: "P5_5_1_SOP_RENCANA_PENINGKATAN_PRODUKSI",
         },
       ],
     },
@@ -774,21 +776,36 @@ export default function PantauISPO() {
                     item.actionType === "sync" ||
                     item.actionType === "auto"
                   ) {
+                    // --- FE DILONGGARKAN AGAR MEMBACA STATUS DRAFT ---
                     isUploaded = serverData
                       ? serverData.status === "APPROVED" ||
-                        serverData.status === "PENDING"
+                        serverData.status === "PENDING" ||
+                        serverData.status === "DRAFT" ||
+                        !!serverData.file_url ||
+                        !!serverData.url
                       : false;
 
                     if (isUploaded) {
-                      if (
-                        item.actionType === "auto" &&
-                        serverData.status === "PENDING"
-                      ) {
-                        badgeLabel = "Menunggu Persetujuan";
-                        badgeClass =
-                          "bg-yellow-50 text-yellow-600 border border-yellow-200";
+                      const statusTeks = serverData.status
+                        ? serverData.status
+                        : "TERSEDIA";
+
+                      if (item.actionType === "auto") {
+                        if (statusTeks === "DRAFT") {
+                          badgeLabel = "Draft (Belum Diajukan)";
+                          badgeClass =
+                            "bg-orange-50 text-orange-600 border border-orange-200";
+                        } else if (statusTeks === "PENDING") {
+                          badgeLabel = "Menunggu Persetujuan";
+                          badgeClass =
+                            "bg-yellow-50 text-yellow-600 border border-yellow-200";
+                        } else {
+                          badgeLabel = `Diunggah (${statusTeks})`;
+                          badgeClass =
+                            "bg-emerald-50 text-emerald-700 border border-emerald-100";
+                        }
                       } else {
-                        badgeLabel = `Diunggah (${serverData.status})`;
+                        badgeLabel = `Diunggah (${statusTeks})`;
                         badgeClass =
                           "bg-emerald-50 text-emerald-700 border border-emerald-100";
                       }
@@ -801,7 +818,6 @@ export default function PantauISPO() {
                     item.actionType === "link" ||
                     item.actionType === "info"
                   ) {
-                    // Untuk Link/Info kita anggap selesai secara visual jika memang data sifatnya instruksional
                     isUploaded = true;
                     badgeLabel =
                       item.actionType === "link"
@@ -811,12 +827,17 @@ export default function PantauISPO() {
                       "bg-blue-50 text-blue-700 border border-blue-100";
                   }
 
-                  // Ubah port ke FARM untuk SEMUA dokumen yang terintegrasi (sync) dari Farm Service
-                  const targetService =
-                    item.actionType === "sync" ? "FARM" : "ISPO";
+                  // --- DETEKSI SUMBER FILE ---
+                  let targetService = "ISPO"; // Default ke port 8004 (ISPO)
+                  if (item.actionType === "sync") {
+                    targetService = "FARM"; // Ke port 8002 jika sync
+                  }
 
                   const fileUrl = serverData
-                    ? getFileUrl(serverData.file_url, targetService)
+                    ? getFileUrl(
+                        serverData.file_url || serverData.url,
+                        targetService,
+                      )
                     : null;
 
                   return (
@@ -974,8 +995,9 @@ export default function PantauISPO() {
                         {item.actionType === "auto" &&
                           !isFetching &&
                           (isUploaded ? (
-                            serverData.status === "PENDING" ? (
-                              // TAMPILAN JIKA MASIH PENDING (Kuning + Tombol Pratinjau)
+                            serverData.status === "PENDING" ||
+                            serverData.status === "DRAFT" ? (
+                              // TAMPILAN JIKA MASIH PENDING ATAU DRAFT
                               <div className="w-full flex flex-col gap-1.5">
                                 <button
                                   onClick={() =>
@@ -987,8 +1009,13 @@ export default function PantauISPO() {
                                 >
                                   <Eye size={12} /> Pratinjau File
                                 </button>
-                                <div className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-700 text-[9px] font-bold text-center leading-none">
-                                  <Clock size={10} /> Menunggu Kebun
+                                <div
+                                  className={`w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl text-[9px] font-bold text-center leading-none border ${serverData.status === "DRAFT" ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-yellow-50 text-yellow-700 border-yellow-200"}`}
+                                >
+                                  <Clock size={10} />{" "}
+                                  {serverData.status === "DRAFT"
+                                    ? "Harap Ajukan Ulang"
+                                    : "Menunggu Kebun"}
                                 </div>
                               </div>
                             ) : (
@@ -1005,7 +1032,6 @@ export default function PantauISPO() {
                               </button>
                             )
                           ) : (
-                            // TAMPILAN JIKA BELUM DIBUAT SAMA SEKALI
                             <div className="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-400 text-[10px] font-bold text-center leading-tight">
                               <Printer size={12} /> Buat di Menu Atas
                             </div>
@@ -1074,7 +1100,6 @@ export default function PantauISPO() {
   // State untuk Pop-up Konfirmasi Ajukan Draft Dokumen Otomatis
   const [draftDocToSubmit, setDraftDocToSubmit] = useState(null);
 
-  // UBAH: Gunakan state ini untuk menampung ID dokumen yang sedang loading (bukan boolean true/false lagi)
   const [loadingDocId, setLoadingDocId] = useState(null);
 
   const handleGenerateDocument = async (docId, title) => {
@@ -1084,17 +1109,21 @@ export default function PantauISPO() {
     try {
       const token = localStorage.getItem("token");
       let endpointUrl = "";
+      let reqCode = ""; // Tambahan untuk memanggil ID Submission secara manual
 
       switch (docId) {
         case 1:
           endpointUrl =
             API_ENDPOINTS.ISPO.PETANI.GENERATE_DOKUMEN_ISPO_OPERASIONAL;
+          reqCode = "P2_2_2_LAPORAN_REALISASI";
           break;
         case 2:
           endpointUrl = API_ENDPOINTS.ISPO.PETANI.GENERATE_DOKUMEN_SPPL;
+          reqCode = "P1_LAPORAN_SPPL";
           break;
         case 3:
           endpointUrl = API_ENDPOINTS.ISPO.PETANI.GENERATE_DOKUMEN_PENJUALAN;
+          reqCode = "P4_4_3_DOKUMEN_REALISASI_PENJUALAN";
           break;
         default:
           showToast.info(`Fitur generate untuk "${title}" belum tersedia.`);
@@ -1108,6 +1137,7 @@ export default function PantauISPO() {
         return;
       }
 
+      // 1. HIT ENDPOINT GENERATE DOKUMEN
       const response = await fetch(endpointUrl, {
         method: "POST",
         headers: {
@@ -1117,6 +1147,7 @@ export default function PantauISPO() {
       });
 
       const data = await response.json();
+      console.log(`[DEBUG] Respon Generate Dokumen (${title}):`, data);
 
       if (!response.ok) {
         showToast.error(
@@ -1126,25 +1157,59 @@ export default function PantauISPO() {
         return;
       }
 
-      if (data.download_url && data.submission_id) {
-        const fullPdfUrl = `${API_BASE_URLS.ISPO}${data.download_url}`;
+      const payload = data.data ? data.data : data;
+      const pdfUrl = payload.download_url || payload.file_url || payload.url;
+      let subId = payload.submission_id || payload.id;
 
-        // 1. Buka Preview PDF
+      if (pdfUrl) {
+        const fullPdfUrl = pdfUrl.startsWith("http")
+          ? pdfUrl
+          : `${API_BASE_URLS.ISPO}${pdfUrl}`;
+
+        // Buka Preview PDF di Tab Baru
         window.open(fullPdfUrl, "_blank");
 
-        // 2. Tampilkan Pop-up Konfirmasi dengan menyimpan ID submission
-        setDraftDocToSubmit({
-          submissionId: data.submission_id,
-          title: title,
-        });
+        // 2. JIKA SUBMISSION ID TIDAK DIKIRIM BE, KITA TARIK MANUAL DARI REQUIREMENT CODE!
+        if (!subId && reqCode) {
+          try {
+            const statusRes = await fetch(
+              `${API_BASE_URLS.ISPO}/ispo/submission/${reqCode}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            if (statusRes.ok) {
+              const statusData = await statusRes.json();
+              // Ambil ID dari hasil tarikan manual
+              subId = statusData.id || statusData.submission_id;
+            }
+          } catch (err) {
+            console.warn("Gagal fetch ID manual:", err);
+          }
+        }
+
+        // 3. TAMPILKAN POP-UP DRAFT UNTUK DIAJUKAN
+        if (subId) {
+          setDraftDocToSubmit({
+            submissionId: subId,
+            title: title,
+          });
+
+          // Refresh list utama untuk update status di background
+          fetchSingleDocStatus(reqCode);
+        } else {
+          showToast.error(
+            "Gagal memproses pengajuan Dokumen tidak ditemukan dari sistem.",
+          );
+        }
       } else {
         showToast.error(
-          "Gagal memuat dokumen: Data tidak lengkap dari server.",
+          "Gagal memuat dokumen: URL File tidak ditemukan dari sistem.",
         );
       }
     } catch (error) {
       console.error("Error generating document:", error);
-      showToast.error("Terjadi gangguan jaringan atau server tidak merespon.");
+      showToast.error("Terjadi gangguan jaringan atau sistem tidak merespon.");
     } finally {
       setLoadingDocId(null);
     }

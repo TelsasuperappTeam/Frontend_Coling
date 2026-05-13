@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Memperbaiki UI/UX tampilan dan menyesuaikan alur role petani dan kebun sesuai revisi berdasarkan hasil survei"
+git commit -m "Memperbaiki UI/UX tampilan telsa V2.0"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"

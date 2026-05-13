@@ -196,6 +196,10 @@ export const API_ENDPOINTS = {
         ADD_RENCANA_PANEN: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/rencana/${blokId}`,
 
+        // PUT/PATCH Edit Rencana Panen (Resubmit)
+        UPDATE_RENCANA_PANEN: (rencanaId) =>
+          `${API_BASE_URLS.FARM}/farm/me/rencana-panen/${rencanaId}`,
+
         // POST Tambah Catatan Realisasi (Harian/Per Pemanen)
         ADD_REALISASI_PANEN: `${API_BASE_URLS.FARM}/farm/me/rencana-panen/realisasi`,
 
@@ -349,7 +353,7 @@ export const API_ENDPOINTS = {
       GENERATE_DOKUMEN_SPPL: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/laporan-sppl`,
 
       // (POST) Download dokumen rencana operasional ISPO di Halaman Pantau ISPO
-      GENERATE_DOKUMEN_PENJUALAN: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/laporan-sppl`,
+      GENERATE_DOKUMEN_PENJUALAN: `${API_BASE_URLS.ISPO}/ispo/prinsip-4/generate-realisasi-penjualan`,
 
       // (GET) Progres ISPO Petani di Halaman Dashboard
       GET_PROGRES_ISPO_PETANI: `${API_BASE_URLS.ISPO}/ispo/progress`,

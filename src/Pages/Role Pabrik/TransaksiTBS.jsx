@@ -354,6 +354,39 @@ const TransaksiTBS = () => {
     }
   };
 
+  // 1. State untuk menyimpan info kapasitas RAM real-time
+  const [infoRam, setInfoRam] = useState({ total: 0, terpakai: 0, sisa: 0 });
+
+  // 2. Fetch data RAM (Mengadaptasi dari logika StokRam.jsx)
+  useEffect(() => {
+    const fetchInfoRam = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(API_ENDPOINTS.TRACEABILITY.PABRIK.STOK_RAM, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Konversi ke Ton
+          const totalTon = (data.kuota_kapasitas_kg || 0) / 1000;
+          const terpakaiTon = (data.total_sisa_stok_tbs || 0) / 1000;
+
+          setInfoRam({
+            total: totalTon,
+            terpakai: terpakaiTon,
+            sisa: Math.max(0, totalTon - terpakaiTon), // Sisa = Total - Terpakai
+          });
+        }
+      } catch (err) {
+        console.error("Gagal mengambil info kapasitas RAM:", err);
+      }
+    };
+
+    fetchInfoRam();
+  }, []);
+
   const toggleMainSection = (section) => {
     setActiveMainSection(section);
     setActiveSubRencana(null);
@@ -465,7 +498,7 @@ const TransaksiTBS = () => {
 
               {activeSubRencana === "harian" && (
                 <div className="p-4 bg-white border-t text-black border-gray-100 animate-fadeIn space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-gray-600 uppercase">
                         Jenis Sawit
@@ -496,19 +529,42 @@ const TransaksiTBS = () => {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-600 uppercase">
-                        Kapasitas (Ton)
-                      </label>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[11px] font-bold text-gray-600 uppercase">
+                          Kapasitas Kosong (Ton)
+                        </label>
+                        {/* --- INDIKATOR SISA RAM REAL-TIME --- */}
+                        <span className="text-[9px] sm:text-[10px] text-green-700 font-bold bg-green-50 px-2.5 py-1 rounded-md border border-green-200">
+                          Tersedia: {infoRam.sisa.toLocaleString("id-ID")} Ton
+                        </span>
+                      </div>
+
                       <input
                         type="number"
                         name="kapasitas_ton"
                         min="0.1"
+                        max={infoRam.sisa} // Batasi maksimal panah ke atas
                         step="any"
                         value={formRencana.kapasitas_ton}
                         onChange={handleInputChange}
-                        className="w-full border rounded-lg p-3 text-sm outline-none focus:border-[#EF8523]"
-                        placeholder="Contoh: 50"
+                        className={`w-full border rounded-lg p-3 text-sm outline-none transition-all ${
+                          // Jika input melebihi sisa RAM, warna jadi merah
+                          Number(formRencana.kapasitas_ton) > infoRam.sisa
+                            ? "border-red-500 focus:border-red-500 bg-red-50 text-red-700"
+                            : "border-gray-300 focus:border-[#EF8523] bg-white text-gray-900"
+                        }`}
+                        placeholder={`Maksimal input: ${infoRam.sisa} Ton`}
                       />
+
+                      {/* --- PESAN ERROR JIKA MELEBIHI BATAS --- */}
+                      {Number(formRencana.kapasitas_ton) > infoRam.sisa && (
+                        <p className="text-[10px] text-red-600 font-bold flex items-center gap-1 mt-1 animate-pulse">
+                          {/* Pastikan AlertCircle sudah di-import dari lucide-react */}
+                          <AlertCircle className="w-3 h-3 shrink-0" />
+                          Input tidak boleh melebihi sisa kapasitas RAM yang
+                          tersedia!
+                        </p>
+                      )}
                     </div>
 
                     {/* BAGIAN TANGGAL DIBUAT BERSEBELAHAN ATAU DISESUAIKAN GRIDNYA */}
@@ -524,9 +580,11 @@ const TransaksiTBS = () => {
                         className="w-full border rounded-lg p-3 text-sm outline-none focus:border-[#EF8523]"
                       />
                     </div>
-                    <div className="space-y-1.5 md:col-span-2">
-                      {" "}
-                      {/* Bisa disesuaikan gridnya agar rapi */}
+                  </div>{" "}
+                  {/* --- BAGIAN TANGGAL SELESAI & TOMBOL SIMPAN --- */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 items-end">
+                    {/* Kolom Kiri: Input Tanggal (Sekarang ukurannya persis 50% mengikuti grid atas) */}
+                    <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-gray-600 uppercase">
                         Tanggal Selesai
                       </label>
@@ -538,21 +596,22 @@ const TransaksiTBS = () => {
                         className="w-full border rounded-lg p-3 text-sm outline-none focus:border-[#EF8523]"
                       />
                     </div>
-                  </div>
 
-                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-                    <button
-                      onClick={handleSubmitRencana}
-                      disabled={isLoading}
-                      className={`w-full sm:w-auto px-8 py-3 ${
-                        isLoading
-                          ? "bg-gray-400"
-                          : "bg-[#B5302D] hover:bg-[#8e2523]"
-                      } text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 order-2 sm:order-1`}
-                    >
-                      <Save size={16} />{" "}
-                      {isLoading ? "Menyimpan..." : "Simpan Rencana"}
-                    </button>
+                    {/* Kolom Kanan: Tombol (Didorong ke ujung kanan) */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleSubmitRencana}
+                        disabled={isLoading}
+                        className={`w-full sm:w-auto px-8 py-3 shrink-0 ${
+                          isLoading
+                            ? "bg-gray-400"
+                            : "bg-[#B5302D] hover:bg-[#8e2523]"
+                        } text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2`}
+                      >
+                        <Save size={16} />{" "}
+                        {isLoading ? "Menyimpan..." : "Simpan Rencana"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

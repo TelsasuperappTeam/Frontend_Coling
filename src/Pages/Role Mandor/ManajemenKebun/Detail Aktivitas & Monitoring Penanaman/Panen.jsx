@@ -15,10 +15,10 @@ import {
   ChevronDown,
   Leaf,
   ClipboardList,
-  // --- IMPORT TAMBAHAN UNTUK LOGIKA SIKLUS ---
   History,
   Eye,
   RefreshCw,
+  MapPin,
 } from "lucide-react";
 
 // --- IMPORT KONSTANTA BE MAHAR (DITAMBAH API_BASE_URLS UNTUK SIKLUS) ---
@@ -39,6 +39,7 @@ export default function Panen() {
 
   const [activeModal, setActiveModal] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState(null);
 
   const [openSection, setOpenSection] = useState({
     rencana: window.innerWidth >= 768,
@@ -254,20 +255,49 @@ export default function Panen() {
         (item) => item.nomor_siklus === activeCycleNum,
       );
 
-      const mappedPlans = activeCycleData.map((item) => ({
-        id: item.id,
-        unit: item.nama_unit,
-        tanggal: item.tanggal_rencana_panen,
-        estimasi: item.estimasi_total_tbs_kg,
-        status: item.status,
-        luas: item.luas_lahan_dipanen,
-        alasan:
-          item.catatan_penolakan ||
-          item.alasan_penolakan ||
-          "Tidak ada catatan.",
-        catatan_pemanenan: item.catatan_pemanenan || [],
-        hasil_panen: item.hasil_panen || null,
-      }));
+      // --- PERUBAHAN: MAPPING ASYNCHRONOUS DENGAN FETCH GATEKEEPER ---
+      const mappedPlans = await Promise.all(
+        activeCycleData.map(async (item) => {
+          let gatekeeperData = null;
+
+          // Cek gatekeeper HANYA untuk rencana yang sudah disetujui & belum di-finalisasi
+          if (item.status === "DISETUJUI" && !item.hasil_panen) {
+            try {
+              // Endpoint menembak ke Gatekeeper BE
+              const gkUrl = `${API_BASE_URLS.FARM}/farm/me/rencana-panen/${item.id}/gatekeeper`;
+              const gkRes = await fetch(gkUrl, { method: "GET", headers });
+              if (gkRes.ok) {
+                gatekeeperData = await gkRes.json();
+                console.log(`[Gatekeeper Plan ${item.id}]:`, gatekeeperData);
+              }
+            } catch (e) {
+              console.error(`Gagal fetch gatekeeper untuk plan ${item.id}`, e);
+            }
+          }
+
+          return {
+            id: item.id,
+            unit: item.nama_unit,
+            tanggal: item.tanggal_rencana_panen,
+            estimasi: item.estimasi_total_tbs_kg,
+            status: item.status,
+            luas: item.luas_lahan_dipanen,
+            alasan:
+              item.catatan_penolakan ||
+              item.alasan_penolakan ||
+              "Tidak ada catatan.",
+            catatan_pemanenan: item.catatan_pemanenan || [],
+            hasil_panen: item.hasil_panen || null,
+
+            grup_id: item.grup_penjualan_id || null,
+            status_pabrik: item.status_pabrik || null, // "DITERIMA" / "PENDING"
+            status_logistik: item.status_logistik || null, // "DITERIMA" / "PENDING"
+            
+            // SIMPAN DATA GATEKEEPER DARI BE KE DALAM STATE LOKAL
+            gatekeeper: gatekeeperData,
+          };
+        })
+      );
 
       setPlans(mappedPlans);
 
@@ -305,30 +335,43 @@ export default function Panen() {
   // ================= HANDLERS =================
 
   const handleSavePlan = async () => {
-    // ... (Logika handleSavePlan tetap sama) ...
     if (!formPlan.tanggal || !formPlan.luas || !formPlan.estimasi)
       return alert("Mohon lengkapi Tanggal, Luas Lahan, dan Estimasi!");
+
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      const url =
-        API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_RENCANA_PANEN(ACTIVE_BLOK_ID);
+
+      // LOGIKA BARU: Jika ada editingPlanId, gunakan method PUT/PATCH
+      const url = editingPlanId
+        ? API_ENDPOINTS.FARM.PETANI.ACTIVITY.UPDATE_RENCANA_PANEN(editingPlanId)
+        : API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_RENCANA_PANEN(ACTIVE_BLOK_ID);
+
+      const method = editingPlanId ? "PUT" : "POST"; // Sesuaikan dengan BE (Bisa PUT atau PATCH)
+
       const payload = {
         tanggal_rencana_panen: formPlan.tanggal,
         luas_lahan_dipanen: parseFloat(formPlan.luas),
         estimasi_total_tbs_kg: parseFloat(formPlan.estimasi),
       };
+
       const res = await fetch(url, {
-        method: "POST",
+        method: method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
+
       if (res.ok) {
-        alert("Rencana panen berhasil diajukan!");
+        alert(
+          editingPlanId
+            ? "Rencana panen berhasil diperbarui!"
+            : "Rencana panen berhasil diajukan!",
+        );
         setActiveModal(null);
+        setEditingPlanId(null);
         setFormPlan({ tanggal: "", estimasi: "", luas: "" });
         fetchRencanaPanen();
       } else {
@@ -910,16 +953,50 @@ export default function Panen() {
                           </div>
                         </div>
 
+                        {/* --- UI SKENARIO 1: TOMBOL EDIT BILA DITOLAK ATAU PENDING --- */}
                         {plan.status === "DITOLAK" && (
                           <div className="mt-2 bg-red-50 border border-red-200 p-2.5 sm:p-3 rounded-lg animate-fadeIn">
                             <p className="text-[9px] sm:text-[10px] font-bold text-red-800 uppercase mb-0.5 flex items-center gap-1">
                               <AlertCircle className="w-3 h-3" /> Catatan
                               Penolakan:
                             </p>
-                            <p className="text-[10px] sm:text-xs text-red-700 leading-relaxed italic">
+                            <p className="text-[10px] sm:text-xs text-red-700 leading-relaxed italic mb-2">
                               "{plan.alasan}"
                             </p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingPlanId(plan.id);
+                                setFormPlan({
+                                  tanggal: plan.tanggal,
+                                  estimasi: plan.estimasi,
+                                  luas: plan.luas,
+                                });
+                                setActiveModal("plan");
+                              }}
+                              className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1.5 rounded-md text-[10px] font-bold transition-colors"
+                            >
+                              Edit & Ajukan Ulang
+                            </button>
                           </div>
+                        )}
+
+                        {plan.status === "PENDING" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingPlanId(plan.id);
+                              setFormPlan({
+                                tanggal: plan.tanggal,
+                                estimasi: plan.estimasi,
+                                luas: plan.luas,
+                              });
+                              setActiveModal("plan");
+                            }}
+                            className="w-full mt-2 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 px-2 py-1.5 rounded-md text-[10px] font-bold transition-colors"
+                          >
+                            Edit Pengajuan
+                          </button>
                         )}
                       </div>
 
@@ -1085,59 +1162,119 @@ export default function Panen() {
                           .filter(
                             (p) => p.status === "DISETUJUI" && !p.hasil_panen,
                           )
-                          .map((plan) => (
-                            <div
-                              key={plan.id}
-                              className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-white border border-blue-100 rounded-lg shadow-sm hover:shadow-md transition-all gap-3 sm:gap-4"
-                            >
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs sm:text-sm font-bold text-gray-800">
-                                    {plan.tanggal}
-                                  </span>
-                                  <span className="text-[9px] sm:text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">
-                                    Aktif
-                                  </span>
-                                </div>
-                                <p className="text-[10px] sm:text-xs text-gray-500">
-                                  Target: {plan.estimasi} Kg &bull;{" "}
-                                  <span className="font-bold text-gray-700">
-                                    {plan.catatan_pemanenan.length} Catatan
-                                    Masuk
-                                  </span>
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  if (
-                                    !plan.catatan_pemanenan ||
-                                    plan.catatan_pemanenan.length === 0
-                                  ) {
-                                    alert(
-                                      "Harap isi Catatan Aktivitas terlebih dahulu sebelum menyelesaikan panen!",
-                                    );
-                                    return;
-                                  }
-                                  openResultModal(plan.id);
-                                }}
-                                disabled={
-                                  !plan.catatan_pemanenan ||
-                                  plan.catatan_pemanenan.length === 0
-                                }
-                                className={`text-[10px] sm:text-xs px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold transition shadow-sm whitespace-nowrap ${
-                                  !plan.catatan_pemanenan ||
-                                  plan.catatan_pemanenan.length === 0
-                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                                }`}
+                          .map((plan) => {
+                            // --- LOGIKA SKENARIO 2: MENGGUNAKAN GATEKEEPER DARI API ---
+                            const gk = plan.gatekeeper || {};
+
+                            // 1. Membaca 4 indikator dari JSON Backend sesuai respon asli
+                            const hasCatatan = gk.is_catatan_pekerja_terisi !== undefined 
+                                ? gk.is_catatan_pekerja_terisi 
+                                : (plan.catatan_pemanenan && plan.catatan_pemanenan.length > 0);
+                                
+                            const inGroup = gk.is_masuk_grup !== undefined 
+                                ? gk.is_masuk_grup 
+                                : !!plan.grup_id;
+                                
+                            const pabrikAcc = gk.is_diterima_pabrik !== undefined 
+                                ? gk.is_diterima_pabrik 
+                                : (plan.status_pabrik === "DITERIMA" || plan.status_pabrik === "APPROVED");
+                                
+                            const logistikAcc = gk.is_logistik_siap !== undefined 
+                                ? gk.is_logistik_siap 
+                                : (plan.status_logistik === "DITERIMA" || plan.status_logistik === "APPROVED");
+
+                            // 2. KUNCI UTAMA: is_bisa_selesai dari Backend
+                            // Jika `is_bisa_selesai` true, maka tombol Selesai akan menyala (Bisa di-klik)
+                            const canFinalize = gk.is_bisa_selesai === true;
+
+                            return (
+                              <div
+                                key={plan.id}
+                                className={`flex flex-col p-3 sm:p-4 bg-white border rounded-lg shadow-sm transition-all gap-3
+                                  ${canFinalize ? "border-blue-400 shadow-md" : "border-gray-200"}`}
                               >
-                                {!plan.catatan_pemanenan ||
-                                plan.catatan_pemanenan.length === 0
-                                  ? "Catat Aktivitas Dulu"
-                                  : "Selesaikan Panen"}
-                              </button>
-                            </div>
-                          ))}
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-xs sm:text-sm font-bold text-gray-800">
+                                        {plan.tanggal}
+                                      </span>
+                                      <span className="text-[9px] sm:text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">
+                                        Aktif
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] sm:text-xs text-gray-500">
+                                      Target: {plan.estimasi} Kg
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* --- CHECKLIST GATEKEEPER UI --- */}
+                                <div className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-100">
+                                  <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                                    Syarat Selesai (Gatekeeper):
+                                  </p>
+                                  <ul className="text-[10px] sm:text-xs space-y-1">
+                                    <li
+                                      className={`flex items-center gap-1.5 ${inGroup ? "text-green-600 font-bold" : "text-gray-400"}`}
+                                    >
+                                      {inGroup ? (
+                                        <CheckCircle className="w-3 h-3" />
+                                      ) : (
+                                        <Clock className="w-3 h-3" />
+                                      )}
+                                      Sudah ditarik ke Grup Penjualan Kebun
+                                    </li>
+                                    <li
+                                      className={`flex items-center gap-1.5 ${pabrikAcc ? "text-green-600 font-bold" : "text-gray-400"}`}
+                                    >
+                                      {pabrikAcc ? (
+                                        <CheckCircle className="w-3 h-3" />
+                                      ) : (
+                                        <Clock className="w-3 h-3" />
+                                      )}
+                                      Grup Diterima oleh Pabrik
+                                    </li>
+                                    <li
+                                      className={`flex items-center gap-1.5 ${logistikAcc ? "text-green-600 font-bold" : "text-gray-400"}`}
+                                    >
+                                      {logistikAcc ? (
+                                        <CheckCircle className="w-3 h-3" />
+                                      ) : (
+                                        <Clock className="w-3 h-3" />
+                                      )}
+                                      Disetujui oleh Mitra Logistik
+                                    </li>
+                                    <li
+                                      className={`flex items-center gap-1.5 ${hasCatatan ? "text-green-600 font-bold" : "text-red-500"}`}
+                                    >
+                                      {hasCatatan ? (
+                                        <CheckCircle className="w-3 h-3" />
+                                      ) : (
+                                        <AlertCircle className="w-3 h-3" />
+                                      )}
+                                      Catatan Aktivitas Pekerja Terisi
+                                    </li>
+                                  </ul>
+                                </div>
+
+                                <button
+                                  onClick={() => openResultModal(plan.id)}
+                                  disabled={!canFinalize}
+                                  className={`w-full text-xs sm:text-sm py-2 rounded-lg font-bold transition shadow-sm
+                                    ${
+                                      !canFinalize
+                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    }`}
+                                >
+                                  {canFinalize
+                                    ? "✓ Selesaikan Panen"
+                                    : "Penuhi Syarat Di Atas"}
+                                </button>
+                              </div>
+                            );
+                          })}
                       </div>
                     )}
                   </div>
@@ -1247,50 +1384,63 @@ export default function Panen() {
       {/* BUAT TAMBAH RENCANA */}
       {activeModal === "plan" && (
         <ModalLayout
-          title="Buat Rencana Panen"
-          onClose={() => setActiveModal(null)}
+          title={editingPlanId ? "Revisi Rencana Panen" : "Buat Rencana Panen"}
+          onClose={() => {
+            setActiveModal(null);
+            setEditingPlanId(null);
+            setFormPlan({ tanggal: "", estimasi: "", luas: "" });
+          }}
           onSave={handleSavePlan}
           loading={isSubmitting}
         >
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <InputField
-              label="ID Blok (otomatis)"
-              value={blokData?.id || ""}
-              readOnly={true}
-            />
-            <InputField
-              label="Nama Unit/Blok (otomatis)"
-              value={blokData?.nama_unit || ""}
-              readOnly={true}
-            />
-          </div>
-          <InputField
-            label="Tanggal Rencana"
-            type="date"
-            value={formPlan.tanggal}
-            onChange={(e) =>
-              setFormPlan({ ...formPlan, tanggal: e.target.value })
-            }
-          />
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <InputField
-              label="Luas Lahan (Ha)"
-              type="number"
-              placeholder="Contoh: 1.5"
-              value={formPlan.luas}
-              onChange={(e) =>
-                setFormPlan({ ...formPlan, luas: e.target.value })
-              }
-            />
-            <InputField
-              label="Estimasi TBS (Kg)"
-              type="number"
-              placeholder="Contoh: 5000"
-              value={formPlan.estimasi}
-              onChange={(e) =>
-                setFormPlan({ ...formPlan, estimasi: e.target.value })
-              }
-            />
+          <div className="space-y-5 animate-fadeIn">
+            {/* 1. KOTAK INFORMASI LOKASI (Menggantikan Input Nama Unit) */}
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+              <div className="bg-white p-2.5 rounded-lg shadow-sm shrink-0 border border-orange-100">
+                <MapPin className="w-5 h-5 text-[#EF8523]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-bold text-orange-600 uppercase tracking-widest mb-0.5">
+                  Lokasi Target Panen
+                </p>
+                <p className="text-sm sm:text-base font-black text-gray-900 truncate">
+                  {blokData?.nama_unit || "Memuat informasi unit..."}
+                </p>
+              </div>
+            </div>
+
+            {/* 2. AREA FORM INPUT */}
+            <div className="bg-gray-50/50 rounded-xl border border-gray-100 p-4 sm:p-5 space-y-4">
+              <InputField
+                label="Tanggal Rencana Panen"
+                type="date"
+                value={formPlan.tanggal}
+                onChange={(e) =>
+                  setFormPlan({ ...formPlan, tanggal: e.target.value })
+                }
+              />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField
+                  label="Estimasi Luas Lahan (Ha)"
+                  type="number"
+                  placeholder="Contoh: 1.5"
+                  value={formPlan.luas}
+                  onChange={(e) =>
+                    setFormPlan({ ...formPlan, luas: e.target.value })
+                  }
+                />
+                <InputField
+                  label="Estimasi Hasil TBS (Kg)"
+                  type="number"
+                  placeholder="Contoh: 5000"
+                  value={formPlan.estimasi}
+                  onChange={(e) =>
+                    setFormPlan({ ...formPlan, estimasi: e.target.value })
+                  }
+                />
+              </div>
+            </div>
           </div>
         </ModalLayout>
       )}

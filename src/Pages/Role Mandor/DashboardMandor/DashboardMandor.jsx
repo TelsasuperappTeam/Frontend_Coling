@@ -657,16 +657,16 @@ export default function DashboardMandor() {
                 <div className="space-y-1">
                   <DataRow label="Nama Lengkap" value={profile.nama_lengkap} />
                   <DataRow label="Role" value={profile.role} />
+                  <DataRow
+                    label="Relasi Kebun"
+                    value={profile.nama_kebun_naungan}
+                  />
                 </div>
                 <div className="space-y-1">
                   <DataRow label="Nomor Telepon" value={profile.nomor_hp} />
                   <DataRow label="Email" value={profile.email} />
                 </div>
                 <div className="space-y-1">
-                  <DataRow
-                    label="Relasi Kebun"
-                    value={profile.nama_kebun_naungan}
-                  />
                   <DataRow
                     label="Alamat / Lokasi Kebun"
                     value={profile.alamat_kebun}
@@ -1790,8 +1790,8 @@ export default function DashboardMandor() {
                       <div>
                         <h4 className="font-extrabold text-red-800 text-sm flex items-center gap-2">
                           <AlertCircle className="w-5 h-5 text-red-600" />
-                          Area Dalam Status Sengketa!
-                  ter      </h4>
+                          Area Dalam Status Sengketa! ter{" "}
+                        </h4>
                         <p className="text-[11px] sm:text-xs text-red-600/90 mt-1 leading-relaxed max-w-lg">
                           Area gambut ini sedang bermasalah. Anda wajib
                           melaporkan progres mediasi atau mengunggah berita

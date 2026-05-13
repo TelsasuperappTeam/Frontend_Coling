@@ -466,7 +466,7 @@ const Penjualan = () => {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
-              Penjualan TBS
+              Penjualan TBS Ke Pabrik
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm">
               Ajukan penjualan TBS ke pabrik dan pantau status pengajuan.

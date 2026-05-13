@@ -50,7 +50,9 @@ const isProfileIncomplete = (p) => {
     !p.email ||
     !p.foto ||
     !p.alamat_pabrik ||
-    !p.koordinat
+    !p.koordinat ||
+    !p.jenis_pabrik ||
+    !p.kapasitas_ram_pabrik_ton
   );
 };
 
@@ -68,6 +70,8 @@ export default function DashboardPabrik() {
     alamat_pabrik: "",
     foto: "",
     koordinat: "",
+    jenis_pabrik: "",
+    kapasitas_ram_pabrik_ton: "",
   });
 
   // STATE: Untuk Pantau Pengiriman (Aktif)
@@ -118,6 +122,7 @@ export default function DashboardPabrik() {
 
         const userData = await response.json();
 
+        // DashboardPabrik.jsx (Sekitar baris 90)
         setProfile({
           nama_pabrik: userData.nama_lengkap || "-",
           role: "Pabrik",
@@ -125,9 +130,14 @@ export default function DashboardPabrik() {
           nomor_telepon: userData.no_hp || "-",
           alamat_pabrik: userData.alamat || "",
           foto: getFileUrl(userData.foto_profil_url) || "",
-          koordinat: userData.koordinat
-            ? JSON.stringify(userData.koordinat)
-            : "",
+          koordinat:
+            userData.latitude && userData.longitude
+              ? `${userData.latitude}, ${userData.longitude}`
+              : "",
+          // -----------------------------------
+
+          jenis_pabrik: userData.jenis_pabrik || "-",
+          kapasitas_ram_pabrik_ton: userData.kapasitas_ram_pabrik_ton || 0,
         });
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -242,6 +252,10 @@ export default function DashboardPabrik() {
       !!profile.koordinat &&
       profile.koordinat !== "" &&
       profile.koordinat !== "-",
+    jenis_pabrik: !!profile.jenis_pabrik && profile.jenis_pabrik !== "-",
+    kapasitas_ram_pabrik_ton:
+      !!profile.kapasitas_ram_pabrik_ton &&
+      profile.kapasitas_ram_pabrik_ton > 0,
   };
 
   const DataRow = ({ label, value }) => (
@@ -308,13 +322,22 @@ export default function DashboardPabrik() {
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow label="Nama Pabrik" value={profile.nama_pabrik} />
                   <DataRow label="Role" value={profile.role} />
-                </div>
-                <div className="space-y-1 sm:space-y-2">
-                  <DataRow label="Email" value={profile.email} />
                   <DataRow
                     label="Nomor Telepon"
                     value={profile.nomor_telepon}
                   />
+                </div>
+                <div className="space-y-1 sm:space-y-2">
+                  <DataRow label="Email" value={profile.email} />
+                  <DataRow
+                    label="Kapasitas RAM"
+                    value={
+                      profile.kapasitas_ram_pabrik_ton
+                        ? `${profile.kapasitas_ram_pabrik_ton} Ton`
+                        : "-"
+                    }
+                  />
+                  <DataRow label="Jenis Pabrik" value={profile.jenis_pabrik} />
                 </div>
                 <div className="space-y-1 sm:space-y-2">
                   <DataRow

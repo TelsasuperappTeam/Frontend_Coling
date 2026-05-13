@@ -94,10 +94,7 @@ export default function DashboardKebun() {
   const [validasiData, setValidasiData] = useState({
     rencanaTanam: [],
     rencanaPanen: [],
-    dokumenISPO: [
-      { id: 1, nama: "Joko Anwar" },
-      { id: 2, nama: "Rina Nose" },
-    ],
+    dokumenISPO: [],
   });
 
   // --- HELPER AUTH ---
@@ -260,25 +257,33 @@ export default function DashboardKebun() {
         "Content-Type": "application/json",
       };
 
-      // 1. Fetch Pending Rencana Panen (SESUAI BE MAHAR)
+      // 1. Fetch Pending Rencana Panen
       const resPanen = await fetch(
         API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING,
         { headers },
       );
       const dataPanen = resPanen.ok ? await resPanen.json() : [];
 
-      // 2. Fetch Pending Rencana Tanam / Blok (SESUAI BE MAHAR)
+      // 2. Fetch Pending Rencana Tanam / Blok
       const resTanam = await fetch(
         API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK,
         { headers },
       );
       const dataTanam = resTanam.ok ? await resTanam.json() : [];
 
-      // Update state validasiData, merge dengan dokumenISPO static
+      // 3. Fetch Pending Dokumen ISPO (TAMBAHAN BARU)
+      const resDokumen = await fetch(
+        API_ENDPOINTS.ISPO.KEBUN.GET_PETANI_PENDING_SUBMISSION_ISPO,
+        { headers },
+      );
+      const dataDokumen = resDokumen.ok ? await resDokumen.json() : [];
+
+      // Update state validasiData dengan ketiga data asli
       setValidasiData((prev) => ({
         ...prev,
         rencanaPanen: Array.isArray(dataPanen) ? dataPanen : [],
         rencanaTanam: Array.isArray(dataTanam) ? dataTanam : [],
+        dokumenISPO: Array.isArray(dataDokumen) ? dataDokumen : [],
       }));
     } catch (error) {
       console.error("Error fetching validasi data:", error);
@@ -652,7 +657,12 @@ export default function DashboardKebun() {
                             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-[#EF8523]"></span>
                             {/* LOGIC DISPLAY NAMA */}
                             {title === "Dokumen ISPO" ? (
-                              item.nama
+                              <span>
+                                {item.nama_petani || "Petani"}
+                                <span className="text-[10px] text-gray-400 ml-1 font-normal truncate max-w-[120px] inline-block align-bottom">
+                                  - {item.jenis_dokumen || item.requirement_code || "Dokumen Sertifikasi"}
+                                </span>
+                              </span>
                             ) : (
                               <span>
                                 {item.nama_petani}
@@ -879,8 +889,10 @@ export default function DashboardKebun() {
         </Card>
 
         {/* FITUR 5: Harga TBS */}
-        <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}
-        footer={
+        <Card
+          title="Harga TBS Sesuai Aturan Pemerintah"
+          icon={Coins}
+          footer={
             <button
               onClick={() => navigate("/kebun/manajemenoperasional")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
@@ -888,7 +900,7 @@ export default function DashboardKebun() {
               Tambahkan Informasi Harga Terbaru &rarr;
             </button>
           }
-          >
+        >
           <div className="relative h-full flex flex-col pt-2 w-full">
             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">

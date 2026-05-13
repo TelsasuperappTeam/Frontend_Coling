@@ -36,7 +36,7 @@ export const menuConfig = {
     { label: "Inventaris", path: "/kebun/inventaris", icon: Warehouse },
     { label: "Operasional", path: "/kebun/manajemenoperasional", icon: ClipboardList },
     { label: "Kemitraan Petani", path: "/kebun/kemitraanpetani", icon: Users },
-    { label: "Penjualan", path: "/kebun/penjualan", icon: ShoppingCart },
+    { label: "Penjualan Ke Pabrik", path: "/kebun/penjualan", icon: ShoppingCart },
     { label: "Distribusi & Logistik", path: "/kebun/distribusi&logistik", icon: Truck },
     { label: "Riwayat Transaksi", path: "/kebun/riwayattransaksi", icon: History },
   ],

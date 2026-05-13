@@ -14,6 +14,7 @@ import {
   FileText,
   Upload,
   Hash,
+  Wallet,
 } from "lucide-react";
 // Pastikan path konstanta Anda benar
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
@@ -74,25 +75,29 @@ const Riwayatpenjualan = () => {
 
   // --- LOGIKA PEMISAHAN DATA (Dijalankan secara lokal di FE) ---
 
+  // --- LOGIKA PEMISAHAN DATA (Dijalankan secara lokal di FE) ---
+
   // 1. Filter Transaksi Aktif:
-  // Harus BELUM ada pemeriksaan DAN status BUKAN ditolak
+  // Termasuk yang sedang di jalan ATAU sudah diperiksa Pabrik TAPI belum dibayar (belum ada bagi_hasil)
   const dataAktif = allData
     .filter((item) => {
-      const belumDiperiksa =
-        item.pemeriksaan === null || item.pemeriksaan === undefined;
-      const tidakDitolak = item.status_permintaan?.toLowerCase() !== "ditolak";
-      return belumDiperiksa && tidakDitolak;
+      const ditolak = item.status_permintaan?.toLowerCase() === "ditolak";
+      const hasBagiHasil = !!item.bagi_hasil;
+
+      // Masuk AKTIF jika BUKAN ditolak DAN BELUM ada bagi_hasil
+      return !ditolak && !hasBagiHasil;
     })
     .sort((a, b) => b.id - a.id);
 
   // 2. Filter Transaksi Selesai:
-  // Harus SUDAH ADA pemeriksaan ATAU statusnya DITOLAK
+  // HANYA masuk sini jika SUDAH ADA bagi_hasil ATAU statusnya DITOLAK sejak awal
   const dataSelesai = allData
     .filter((item) => {
-      const sudahDiperiksa =
-        item.pemeriksaan !== null && item.pemeriksaan !== undefined;
       const ditolak = item.status_permintaan?.toLowerCase() === "ditolak";
-      return sudahDiperiksa || ditolak;
+      const hasBagiHasil = !!item.bagi_hasil;
+
+      // Masuk SELESAI jika SUDAH bagi_hasil ATAU DITOLAK
+      return hasBagiHasil || ditolak;
     })
     .sort((a, b) => b.id - a.id);
 
@@ -239,27 +244,52 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
   const rawProgress = item.progress_db || "menunggu_pengiriman";
   const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
 
-  // Penentuan Label Status
-  let colorClass = "bg-gray-50 text-gray-600 border-gray-100";
-  let label = "Menunggu";
+  // --- FUNGSI PENENTU LABEL STATUS & WARNA UI ---
+  const getStatusInfo = (item) => {
+    const hasBagiHasil = !!item.bagi_hasil;
+    const progressPublik = item.progress_publik || "Menunggu Diproses";
 
-  if (statusPermintaan === "menunggu") {
-    colorClass = "bg-yellow-50 text-yellow-700 border-yellow-100";
-    label = "Menunggu Konfirmasi";
-  } else if (statusPermintaan === "ditolak") {
-    colorClass = "bg-red-50 text-red-700 border-red-100";
-    label = "Ditolak Mitra";
-  } else if (statusPermintaan === "diterima") {
-    if (pDB === "terima") {
-      colorClass = "bg-green-50 text-green-700 border-green-100";
-      label = item.pemeriksaan
-        ? "Selesai (Ditimbang)"
-        : "Tiba (Menunggu Timbang)";
-    } else {
-      colorClass = "bg-blue-50 text-blue-700 border-blue-100";
-      label = item.progress_publik || "Dalam Perjalanan";
+    // 1. Kondisi Ditolak
+    if (statusPermintaan === "ditolak" || pDB === "ditolak") {
+      return {
+        label: "Penjualan Ditolak",
+        colorClass: "bg-red-50 text-red-700 border border-red-100",
+      };
     }
-  }
+
+    // 2. Kondisi Menunggu Konfirmasi (Awal banget)
+    if (statusPermintaan === "menunggu") {
+      return {
+        label: "Menunggu Konfirmasi",
+        colorClass: "bg-yellow-50 text-yellow-700 border border-yellow-100",
+      };
+    }
+
+    // 3. Kondisi Selesai (Path Selesai)
+    if (hasBagiHasil) {
+      return {
+        label: "Selesai (Tutup Buku)",
+        colorClass: "bg-emerald-50 text-emerald-700 border border-emerald-100",
+      };
+    }
+
+    // 4. Kondisi Aktif: Menunggu Kebun (Sudah di pabrik tapi belum dibayar)
+    if (pDB === "terima" && !hasBagiHasil) {
+      return {
+        label: "Menunggu Bagi Hasil",
+        colorClass: "bg-blue-50 text-blue-700 border border-blue-100",
+      };
+    }
+
+    // 5. Kondisi Aktif: Logistik & Pemeriksaan Pabrik
+    return {
+      label: progressPublik,
+      colorClass: "bg-orange-50 text-[#EF8523] border border-orange-100",
+    };
+  };
+
+  // Panggil info status
+  const statusInfo = getStatusInfo(item);
 
   // --- RENDER JIKA DITOLAK ---
   if (statusPermintaan === "ditolak") {
@@ -304,9 +334,9 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
 
           <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
             <span
-              className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto ${colorClass}`}
+              className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto ${statusInfo.colorClass}`}
             >
-              {label}
+              {statusInfo.label}
             </span>
 
             <div className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm w-full md:w-auto">
@@ -374,6 +404,24 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
                       "Pabrik tujuan tidak tersedia."}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase font-bold mb-0.5">
+                  Est. Jarak
+                </p>
+                <p className="font-bold text-gray-900">
+                  {item.estimasi_jarak_km
+                    ? `${item.estimasi_jarak_km} KM`
+                    : "-"}
+                </p>
+              </div>
+              <div
+                className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center shadow-sm ${statusInfo.colorClass}`}
+              >
+                {statusInfo.label}
               </div>
             </div>
 
@@ -454,12 +502,12 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
 
         <div className="flex flex-col items-center justify-center md:items-end gap-3 mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 md:pl-4 min-w-full md:min-w-[120px]">
           <span
-            className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto ${colorClass}`}
+            className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-1.5 w-full md:w-auto ${statusInfo.colorClass}`}
           >
-            {label === "Selesai (Ditimbang)" && (
+            {statusInfo.label === "Selesai (Tutup Buku)" && (
               <CheckCircle2 className="w-3.5 h-3.5" />
             )}
-            {label}
+            {statusInfo.label}
           </span>
 
           <div className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm w-full md:w-auto">
@@ -548,13 +596,13 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
                 </div>
                 <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-gray-100">
                   <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                    Total Potongan Sortasi
+                    Total Persentase Potongan Sortasi
                   </p>
                   <p className="text-xs sm:text-sm font-black text-red-600">
                     {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") ||
                       0}{" "}
                     <span className="text-[9px] font-bold text-red-400">
-                      Kg
+                      %
                     </span>
                   </p>
                 </div>
@@ -625,7 +673,79 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
             </div>
           )}
 
-{/* GRID DETAIL INFORMASI LENGKAP */}
+          {/* === INFORMASI BAGI HASIL (Hanya muncul jika sudah ada datanya) === */}
+          {item.bagi_hasil && (
+            <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-100 animate-fadeIn">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="p-2 bg-green-100 rounded-lg text-green-600">
+                  <Wallet size={20} />
+                </div>
+                <h3 className="font-bold text-gray-900 text-base">
+                  Rincian Pembayaran & Bagi Hasil
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
+                    Total Pajak (PPH)
+                  </p>
+                  <p className="text-lg font-black text-red-600">
+                    Rp{" "}
+                    {item.bagi_hasil.total_pajak_rupiah?.toLocaleString(
+                      "id-ID",
+                    )}
+                  </p>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                  <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">
+                    Waktu Pembayaran
+                  </p>
+                  <p className="text-sm font-bold text-blue-900">
+                    {new Date(item.bagi_hasil.created_at).toLocaleString(
+                      "id-ID",
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-500 uppercase ml-1">
+                  Detail Penerimaan Petani:
+                </p>
+                {item.bagi_hasil.detail_petani?.map((petani, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center gap-4 mb-3 sm:mb-0">
+                      <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-600 font-bold text-sm">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">
+                          {petani.nama_petani_snapshot}
+                        </p>
+                        <p className="text-[10px] text-gray-500">
+                          Sumbangan: <b>{petani.tbs_disumbangkan_kg} Kg</b>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right bg-green-50 px-4 py-2 rounded-xl border border-green-100">
+                      <p className="text-[9px] text-green-600 font-bold uppercase">
+                        Upah Bersih
+                      </p>
+                      <p className="text-sm sm:text-base font-black text-green-700">
+                        Rp {petani.upah_dibayar_rupiah?.toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* GRID DETAIL INFORMASI LENGKAP */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* 1. Info Transaksi */}
             <div className="flex flex-col gap-3 sm:gap-4">
@@ -763,9 +883,9 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
                     </p>
                   </div>
                   <div
-                    className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center ${pDB === "terima" ? "bg-green-50 text-green-600 border border-green-100" : "bg-orange-50 text-[#EF8523] border border-orange-100"}`}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center shadow-sm ${statusInfo.colorClass}`}
                   >
-                    {item.progress_publik || label}
+                    {statusInfo.label}
                   </div>
                 </div>
               </div>

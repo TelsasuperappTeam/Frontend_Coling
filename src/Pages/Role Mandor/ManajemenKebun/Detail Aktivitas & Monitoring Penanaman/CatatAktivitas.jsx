@@ -7,6 +7,8 @@ import {
   Edit,
   ArrowLeft,
   ClipboardCheck,
+  Clock,
+  History,
 } from "lucide-react";
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
 
@@ -33,6 +35,8 @@ export default function CatatAktivitas() {
     jumlahTotalTanaman: "",
     jarakTanam: "",
     jarakTanamLainnya: "",
+    catatanPerubahanTerakhir: "",
+    waktuPencatatan: "",
   });
 
   const [catatanPerubahan, setCatatanPerubahan] = useState("");
@@ -56,19 +60,74 @@ export default function CatatAktivitas() {
 
       if (responseBlok.ok) {
         const dataBlok = await responseBlok.json();
+
+        // --- [DEBUG 1] Lihat data mentah dari Backend ---
+        console.log("[DEBUG - FETCH] Data Blok Keseluruhan:", dataBlok);
+        console.log(
+          "[DEBUG - FETCH] Array Realisasi Tanam:",
+          dataBlok.realisasi_rencana_tanam,
+        );
+
         setUnit(dataBlok.nama_unit);
-        setRealisasiData({
+
+        const adaRealisasi =
+          dataBlok.realisasi_rencana_tanam &&
+          dataBlok.realisasi_rencana_tanam.length > 0;
+
+        // Ambil riwayat realisasi yang paling terakhir (paling baru)
+        const realisasiTerbaru = adaRealisasi
+          ? dataBlok.realisasi_rencana_tanam[
+              dataBlok.realisasi_rencana_tanam.length - 1
+            ]
+          : null;
+
+        // --- [DEBUG 2] Lihat hasil pemilihan data terbaru ---
+        console.log("[DEBUG - LOGIC] Apakah ada realisasi?", adaRealisasi);
+        console.log(
+          "[DEBUG - LOGIC] Data Realisasi Terbaru yang dipilih:",
+          realisasiTerbaru,
+        );
+
+        // Buat objek data sebelum di-set ke state agar bisa di-log
+        const stateDataToSet = {
           namaUnit: dataBlok.nama_unit,
           jenisTanah: dataBlok.jenis_tanah,
           tanggalTanam: dataBlok.tanggal_tanam_blok,
           luasUnit: `${dataBlok.luas_unit} Ha`,
           jenisBibit: dataBlok.jenis_bibit,
           jenisLahan: dataBlok.jenis_lahan,
-          jumlahTanamanPerHa: dataBlok.jumlah_tanaman_per_ha,
-          jumlahTotalTanaman: dataBlok.jumlah_total_tanaman,
-          jarakTanam: dataBlok.jarak_tanam,
-          jarakTanamLainnya: dataBlok.jarak_tanam_lainnya || "",
-        });
+
+          // --- LOGIKA PRIORITAS: Pakai Realisasi (Jika Ada), Jika Tidak Pakai Rencana Awal ---
+          jumlahTanamanPerHa: realisasiTerbaru
+            ? realisasiTerbaru.realisasi_jumlah_tanaman_per_ha
+            : dataBlok.jumlah_tanaman_per_ha,
+
+          jumlahTotalTanaman: realisasiTerbaru
+            ? realisasiTerbaru.realisasi_jumlah_total_tanaman
+            : dataBlok.jumlah_total_tanaman,
+
+          jarakTanam: realisasiTerbaru
+            ? realisasiTerbaru.realisasi_jarak_tanam
+            : dataBlok.jarak_tanam,
+
+          jarakTanamLainnya: realisasiTerbaru
+            ? realisasiTerbaru.realisasi_jarak_tanam_lainnya || ""
+            : dataBlok.jarak_tanam_lainnya || "",
+
+          catatanPerubahanTerakhir: realisasiTerbaru
+            ? realisasiTerbaru.catatan_perubahan
+            : "",
+          waktuPencatatan: realisasiTerbaru ? realisasiTerbaru.created_at : "",
+        };
+
+        // --- [DEBUG 3] Lihat hasil final yang akan tampil di UI ---
+        console.log(
+          "[DEBUG - FINAL] Data yang di-set ke State:",
+          stateDataToSet,
+        );
+
+        // SET DATA STATE
+        setRealisasiData(stateDataToSet);
       }
     } catch (error) {
       console.error("Error koneksi:", error);
@@ -101,18 +160,17 @@ export default function CatatAktivitas() {
     try {
       const token = localStorage.getItem("token");
       const payload = {
-        realisasi_jumlah_total_tanaman: parseInt(
-          realisasiData.jumlahTotalTanaman,
-        ),
-        realisasi_jumlah_tanaman_per_ha: parseInt(
-          realisasiData.jumlahTanamanPerHa,
-        ),
+        realisasi_jumlah_total_tanaman:
+          parseInt(realisasiData.jumlahTotalTanaman) || 0,
+        realisasi_jumlah_tanaman_per_ha:
+          parseInt(realisasiData.jumlahTanamanPerHa) || 0,
         realisasi_jarak_tanam: realisasiData.jarakTanam,
         realisasi_jarak_tanam_lainnya:
           realisasiData.jarakTanam === "Lainnya"
             ? realisasiData.jarakTanamLainnya
             : null,
         catatan_perubahan: catatanPerubahan,
+
         created_at: new Date().toISOString(),
       };
 
@@ -122,7 +180,7 @@ export default function CatatAktivitas() {
       const endpoint = `${baseUrl}/${id}/realisasi`;
 
       const response = await fetch(endpoint, {
-        method: "POST",
+        method: "POST", // Pastikan Backend memang pakai POST (bukan PUT/PATCH)
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -136,7 +194,26 @@ export default function CatatAktivitas() {
         setIsEditingRealisasi(false);
         setCatatanPerubahan("");
       } else {
-        alert("Gagal menyimpan data.");
+        // --- 3. PERBAIKAN: LOGIKA CERDAS PENANGKAP ERROR PYDANTIC BACKEND ---
+        const errData = await response.json();
+        console.error("Detail Error dari Backend:", errData);
+
+        // Jika error berasal dari validasi Pydantic FastAPI (biasanya bentuknya Array)
+        if (errData.detail && Array.isArray(errData.detail)) {
+          const pesanError = errData.detail
+            .map(
+              (err) => `- Field "${err.loc[err.loc.length - 1]}": ${err.msg}`,
+            )
+            .join("\n");
+          alert(
+            `Gagal menyimpan! Format data ditolak Backend:\n\n${pesanError}`,
+          );
+        } else {
+          // Error string biasa
+          alert(
+            `Gagal: ${errData.detail || errData.message || "Terjadi kesalahan."}`,
+          );
+        }
       }
     } catch (error) {
       console.error(error);
@@ -276,6 +353,39 @@ export default function CatatAktivitas() {
                 </div>
               </div>
 
+              {/* --- UI INFORMASI RIWAYAT REALISASI --- */}
+              {realisasiData.catatanPerubahanTerakhir && (
+                <div className="mt-6 p-4 bg-orange-50 border border-orange-100 rounded-xl animate-fadeIn">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-orange-100 p-2 rounded-lg text-orange-600">
+                      <History className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] sm:text-xs font-bold text-orange-800 uppercase tracking-wider mb-1">
+                        Riwayat Perubahan Terakhir
+                      </p>
+                      <p className="text-xs sm:text-sm text-orange-900 font-medium italic">
+                        "{realisasiData.catatanPerubahanTerakhir}"
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] text-orange-400 mt-2 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Disimpan pada:{" "}
+                        {new Date(realisasiData.waktuPencatatan).toLocaleString(
+                          "id-ID",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isEditingRealisasi && (
                 <div className="mt-6 pt-4 border-t border-gray-100">
                   <label className="block text-sm font-bold text-[#B5302D] mb-2">
@@ -360,7 +470,14 @@ function EditableField({ label, value, onChange, name, disabled }) {
   );
 }
 
-function EditableSelectField({ label, value, onChange, name, disabled, options }) {
+function EditableSelectField({
+  label,
+  value,
+  onChange,
+  name,
+  disabled,
+  options,
+}) {
   return (
     <div>
       <p className="text-black font-bold text-[11px] sm:text-xs mb-1.5 flex justify-between items-center">

@@ -306,7 +306,7 @@ const DOKUMEN_CONFIG = [
     label: "Rencana aksi peningkatan produksi kelapa sawit",
     deskripsi:
       "Upload dokumen yang memuat: Rencana peningkatan produksi kelapa sawit, Langkah atau strategi yang akan dilakukan, dan Bukti bahwa rencana dibagikan ke seluruh anggota.",
-    code: "BELUM ADA CODE", // SESUAIKAN DENGAN BE
+    code: "P5_5_1_SOP_RENCANA_PENINGKATAN_PRODUKSI",
   },
 ];
 
