@@ -22,6 +22,8 @@ import {
   API_BASE_URLS,
 } from "../../../config/constants";
 
+import { showToast, confirmDialog } from "../../../utils/notif";
+
 const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 // Fungsi helper untuk validasi tipe file yang diupload
@@ -58,11 +60,20 @@ export default function InventarisPetani() {
   const fetchRef = useRef(null);
   const getToken = () => localStorage.getItem("token");
 
-  // --- LOGIC: DELETE PERALATAN ---
+  // --- DELETE PERALATAN ---
   const handleDeletePeralatan = useCallback(async (id) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus alat ini?")) return;
+    const isSetuju = await confirmDialog({
+      title: "Hapus Peralatan?",
+      text: "Apakah Anda yakin ingin menghapus alat ini dari inventaris?",
+      confirmText: "Ya, Hapus!",
+      cancelText: "Batal",
+      isDanger: true, // Tombol warna merah
+    });
+
+    if (!isSetuju) return;
 
     try {
+      showToast.loading("Menghapus peralatan...");
       const token = getToken();
       const url = `${API_BASE_URLS.FARM}/farm/me/inventaris/peralatan/${id}`;
 
@@ -73,18 +84,22 @@ export default function InventarisPetani() {
         },
       });
 
+      showToast.dismiss();
+
       if (!response.ok) {
         throw new Error("Gagal menghapus peralatan.");
       }
 
-      alert("Peralatan berhasil dihapus.");
+      showToast.success("Peralatan berhasil dihapus.");
 
       if (fetchRef.current) {
         fetchRef.current();
       }
     } catch (err) {
+      showToast.dismiss();
       console.error(err);
-      alert(err.message);
+      // GANTI: Alert error menjadi Toast
+      showToast.error(err.message || "Terjadi kesalahan saat menghapus.");
     }
   }, []);
 
@@ -527,7 +542,9 @@ export default function InventarisPetani() {
       if (field.required) {
         if (val === undefined || val === null || val === "") {
           setIsSaving(false);
-          setErrorMsg(`Field "${field.label}" wajib diisi.`);
+          setErrorMsg(
+            `Kolom "${field.label}" belum diisi. Silakan lengkapi terlebih dahulu.`,
+          );
           return;
         }
       }
@@ -575,7 +592,7 @@ export default function InventarisPetani() {
 
       await fetchInventaris();
       handleClosePopup();
-      alert(NOTIF_MESSAGES.SAVE_SUCCESS || "Data berhasil disimpan!");
+      showToast.success(NOTIF_MESSAGES.SAVE_SUCCESS || "Data berhasil disimpan!");
     } catch (error) {
       console.error("Save error:", error);
       setErrorMsg(error.message);
@@ -754,8 +771,8 @@ export default function InventarisPetani() {
                           const file = e.target.files[0];
                           if (!file) return;
                           if (!isValidFileType(file)) {
-                            alert(
-                              "Jenis file tidak didukung. Gunakan PDF atau Foto (JPG/PNG).",
+                            showToast.error(
+                              "Jenis dokumen tidak didukung. Harap masukkan file PDF, JPG, atau PNG."
                             );
                             e.target.value = "";
                             return;

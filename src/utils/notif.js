@@ -9,7 +9,6 @@ const checkIsMobile = () => typeof window !== "undefined" && window.innerWidth <
 // ============================================================================
 // 1. TOAST NOTIFICATIONS (Responsive Absolute)
 // ============================================================================
-// Kita kembali menggunakan 'style' bawaan React, tapi dengan logika JS
 const getToastStyle = () => {
   const isMobile = checkIsMobile();
   return {
@@ -21,8 +20,8 @@ const getToastStyle = () => {
     borderRadius: "12px",
     
     // KUNCI RESPONSIVE MUTLAK:
-    fontSize: isMobile ? "11px" : "14px",       // Sangat mungil di HP
-    padding: isMobile ? "8px 12px" : "12px 20px", // Sangat tipis di HP
+    fontSize: isMobile ? "11px" : "13px",       
+    padding: isMobile ? "10px 14px" : "12px 20px", 
     maxWidth: isMobile ? "90%" : "400px",
   };
 };
@@ -57,7 +56,7 @@ export const showToast = {
 };
 
 // ============================================================================
-// 2. CONFIRMATION DIALOG (SweetAlert2 - Hardcoded Responsiveness)
+// 2. CONFIRMATION DIALOG (100% Tailwind CSS & Atas-Bawah)
 // ============================================================================
 export const confirmDialog = async ({
   title = "Apakah Anda Yakin?",
@@ -68,30 +67,41 @@ export const confirmDialog = async ({
 }) => {
   const isMobile = checkIsMobile();
 
+  // Tentukan warna tombol konfirmasi berdasarkan status isDanger
+  const confirmBtnClass = isDanger
+    ? "bg-[#B5302D] hover:bg-red-800 text-white shadow-md shadow-red-200"
+    : "bg-[#EF8523] hover:bg-[#d6741b] text-white shadow-md shadow-orange-200";
+
   const result = await Swal.fire({
-    // TRIK PRO: Kita suntikkan gaya font mutlak langsung ke dalam HTML SweetAlert
-    title: `<div style="font-size: ${isMobile ? '15px' : '18px'}; font-weight: 800; color: #1F2937; margin-top: -10px;">${title}</div>`,
-    html: `<div style="font-size: ${isMobile ? '12px' : '14px'}; color: #6B7280; line-height: 1.5; margin-top: 5px;">${text}</div>`,
+    title: `<div style="font-size: ${isMobile ? '16px' : '18px'}; font-weight: 800; color: #1F2937; margin-top: -5px;">${title}</div>`,
+    html: `<div style="font-size: ${isMobile ? '11px' : '13px'}; color: #6B7280; line-height: 1.5; margin-top: 5px;">${text}</div>`,
     icon: isDanger ? "warning" : "question",
     
-    // KUNCI KOTAK KECIL: Lebar dan padding dipaksa via JS
-    width: isMobile ? "80%" : "360px", // Di HP hanya 80% layar, Laptop max 360px
-    padding: isMobile ? "1rem" : "1.5rem", // Jarak dalam lebih sempit di HP
+    width: isMobile ? "85%" : "360px",
+    padding: isMobile ? "1.25rem" : "1.5rem",
     
     showCancelButton: true,
-    confirmButtonColor: isDanger ? "#B5302D" : "#EF8523", 
-    cancelButtonColor: "#F3F4F6", 
     
-    // Teks Tombol juga di-hardcode ukurannya
-    confirmButtonText: `<span style="font-size: ${isMobile ? '12px' : '14px'}; padding: ${isMobile ? '0px 8px' : '2px 12px'};">${confirmText}</span>`,
-    cancelButtonText: `<span style="font-size: ${isMobile ? '12px' : '14px'}; padding: ${isMobile ? '0px 8px' : '2px 12px'}; color: #374151;">${cancelText}</span>`,
-    reverseButtons: true, 
+    // KUNCI UTAMA: Matikan style bawaan SweetAlert agar Tailwind bisa bekerja 100%
+    buttonsStyling: false, 
+    
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+
+    // MATIKAN reverseButtons agar "Ya" (Konfirmasi) dirender di urutan pertama (di atas)
+    reverseButtons: false, 
     
     customClass: {
       popup: "rounded-[24px] shadow-2xl border border-gray-100",
-      actions: isMobile ? "gap-2 mt-4" : "gap-3 mt-6",
-      confirmButton: "rounded-xl shadow-md",
-      cancelButton: "rounded-xl border border-gray-200 bg-white"
+      
+      // Flex Col agar tombol tersusun dari atas ke bawah
+      actions: "flex flex-col w-full gap-2 sm:gap-2.5 mt-5 sm:mt-6 px-1 sm:px-2",
+      
+      // Tombol Konfirmasi (Di Atas): Gunakan w-full agar penuh satu baris
+      confirmButton: `w-full px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all duration-300 !m-0 ${confirmBtnClass}`,
+      
+      // Tombol Batal (Di Bawah): Gunakan w-full juga
+      cancelButton: "w-full px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-bold bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all shadow-sm !m-0"
     },
   });
 

@@ -16,6 +16,7 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../../config/constants";
+import { showToast, confirmDialog } from "../../../utils/notif";
 
 // --- Konfigurasi Leaflet Icon ---
 import markerIconUrl from "leaflet/dist/images/marker-icon.png";
@@ -106,15 +107,11 @@ export default function DataDiriMandor({
     // 1. Munculkan text merah di bawah input
     setWarning((prev) => ({ ...prev, [fieldKey]: true }));
 
-    // 2. Munculkan toast notifikasi di atas
-    setNotification({
-      type: "info",
-      message: `Data ${label} sudah tersimpan dan terkunci otomatis.`,
-    });
+    // 2. Munculkan toast notifikasi di atas (GANTI KE TOAST)
+    showToast.error(`Data ${label} sudah tersimpan dan terkunci otomatis.`);
 
-    // Reset notifikasi setelah 3 detik
+    // Reset warning setelah 3 detik
     setTimeout(() => {
-      setNotification({ type: "", message: "" });
       setWarning((prev) => ({ ...prev, [fieldKey]: false }));
     }, 3000);
   };
@@ -137,12 +134,10 @@ export default function DataDiriMandor({
         // Reset input file agar user tahu file tidak terpilih
         e.target.value = null;
 
-        // Tampilkan notifikasi error
-        setNotification({
-          type: "error",
-          message:
-            "Ukuran foto terlalu besar! Harap upload foto di bawah 2 MB.",
-        });
+        // Tampilkan notifikasi error (GANTI KE TOAST)
+        showToast.error(
+          "Ukuran foto terlalu besar! Harap upload foto di bawah 2 MB.",
+        );
         return; // Hentikan proses, jangan setPreviewFoto
       }
 
@@ -163,10 +158,7 @@ export default function DataDiriMandor({
     }
 
     if (!navigator.geolocation) {
-      setNotification({
-        type: "error",
-        message: "Browser tidak mendukung Geolocation.",
-      });
+      showToast.error("Browser tidak mendukung Geolocation.");
       return;
     }
 
@@ -178,11 +170,7 @@ export default function DataDiriMandor({
           lng: position.coords.longitude,
         });
         setIsLoadingLocation(false);
-        setNotification({
-          type: "success",
-          message: "Lokasi berhasil ditemukan!",
-        });
-        setTimeout(() => setNotification({ type: "", message: "" }), 2000);
+        showToast.success("Lokasi berhasil ditemukan!");
       },
       (error) => {
         setIsLoadingLocation(false);
@@ -190,16 +178,26 @@ export default function DataDiriMandor({
         if (error.code === 1) msg = "Izin lokasi ditolak. Mohon aktifkan GPS.";
         else if (error.code === 2) msg = "Lokasi tidak tersedia.";
         else if (error.code === 3) msg = "Waktu permintaan habis.";
-        setNotification({ type: "error", message: msg });
+        showToast.error(msg);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   };
 
   // --- SAVE DATA (PUT) ---
   const handleSubmit = async () => {
-    setNotification({ type: "", message: "" });
+    const isSetuju = await confirmDialog({
+      title: "Simpan Data Diri?",
+      text: "Data yang sudah disimpan akan OTOMATIS TERKUNCI dan tidak dapat diubah lagi. Pastikan data Anda sudah benar!",
+      confirmText: "Ya, Simpan Permanen",
+      cancelText: "Periksa Lagi",
+      isDanger: false,
+    });
+
+    if (!isSetuju) return;
+
     setIsSubmitting(true);
+    showToast.loading("Menyimpan data diri...");
 
     try {
       const token =
@@ -227,20 +225,22 @@ export default function DataDiriMandor({
       try {
         responseData = responseText ? JSON.parse(responseText) : {};
       } catch (parseError) {
-        // Kita gunakan variable 'parseError' agar tidak dianggap unused oleh linter
-        console.warn(
-          "JSON Parse Error (Response mungkin bukan JSON):",
-          parseError
-        );
+        console.warn("JSON Parse Error:", parseError);
         responseData = { detail: responseText || "Error Server" };
       }
 
       if (!response.ok)
         throw new Error(responseData.detail || "Gagal update data.");
 
+      // 3. MATIKAN LOADING & TAMPILKAN TOAST SUKSES
+      showToast.dismiss();
+      showToast.success("Data diri berhasil disimpan dan dikunci!");
+
       onSave(true);
     } catch (err) {
-      setNotification({ type: "error", message: err.message });
+      // 4. MATIKAN LOADING & TAMPILKAN TOAST ERROR
+      showToast.dismiss();
+      showToast.error(err.message);
       setIsSubmitting(false);
     }
   };
@@ -280,8 +280,8 @@ export default function DataDiriMandor({
               notification.type === "error"
                 ? "bg-red-50 text-red-700 border-red-200"
                 : notification.type === "success"
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-blue-50 text-blue-700 border-blue-200"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-blue-50 text-blue-700 border-blue-200"
             }`}
           >
             <Info size={18} className="shrink-0 mt-0.5" />
@@ -380,8 +380,8 @@ export default function DataDiriMandor({
         <div className="space-y-3">
           <label className="flex items-center justify-between text-sm font-bold text-gray-800">
             <span className="flex items-center gap-2">
-              <MapPin size={18} className="text-[#B5302D]" /> Alamat/Lokasi Lahan
-              Kebun
+              <MapPin size={18} className="text-[#B5302D]" /> Alamat/Lokasi
+              Lahan Kebun
             </span>
             {lockedFields.alamat && (
               <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">

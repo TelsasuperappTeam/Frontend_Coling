@@ -21,8 +21,9 @@ import {
   MapPin,
 } from "lucide-react";
 
-// --- IMPORT KONSTANTA BE MAHAR (DITAMBAH API_BASE_URLS UNTUK SIKLUS) ---
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
+import Swal from "sweetalert2";
+import { showToast, confirmDialog } from "../../../../utils/notif";
 
 export default function Panen() {
   const navigate = useNavigate();
@@ -247,15 +248,26 @@ export default function Panen() {
         API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_RENCANA_PANEN_LIST(
           ACTIVE_BLOK_ID,
         );
+
       const response = await fetch(url, { method: "GET", headers });
       if (!response.ok) throw new Error("Gagal mengambil data rencana panen");
 
       const data = await response.json();
+
+      // DEBUG 2: Cek respon mentah dari Backend
+      console.log("[DEBUG] Data Rencana Panen Mentah (Dari BE):", data);
+
       const activeCycleData = data.filter(
         (item) => item.nomor_siklus === activeCycleNum,
       );
 
-      // --- PERUBAHAN: MAPPING ASYNCHRONOUS DENGAN FETCH GATEKEEPER ---
+      // DEBUG 3: Cek data setelah difilter berdasarkan siklus aktif
+      console.log(
+        `[DEBUG] Data Rencana Panen Siklus Aktif (Siklus Ke-${activeCycleNum}):`,
+        activeCycleData,
+      );
+
+      // --- MAPPING ASYNCHRONOUS DENGAN FETCH GATEKEEPER ---
       const mappedPlans = await Promise.all(
         activeCycleData.map(async (item) => {
           let gatekeeperData = null;
@@ -268,7 +280,6 @@ export default function Panen() {
               const gkRes = await fetch(gkUrl, { method: "GET", headers });
               if (gkRes.ok) {
                 gatekeeperData = await gkRes.json();
-                console.log(`[Gatekeeper Plan ${item.id}]:`, gatekeeperData);
               }
             } catch (e) {
               console.error(`Gagal fetch gatekeeper untuk plan ${item.id}`, e);
@@ -292,11 +303,11 @@ export default function Panen() {
             grup_id: item.grup_penjualan_id || null,
             status_pabrik: item.status_pabrik || null, // "DITERIMA" / "PENDING"
             status_logistik: item.status_logistik || null, // "DITERIMA" / "PENDING"
-            
+
             // SIMPAN DATA GATEKEEPER DARI BE KE DALAM STATE LOKAL
             gatekeeper: gatekeeperData,
           };
-        })
+        }),
       );
 
       setPlans(mappedPlans);
@@ -335,19 +346,39 @@ export default function Panen() {
   // ================= HANDLERS =================
 
   const handleSavePlan = async () => {
-    if (!formPlan.tanggal || !formPlan.luas || !formPlan.estimasi)
-      return alert("Mohon lengkapi Tanggal, Luas Lahan, dan Estimasi!");
+    if (!formPlan.tanggal || !formPlan.luas || !formPlan.estimasi) {
+      showToast.error(
+        "Masih ada kolom yang belum diisi. Silakan lengkapi Tanggal, Luas Lahan, dan Estimasi terlebih dahulu.",
+      );
+      return;
+    }
 
+    // KONFIRMASI (YANG HARUS NO. 1)
+    const isSetuju = await confirmDialog({
+      title: editingPlanId ? "Simpan Perubahan?" : "Kirim Rencana Panen?",
+      text: editingPlanId
+        ? "Pastikan perubahan rencana panen sudah sesuai."
+        : "Permintaan rencana panen akan diteruskan ke Role Kebun. Kebun nantinya akan menjual ke pabrik dan mencarikan logistik. Anda bisa memantau prosesnya di menu Riwayat Penjualan.",
+      confirmText: editingPlanId ? "Ya, Simpan" : "Ya, Kirim Rencana",
+      cancelText: "Batal",
+      isDanger: false,
+    });
+
+    if (!isSetuju) return;
+
+    // Tutup popup duluan agar loading terlihat jelas dan tidak tertumpuk
+    setActiveModal(null);
     setIsSubmitting(true);
+    showToast.loading("Menyimpan rencana panen...");
+
     try {
       const token = localStorage.getItem("token");
 
-      // LOGIKA BARU: Jika ada editingPlanId, gunakan method PUT/PATCH
       const url = editingPlanId
         ? API_ENDPOINTS.FARM.PETANI.ACTIVITY.UPDATE_RENCANA_PANEN(editingPlanId)
         : API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_RENCANA_PANEN(ACTIVE_BLOK_ID);
 
-      const method = editingPlanId ? "PUT" : "POST"; // Sesuaikan dengan BE (Bisa PUT atau PATCH)
+      const method = editingPlanId ? "PUT" : "POST";
 
       const payload = {
         tanggal_rencana_panen: formPlan.tanggal,
@@ -364,32 +395,46 @@ export default function Panen() {
         body: JSON.stringify(payload),
       });
 
+      showToast.dismiss();
+
       if (res.ok) {
-        alert(
+        showToast.success(
           editingPlanId
             ? "Rencana panen berhasil diperbarui!"
             : "Rencana panen berhasil diajukan!",
         );
-        setActiveModal(null);
         setEditingPlanId(null);
         setFormPlan({ tanggal: "", estimasi: "", luas: "" });
         fetchRencanaPanen();
       } else {
         const err = await res.json();
-        alert(`Gagal: ${err.detail || "Terjadi kesalahan"}`);
+        showToast.error(`Gagal: ${err.detail || "Terjadi kesalahan"}`);
       }
     } catch {
-      alert("Error jaringan saat menyimpan rencana panen.");
+      showToast.dismiss();
+      showToast.error("Error jaringan saat menyimpan rencana panen.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSaveLog = async () => {
-    // ... (Logika handleSaveLog tetap sama) ...
-    if (!formLog.selectedPlanId || !formLog.namaPetani || !formLog.jumlahTandan)
-      return alert("Mohon lengkapi Rencana, Nama Pemanen, dan Jumlah Tandan!");
+    if (
+      !formLog.selectedPlanId ||
+      !formLog.namaPetani ||
+      !formLog.jumlahTandan
+    ) {
+      showToast.error(
+        "Masih ada kolom yang belum diisi. Silakan pilih Rencana, Nama Pemanen, dan Jumlah Tandan terlebih dahulu.",
+      );
+      return;
+    }
+
+    // Tutup popup duluan
+    setActiveModal(null);
     setIsSubmitting(true);
+    showToast.loading("Menyimpan catatan panen...");
+
     try {
       const token = localStorage.getItem("token");
       const url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_REALISASI_PANEN;
@@ -410,9 +455,11 @@ export default function Panen() {
         },
         body: JSON.stringify(payload),
       });
+
+      showToast.dismiss();
+
       if (res.ok) {
-        alert("Catatan berhasil disimpan!");
-        setActiveModal(null);
+        showToast.success("Catatan aktivitas berhasil disimpan!");
         setFormLog({
           selectedPlanId: "",
           tanggal: "",
@@ -425,10 +472,11 @@ export default function Panen() {
         fetchRencanaPanen();
       } else {
         const err = await res.json();
-        alert(`Gagal: ${err.detail || "Cek isian kembali"}`);
+        showToast.error(`Gagal: ${err.detail || "Cek isian kembali"}`);
       }
     } catch {
-      alert("Gagal koneksi ke server.");
+      showToast.dismiss();
+      showToast.error("Gagal koneksi ke server.");
     } finally {
       setIsSubmitting(false);
     }
@@ -440,8 +488,22 @@ export default function Panen() {
   };
 
   const handleSaveResult = async () => {
-    // ... (Logika handleSaveResult tetap sama) ...
+    // KONFIRMASI (YANG HARUS NO. 2)
+    const isSetuju = await confirmDialog({
+      title: "Selesaikan Panen?",
+      text: "Apakah Anda yakin ingin menyelesaikan panen ini? Data akan ditutup dan masuk ke riwayat selesai secara permanen.",
+      confirmText: "Ya, Selesaikan!",
+      cancelText: "Batal",
+      isDanger: false,
+    });
+
+    if (!isSetuju) return;
+
+    // Tutup popup duluan
+    setActiveModal(null);
     setIsSubmitting(true);
+    showToast.loading("Memproses finalisasi panen...");
+
     try {
       const token = localStorage.getItem("token");
       const url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.FINALISASI_PANEN(
@@ -460,19 +522,22 @@ export default function Panen() {
         },
         body: JSON.stringify(payload),
       });
+
+      showToast.dismiss();
+
       if (res.ok) {
-        alert(
-          "Panen Berhasil Diselesaikan! Data ditutup dan masuk riwayat selesai.",
+        showToast.success(
+          "Panen Berhasil Diselesaikan! Data masuk ke riwayat selesai.",
         );
-        setActiveModal(null);
         fetchBlokDetail();
         fetchRencanaPanen();
       } else {
         const err = await res.json();
-        alert(`Gagal finalisasi: ${err.detail || err.message}`);
+        showToast.error(`Gagal finalisasi: ${err.detail || err.message}`);
       }
     } catch {
-      alert("Error jaringan.");
+      showToast.dismiss();
+      showToast.error("Error jaringan.");
     } finally {
       setIsSubmitting(false);
     }
@@ -481,48 +546,61 @@ export default function Panen() {
   // 5. Fungsi Buat Siklus Baru (PINDAHAN DARI CatatAktivitas)
   const handleNewCycle = async () => {
     if (!currentCycleInfo.isFinished) {
-      alert(
+      showToast.error(
         `Siklus ke-${currentCycleInfo.nomorSiklus} saat ini belum selesai. Tidak bisa memulai siklus baru.`,
       );
       return;
     }
 
-    const confirmMsg = `Anda akan menutup Siklus Ke-${currentCycleInfo.nomorSiklus} dan memulai siklus baru.\n\nData sebelumnya akan diarsipkan. Lanjutkan?`;
+    const isSetuju = await confirmDialog({
+      title: "Mulai Siklus Baru?",
+      text: `Anda akan menutup Siklus Ke-${currentCycleInfo.nomorSiklus} dan memulai siklus baru. Data sebelumnya akan diarsipkan. Lanjutkan?`,
+      confirmText: "Ya, Mulai Siklus",
+      cancelText: "Batal",
+      isDanger: false,
+    });
 
-    if (confirm(confirmMsg)) {
-      try {
-        const token = localStorage.getItem("token");
-        const endpoint =
-          API_ENDPOINTS.FARM.PETANI.ACTIVITY.BUAT_SIKLUS_BARU(ACTIVE_BLOK_ID);
+    if (!isSetuju) return;
 
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+    showToast.loading("Membuat siklus baru...");
 
-        if (response.ok) {
-          const result = await response.json();
-          alert(result.message || "Siklus baru berhasil dimulai!");
+    try {
+      const token = localStorage.getItem("token");
+      const endpoint =
+        API_ENDPOINTS.FARM.PETANI.ACTIVITY.BUAT_SIKLUS_BARU(ACTIVE_BLOK_ID);
 
-          // Refresh semua data
-          await fetchBlokDetail();
-          fetchHistoryList();
-          fetchRencanaPanen();
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        } else {
-          const errorData = await response.json();
-          alert(
-            `Gagal membuat siklus baru: ${errorData.detail || errorData.message}`,
-          );
-        }
-      } catch (error) {
-        console.error("Error trigger siklus baru:", error);
-        alert("Terjadi kesalahan jaringan saat mencoba membuat siklus baru.");
+      showToast.dismiss();
+
+      if (response.ok) {
+        const result = await response.json();
+        showToast.success(result.message || "Siklus baru berhasil dimulai!");
+
+        // Refresh semua data
+        await fetchBlokDetail();
+        fetchHistoryList();
+        fetchRencanaPanen();
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        const errorData = await response.json();
+        showToast.error(
+          `Gagal membuat siklus baru: ${errorData.detail || errorData.message}`,
+        );
       }
+    } catch (error) {
+      showToast.dismiss();
+      console.error("Error trigger siklus baru:", error);
+      showToast.error(
+        "Terjadi kesalahan jaringan saat mencoba membuat siklus baru.",
+      );
     }
   };
 
@@ -1167,21 +1245,28 @@ export default function Panen() {
                             const gk = plan.gatekeeper || {};
 
                             // 1. Membaca 4 indikator dari JSON Backend sesuai respon asli
-                            const hasCatatan = gk.is_catatan_pekerja_terisi !== undefined 
-                                ? gk.is_catatan_pekerja_terisi 
-                                : (plan.catatan_pemanenan && plan.catatan_pemanenan.length > 0);
-                                
-                            const inGroup = gk.is_masuk_grup !== undefined 
-                                ? gk.is_masuk_grup 
+                            const hasCatatan =
+                              gk.is_catatan_pekerja_terisi !== undefined
+                                ? gk.is_catatan_pekerja_terisi
+                                : plan.catatan_pemanenan &&
+                                  plan.catatan_pemanenan.length > 0;
+
+                            const inGroup =
+                              gk.is_masuk_grup !== undefined
+                                ? gk.is_masuk_grup
                                 : !!plan.grup_id;
-                                
-                            const pabrikAcc = gk.is_diterima_pabrik !== undefined 
-                                ? gk.is_diterima_pabrik 
-                                : (plan.status_pabrik === "DITERIMA" || plan.status_pabrik === "APPROVED");
-                                
-                            const logistikAcc = gk.is_logistik_siap !== undefined 
-                                ? gk.is_logistik_siap 
-                                : (plan.status_logistik === "DITERIMA" || plan.status_logistik === "APPROVED");
+
+                            const pabrikAcc =
+                              gk.is_diterima_pabrik !== undefined
+                                ? gk.is_diterima_pabrik
+                                : plan.status_pabrik === "DITERIMA" ||
+                                  plan.status_pabrik === "APPROVED";
+
+                            const logistikAcc =
+                              gk.is_logistik_siap !== undefined
+                                ? gk.is_logistik_siap
+                                : plan.status_logistik === "DITERIMA" ||
+                                  plan.status_logistik === "APPROVED";
 
                             // 2. KUNCI UTAMA: is_bisa_selesai dari Backend
                             // Jika `is_bisa_selesai` true, maka tombol Selesai akan menyala (Bisa di-klik)
@@ -1212,7 +1297,7 @@ export default function Panen() {
                                 {/* --- CHECKLIST GATEKEEPER UI --- */}
                                 <div className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-100">
                                   <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                                    Syarat Selesai (Gatekeeper):
+                                    Syarat Bisa Klik Selesai:
                                   </p>
                                   <ul className="text-[10px] sm:text-xs space-y-1">
                                     <li
@@ -1337,6 +1422,16 @@ export default function Panen() {
                                     Kg
                                   </p>
                                 </div>
+                                <div className="col-span-2 mt-2 pt-2 border-t border-dashed border-gray-100">
+                                  <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
+                                    Kualitas TBS
+                                  </p>
+                                  <p className="text-xs sm:text-sm font-bold text-gray-800 italic">
+                                    {plan.hasil_panen.kualitas_tbs
+                                      ? `"${plan.hasil_panen.kualitas_tbs}"`
+                                      : "-"}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -1419,7 +1514,7 @@ export default function Panen() {
                   setFormPlan({ ...formPlan, tanggal: e.target.value })
                 }
               />
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputField
                   label="Estimasi Luas Lahan (Ha)"

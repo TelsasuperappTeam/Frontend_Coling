@@ -11,6 +11,7 @@ import {
   History,
 } from "lucide-react";
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
+import { showToast, confirmDialog } from "../../../../utils/notif";
 
 // KOMPONEN UTAMA
 export default function CatatAktivitas() {
@@ -152,11 +153,28 @@ export default function CatatAktivitas() {
   };
 
   const handleSaveRealisasi = async () => {
+    // Alert validasi kosong menjadi Toast dengan kalimat yang lebih ramah
     if (!catatanPerubahan || catatanPerubahan.trim() === "") {
-      alert("Catatan perubahan belum diisi. Mohon tuliskan alasannya.");
+      showToast.error(
+        "Catatan perubahan belum diisi. Silakan lengkapi terlebih dahulu.",
+      );
       return;
     }
+
+    // Popup konfirmasi sebelum menyimpan ke server
+    const isSetuju = await confirmDialog({
+      title: "Simpan Realisasi Tanam?",
+      text: "Pastikan data realisasi yang dicatat sudah sesuai dengan kondisi nyata di lapangan.",
+      confirmText: "Ya, Simpan Realisasi",
+      cancelText: "Periksa Lagi",
+      isDanger: false,
+    });
+
+    if (!isSetuju) return;
+
     setLoadingRealisasi(true);
+    showToast.loading("Menyimpan data realisasi...");
+
     try {
       const token = localStorage.getItem("token");
       const payload = {
@@ -180,7 +198,7 @@ export default function CatatAktivitas() {
       const endpoint = `${baseUrl}/${id}/realisasi`;
 
       const response = await fetch(endpoint, {
-        method: "POST", // Pastikan Backend memang pakai POST (bukan PUT/PATCH)
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -188,13 +206,17 @@ export default function CatatAktivitas() {
         body: JSON.stringify(payload),
       });
 
+      // MATIKAN LOADING TOAST SETELAH ADA RESPON BE
+      showToast.dismiss();
+
       if (response.ok) {
-        alert("Realisasi disimpan & Diperbarui!");
+        showToast.success("Realisasi berhasil disimpan & diperbarui!");
+
         await fetchRealisasiDetail();
         setIsEditingRealisasi(false);
         setCatatanPerubahan("");
       } else {
-        // --- 3. PERBAIKAN: LOGIKA CERDAS PENANGKAP ERROR PYDANTIC BACKEND ---
+        // --- LOGIKA CERDAS PENANGKAP ERROR PYDANTIC BACKEND ---
         const errData = await response.json();
         console.error("Detail Error dari Backend:", errData);
 
@@ -205,19 +227,20 @@ export default function CatatAktivitas() {
               (err) => `- Field "${err.loc[err.loc.length - 1]}": ${err.msg}`,
             )
             .join("\n");
-          alert(
+
+          showToast.error(
             `Gagal menyimpan! Format data ditolak Backend:\n\n${pesanError}`,
           );
         } else {
-          // Error string biasa
-          alert(
+          showToast.error(
             `Gagal: ${errData.detail || errData.message || "Terjadi kesalahan."}`,
           );
         }
       }
     } catch (error) {
+      showToast.dismiss();
       console.error(error);
-      alert("Terjadi kesalahan koneksi.");
+      showToast.error("Terjadi kesalahan jaringan saat menyimpan data.");
     } finally {
       setLoadingRealisasi(false);
     }

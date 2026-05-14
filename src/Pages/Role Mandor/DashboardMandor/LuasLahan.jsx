@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_ENDPOINTS, NOTIF_MESSAGES } from "../../../config/constants";
-import { Loader2, ArrowLeft, Info, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Info,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { showToast, confirmDialog } from "../../../utils/notif";
 
 export default function LuasLahan() {
   const navigate = useNavigate();
@@ -145,7 +152,7 @@ export default function LuasLahan() {
             return updatedForm;
           });
 
-          alert("Melanjutkan draft pendaftaran sebelumnya.");
+          showToast.info("Melanjutkan draft pendaftaran sebelumnya.");
         }
       } catch (error) {
         if (error.response?.status !== 404) {
@@ -162,11 +169,12 @@ export default function LuasLahan() {
   };
 
   // === SUBMIT STEP 1 ===
+  // === SUBMIT STEP 1 ===
   const submitStep1 = async () => {
     if (!form.jenisPelakuUsaha)
-      return alert("Pilih jenis pelaku usaha terlebih dahulu!");
+      return showToast.error("Pilih jenis pelaku usaha terlebih dahulu!");
     if (form.membukaLahan === null)
-      return alert("Pilih jawaban membuka lahan terlebih dahulu!");
+      return showToast.error("Pilih jawaban membuka lahan terlebih dahulu!");
 
     setIsLoading(true);
     try {
@@ -202,19 +210,19 @@ export default function LuasLahan() {
   // === SUBMIT STEP 2 & 3 ===
   const submitStep2And3 = async () => {
     if (form.sertifikatTanah === null)
-      return alert("Pilih status kepemilikan!");
+      return showToast.error("Pilih status kepemilikan!");
     if (form.sertifikatTanah === true && !form.jenisSertifikat)
-      return alert("Pilih jenis sertifikat!");
+      return showToast.error("Pilih jenis sertifikat!");
 
     if (
       form.sertifikatTanah === true &&
       form.jenisSertifikat === "Bukti Lainnya" &&
       !form.jenisLainnya.trim()
     )
-      return alert("Harap sebutkan jenis sertifikat lainnya!");
+      return showToast.error("Harap sebutkan jenis sertifikat lainnya!");
 
     if (form.sertifikatTanah === false && form.sedangMengurus === null)
-      return alert("Jawab status kepengurusan dokumen!");
+      return showToast.error("Jawab status kepengurusan dokumen!");
 
     setIsLoading(true);
     setErrorMsg("");
@@ -257,7 +265,7 @@ export default function LuasLahan() {
         const pesanISPO =
           "Maaf, lahan Anda tidak memenuhi standar ISPO karena tidak memiliki dokumen sah dan tidak dalam proses pengurusan. Proses pendaftaran lahan dihentikan. Anda akan dialihkan ke Dashboard Utama...";
         setErrorMsg(pesanISPO);
-        alert("Gagal Memenuhi Persyaratan ISPO");
+        showToast.error("Gagal Memenuhi Persyaratan ISPO");
         setTimeout(() => navigate("/petani/dashboard"), 10000);
       } else {
         console.error(error);
@@ -274,13 +282,15 @@ export default function LuasLahan() {
       form.sertifikatTanah === true &&
       form.files.kepemilikan_tanah_sah.status !== "success"
     ) {
-      return alert("Mohon upload sertifikat tanah terlebih dahulu.");
+      return showToast.error("Mohon upload sertifikat tanah terlebih dahulu.");
     }
     if (
       form.sedangMengurus === true &&
       form.files.proses_kepengurusan_tanah.status !== "success"
     ) {
-      return alert("Mohon upload bukti pengurusan dokumen terlebih dahulu.");
+      return showToast.error(
+        "Mohon upload bukti pengurusan dokumen terlebih dahulu.",
+      );
     }
     setStep(4);
   };
@@ -295,7 +305,7 @@ export default function LuasLahan() {
       !form.tahunPembukaan ||
       !isSengketaValid
     ) {
-      return alert("Harap lengkapi semua field yang wajib diisi!");
+      return showToast.error("Harap lengkapi semua field yang wajib diisi!");
     }
 
     const luasLahanBersih = form.luasLahan.toString().replace(",", ".");
@@ -303,14 +313,14 @@ export default function LuasLahan() {
     const tahunParse = parseInt(form.tahunPembukaan);
 
     if (isNaN(luasParse) || luasParse <= 0)
-      return alert(
+      return showToast.error(
         "Penulisan Luas lahan tidak valid! Harus berupa angka murni (misal: 3.5).",
       );
     if (isNaN(tahunParse) || tahunParse < 1900 || tahunParse > 2100)
-      return alert("Tahun pembukaan tidak valid!");
+      return showToast.error("Tahun pembukaan tidak valid!");
 
     if (form.jenisPelakuUsaha === "PEKEBUN" && luasParse > 25) {
-      return alert(
+      return showToast.error(
         "Luas lahan melebihi 25 Ha. Sesuai Permentan NO.98/2013, mohon mendaftar sebagai Perusahaan jika memiliki lahan lebih dari 25 Ha.",
       );
     }
@@ -364,51 +374,70 @@ export default function LuasLahan() {
 
   // === SUBMIT FINAL ===
   const submitFinal = async () => {
+    // Validasi
     if (form.sengketa === true) {
       if (form.files.sengketa_lahan.status !== "success") {
-        return alert("Wajib upload Bukti Sengketa.");
+        return showToast.error("Wajib upload Bukti Sengketa.");
+      }
+    } else {
+      // LOGIKA BE: Dokumen Izin Usaha HANYA wajib jika lahan TIDAK sengketa
+      if (
+        form.jenisPelakuUsaha === "PEKEBUN" &&
+        form.files.stdb.status !== "success"
+      ) {
+        return showToast.error("Wajib upload STDB (Khusus Petani Swadaya).");
+      }
+      if (
+        form.jenisPelakuUsaha === "PERUSAHAAN" &&
+        form.files.iup_hgu.status !== "success"
+      ) {
+        return showToast.error("Wajib upload IUP/HGU (Khusus Perusahaan).");
+      }
+      if (form.files.sppl.status !== "success") {
+        return showToast.error("Wajib upload SPPL.");
       }
     }
-
-    if (
-      form.jenisPelakuUsaha === "PEKEBUN" &&
-      form.files.stdb.status !== "success"
-    ) {
-      return alert("Wajib upload STDB (Khusus Petani Swadaya).");
-    }
-    if (
-      form.jenisPelakuUsaha === "PERUSAHAAN" &&
-      form.files.iup_hgu.status !== "success"
-    ) {
-      return alert("Wajib upload IUP/HGU (Khusus Perusahaan).");
-    }
-    if (form.files.sppl.status !== "success")
-      return alert("Wajib upload SPPL.");
 
     if (form.membukaLahan === true) {
       if (form.files.pembukaan_lahan_video.status !== "success") {
-        return alert("Wajib upload bukti/video pembukaan lahan.");
+        return showToast.error("Wajib upload bukti/video pembukaan lahan.");
       }
     }
 
+    // KONFIRMASI SEBELUM FINALISASI DATA
+    const isSetuju = await confirmDialog({
+      title: "Kirim Pendaftaran Lahan?",
+      text: "Pastikan semua data dan dokumen sudah diunggah dengan benar. Data akan dikirim untuk divalidasi.",
+      confirmText: "Ya, Kirim Data!",
+      cancelText: "Periksa Lagi",
+      isDanger: false,
+    });
+
+    if (!isSetuju) return;
+
     setIsLoading(true);
+    showToast.loading("Menyimpan data final...");
+
     try {
       await fetchAPI(API_ENDPOINTS.FARM.PETANI.LAHAN.FINALISASI(processId), {
         method: "POST",
         body: JSON.stringify({}),
       });
 
-      alert(
+      showToast.dismiss();
+      showToast.success(
         NOTIF_MESSAGES.SAVE_SUCCESS ||
           "Proses pendaftaran lahan berhasil disimpan!",
       );
       navigate("/petani/dashboard");
     } catch (error) {
+      showToast.dismiss();
       console.error(error);
       setErrorMsg(
         NOTIF_MESSAGES.UPDATE_FAILED ||
           "Gagal finalisasi data. Server mengalami gangguan.",
       );
+      showToast.error("Gagal finalisasi data.");
     } finally {
       setIsLoading(false);
     }
@@ -416,7 +445,7 @@ export default function LuasLahan() {
 
   // === FUNGSI UPLOAD ===
   const handleUpload = async (type, file) => {
-    if (!processId) return alert("ID Proses tidak ditemukan.");
+    if (!processId) return showToast.error("ID Proses tidak ditemukan.");
     if (!file) return;
 
     // Filter Ekstensi & Ukuran File
@@ -428,7 +457,7 @@ export default function LuasLahan() {
       "image/png",
     ];
     if (!allowedTypes.includes(file.type)) {
-      return alert(
+      return showToast.error(
         `Tipe file tidak diizinkan. Hanya PDF, JPG, PNG, atau Video (MP4).`,
       );
     }
@@ -438,7 +467,7 @@ export default function LuasLahan() {
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
     if (file.size > maxSizeBytes) {
-      return alert(`Ukuran file maksimal ${maxSizeMB}MB!`);
+      return showToast.error(`Ukuran file maksimal ${maxSizeMB}MB!`);
     }
     setForm((prev) => ({
       ...prev,
@@ -467,14 +496,14 @@ export default function LuasLahan() {
           [type]: { status: "success", name: file.name },
         },
       }));
-      alert(`Upload berhasil`);
+      showToast.success(`Upload dokumen berhasil!`);
     } catch (error) {
       console.error(error);
       setForm((prev) => ({
         ...prev,
         files: { ...prev.files, [type]: { status: "failed", name: null } },
       }));
-      alert("Gagal upload file.");
+      showToast.error("Gagal mengupload dokumen.");
     }
   };
 
@@ -584,84 +613,120 @@ export default function LuasLahan() {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
                 Persiapan Pendaftaran Lahan
               </h2>
-              <p className="text-sm text-gray-500 max-w-lg mx-auto">
+              <p className="text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
                 Agar proses pengisian berjalan lancar, mohon pastikan Anda telah
-                menyiapkan dokumen dalam format PDF/Foto/Video dari
-                berkas-berkas berikut:
+                menyiapkan dokumen dalam format <b>PDF, Foto, atau Video</b>{" "}
+                dari berkas-berkas berikut:
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Dokumen Wajib */}
-              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-green-100 p-1.5 rounded-full">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  </div>
                   <h3 className="font-bold text-gray-800 text-sm">
                     Dokumen Utama (Wajib)
                   </h3>
                 </div>
-                <ul className="space-y-3 text-xs sm:text-sm text-gray-600 ml-7 list-disc">
-                  <li>
-                    Sertifikat Tanah (SHM, Girik, Akta, dll) <br />
-                    <span className="text-[10px] text-gray-400">
-                      Atau bukti surat pengurusan jika sedang diurus.
+                <ul className="space-y-4 text-xs sm:text-sm text-gray-600 ml-2">
+                  <li className="flex gap-2">
+                    <span className="text-[#B5302D] font-bold">•</span>
+                    <span>
+                      <b>Sertifikat Tanah</b> (SHM, Girik, Akta, dll)
+                      <br />
+                      <span className="text-[10px] text-gray-400 block mt-0.5">
+                        Atau bukti surat pengurusan jika dokumen sedang
+                        diproses.
+                      </span>
                     </span>
                   </li>
-                  <li>
-                    Surat Izin Usaha Perkebunan (IUP/HGU) <br />
-                    <span className="text-[10px] text-gray-400">
-                      Untuk pelaku usaha sawit skala perusahaan.
+                  <li className="flex gap-2 border-t border-gray-50 pt-3">
+                    <span className="text-[#B5302D] font-bold">•</span>
+                    <span>
+                      <b>Izin Usaha</b> (IUP/HGU)
+                      <br />
+                      <span className="text-[10px] text-gray-400 block mt-0.5">
+                        Khusus untuk pelaku usaha skala Perusahaan.
+                      </span>
                     </span>
                   </li>
-                  <li>Surat Pernyataan Pengelolaan Lingkungan (SPPL)</li>
+                  <li className="flex gap-2 border-t border-gray-50 pt-3">
+                    <span className="text-[#B5302D] font-bold">•</span>
+                    <span>
+                      <b>SPPL</b> (Surat Pernyataan Lingkungan)
+                    </span>
+                  </li>
                 </ul>
               </div>
 
               {/* Dokumen Kondisional */}
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <Info className="w-5 h-5 text-[#EF8523]" />
+              <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-orange-100 p-1.5 rounded-full">
+                    <Info className="w-4 h-4 text-[#EF8523]" />
+                  </div>
                   <h3 className="font-bold text-gray-800 text-sm">
                     Dokumen Tambahan
                   </h3>
                 </div>
-                <p className="text-xs text-gray-500 mb-3 ml-7 italic">
-                  Hanya disiapkan jika kondisi di bawah ini sesuai dengan lahan
-                  Anda:
+                <p className="text-[11px] text-orange-700 mb-4 italic leading-snug">
+                  Hanya disiapkan jika kondisi lahan Anda sesuai dengan kriteria
+                  di bawah ini:
                 </p>
-                <ul className="space-y-3 text-xs sm:text-sm text-gray-700 ml-7 list-disc">
-                  <li>
-                    <span className="font-semibold">Video Pembukaan Lahan</span>{" "}
-                    <br />
-                    <span className="text-[10px] text-gray-500">
-                      Hanya jika Anda{" "}
-                      <span className="font-bold text-orange-600">
-                        sedang membuka lahan baru
-                      </span>{" "}
-                      saat ini.
+                <ul className="space-y-4 text-xs sm:text-sm text-gray-700 ml-2">
+                  <li className="flex gap-2">
+                    <span className="text-[#EF8523] font-bold">•</span>
+                    <span>
+                      <b>Video Pembukaan Lahan</b>
+                      <br />
+                      <span className="text-[10px] text-gray-500 block mt-0.5">
+                        Wajib jika Anda sedang membuka lahan baru saat ini.
+                      </span>
                     </span>
                   </li>
-                  <li>
-                    <span className="font-semibold">
-                      Bukti Penyelesaian Sengketa
-                    </span>{" "}
-                    <br />
-                    <span className="text-[10px] text-gray-500">
-                      Hanya jika lahan sedang dalam{" "}
-                      <span className="font-bold text-orange-600">
-                        status sengketa
+                  <li className="flex gap-2 border-t border-orange-100 pt-3">
+                    <span className="text-[#EF8523] font-bold">•</span>
+                    <span>
+                      <b>Bukti Progres Sengketa</b>
+                      <br />
+                      <span className="text-[10px] text-gray-500 block mt-0.5">
+                        Wajib jika lahan sedang dalam status sengketa.
                       </span>
-                      .
                     </span>
                   </li>
                 </ul>
+              </div>
+            </div>
+
+            {/* --- INFORMASI KHUSUS SENGKETA --- */}
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 shadow-sm flex gap-4 items-start">
+              <div className="bg-blue-100 p-2 rounded-xl shrink-0">
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="text-xs sm:text-sm text-blue-800 leading-relaxed">
+                <p className="font-extrabold text-blue-900 mb-1 flex items-center gap-2">
+                  Penting: Jalur Khusus Lahan Sengketa
+                </p>
+                <p>
+                  Jika lahan Anda berstatus <b>Sengketa</b>, sistem akan
+                  memberikan keringanan: Anda bisa mendaftar{" "}
+                  <b>tanpa mengunggah STDB/IUP & SPPL</b>.
+                </p>
+                <p className="mt-2 font-medium">
+                  Sebagai gantinya, Anda <b>wajib</b> melampirkan bukti progres
+                  mediasi atau identifikasi masalah sengketa agar data tetap
+                  dapat divalidasi oleh sistem.
+                </p>
               </div>
             </div>
 
             <div className="pt-6 border-t border-gray-100">
               <button
                 onClick={() => setStep(1)}
-                className="bg-[#B5302D] text-white px-5 py-3 rounded-xl w-full flex justify-center items-center font-bold text-sm shadow-md hover:bg-[#9a2826] transition-all duration-200"
+                className="bg-[#B5302D] text-white px-5 py-4 rounded-xl w-full flex justify-center items-center font-bold text-sm shadow-lg hover:bg-[#9a2826] transition-all duration-300 active:scale-[0.98]"
               >
                 Saya Sudah Siap, Mulai Isi Data
               </button>
@@ -963,31 +1028,36 @@ export default function LuasLahan() {
           <div className="space-y-3 sm:space-y-4">
             {form.sengketa === true && (
               <UploadInput
-                label="Bukti Sengketa"
+                label="Bukti Identifikasi/Progres Sengketa"
                 type="sengketa_lahan"
                 required={true}
               />
             )}
 
-            {form.jenisPelakuUsaha === "PEKEBUN" ? (
-              <UploadInput
-                label="Surat Tanda Daftar Budidaya (STDB)"
-                type="stdb"
-                required={true}
-              />
-            ) : (
-              <UploadInput
-                label="Izin Usaha Perkebunan (IUP/HGU)"
-                type="iup_hgu"
-                required={true}
-              />
-            )}
+            {/* LOGIKA BE: Form STDB & SPPL HANYA MUNCUL JIKA TIDAK SENGKETA */}
+            {form.sengketa === false && (
+              <>
+                {form.jenisPelakuUsaha === "PEKEBUN" ? (
+                  <UploadInput
+                    label="Surat Tanda Daftar Budidaya (STDB)"
+                    type="stdb"
+                    required={true}
+                  />
+                ) : (
+                  <UploadInput
+                    label="Izin Usaha Perkebunan (IUP/HGU)"
+                    type="iup_hgu"
+                    required={true}
+                  />
+                )}
 
-            <UploadInput
-              label="Surat Pernyataan Pengelolaan Lingkungan (SPPL)"
-              type="sppl"
-              required={true}
-            />
+                <UploadInput
+                  label="Surat Pernyataan Pengelolaan Lingkungan (SPPL)"
+                  type="sppl"
+                  required={true}
+                />
+              </>
+            )}
 
             {form.membukaLahan === true && (
               <UploadInput

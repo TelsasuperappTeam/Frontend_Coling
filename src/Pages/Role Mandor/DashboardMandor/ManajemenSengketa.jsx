@@ -56,12 +56,17 @@ export default function ManajemenSengketa() {
       if (res.ok) {
         const data = await res.json();
 
+        // Ambil ID Parent Lahan dari root object
+        const parentLahanId = data.id || data.lahan_id;
+
         // Gabungkan Mineral dan Gambut, lalu filter hanya yang ADA SENGKETA
         const mineralSengketa = (data.lahan_mineral?.detail_batch || [])
           .filter((l) => l.ada_sengketa)
           .map((l) => ({
             ...l,
-            id: l.id || l.batch_id || l.lahan_id || l.id_lahan,
+            // GUNAKAN PARENT ID UNTUK ENDPOINT SENGKETA
+            id: parentLahanId || l.lahan_id || l.id,
+            batch_id: l.id, // Simpan batch_id jika sewaktu-waktu butuh
             tipe: "Mineral",
             nama: l.nama_lahan_mineral || "Lahan Mineral",
             luas: l.luas_batch,
@@ -71,7 +76,9 @@ export default function ManajemenSengketa() {
           .filter((l) => l.ada_sengketa)
           .map((l) => ({
             ...l,
-            id: l.id || l.gambut_id || l.lahan_id || l.id_lahan,
+            // GUNAKAN PARENT ID UNTUK ENDPOINT SENGKETA
+            id: parentLahanId || l.lahan_id || l.id,
+            gambut_id: l.id,
             tipe: "Gambut",
             nama: l.nama_lahan_gambut || "Lahan Gambut",
             luas: l.luas_total_diajukan,
@@ -103,18 +110,25 @@ export default function ManajemenSengketa() {
 
     try {
       const token = localStorage.getItem("token");
-      // Endpoint BE: GET /farm/me/lahan/{lahan_id}/sengketa/dokumen
-      const res = await fetch(
-        `${API_BASE_URLS.FARM}/farm/me/lahan/${lahan.id}/sengketa/dokumen`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const endpointUrl = `${API_BASE_URLS.FARM}/farm/me/lahan/${lahan.id}/sengketa/dokumen`;
+
+      // Console log untuk mengecek apakah URL dan lahan.id sudah benar
+      console.log("[DEBUG] Fetching URL:", endpointUrl);
+
+      const res = await fetch(endpointUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (res.ok) {
         const data = await res.json();
+
+        // Console log utama untuk melihat respon dari Backend
+        console.log("[DEBUG] Response Data Dokumen Sengketa:", data);
+
         setDokumenTerkumpul(data.dokumen_terkumpul || data || []);
       } else {
+        // Console log jika response dari BE bukan 200 OK
+        console.warn("[DEBUG] Gagal Fetch, HTTP Status:", res.status);
         setDokumenTerkumpul([]);
       }
     } catch (error) {
@@ -178,9 +192,9 @@ export default function ManajemenSengketa() {
   // =========================================================================
   const handleSelesaikanSengketa = async (e) => {
     e.preventDefault();
-    if (!formResolve.surat_damai || !formResolve.stdb || !formResolve.sppl) {
+    if (!formResolve.surat_damai) {
       return showToast.error(
-        "Mohon lengkapi ketiga dokumen wajib (Surat Damai, STDB, SPPL)!",
+        "Mohon lampirkan dokumen Surat Damai / Putusan Inkrah!",
       );
     }
 
@@ -199,9 +213,19 @@ export default function ManajemenSengketa() {
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      formData.append("surat_damai", formResolve.surat_damai);
-      formData.append("stdb", formResolve.stdb);
-      formData.append("sppl", formResolve.sppl);
+
+      // 1. Surat Damai WAJIB, jadi langsung di-append
+      formData.append("file_bukti_selesai", formResolve.surat_damai);
+
+      // 2. STDB OPSIONAL: Gunakan logika 'if' agar tidak mengirim teks "null" jika kosong
+      if (formResolve.stdb) {
+        formData.append("file_izin_usaha", formResolve.stdb);
+      }
+
+      // 3. SPPL OPSIONAL: Gunakan logika 'if' agar tidak mengirim teks "null" jika kosong
+      if (formResolve.sppl) {
+        formData.append("file_sppl", formResolve.sppl);
+      }
 
       const res = await fetch(
         `${API_BASE_URLS.FARM}/farm/me/lahan/${selectedLahan.id}/selesaikan-sengketa`,
@@ -384,8 +408,8 @@ export default function ManajemenSengketa() {
             {/* PANEL KANAN: TIMELINE DOKUMEN (DARI GET /sengketa/dokumen) */}
             <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8">
               <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-500" /> Riwayat Progres &
-                Dokumen Terkumpul
+                <FileText className="w-5 h-5 text-blue-500" /> Riwayat Progres
+                Mediasi
               </h3>
 
               {isLoading ? (
@@ -393,45 +417,73 @@ export default function ManajemenSengketa() {
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
               ) : dokumenTerkumpul.length === 0 ? (
-                <div className="text-center py-10 border border-dashed border-gray-200 rounded-2xl bg-gray-50">
-                  <p className="text-sm text-gray-500">
-                    Belum ada dokumen progres yang diunggah.
+                <div className="text-center py-10 border-2 border-dashed border-blue-200 rounded-2xl bg-blue-50/50">
+                  <FileText className="w-10 h-10 text-blue-300 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-gray-700">
+                    Belum ada log progres mediasi.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                    Klik tombol <b>"Tambah Bukti Mediasi"</b> setiap kali Anda
+                    selesai melakukan rapat, mediasi desa, atau ada perkembangan
+                    kasus untuk direkam oleh sistem.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4 border-l-2 border-gray-100 ml-3 pl-5 relative">
-                  {dokumenTerkumpul.map((doc, idx) => (
-                    <div key={idx} className="relative">
-                      {/* Titik Timeline */}
-                      <div className="absolute -left-[27px] top-1.5 w-4 h-4 rounded-full bg-blue-100 border-2 border-blue-500"></div>
+                  {dokumenTerkumpul
+                    // --- PERBAIKAN FE: FILTER DOKUMEN ---
+                    // Hanya tampilkan dokumen yang tipenya berkaitan dengan progres/sengketa
+                    .filter((doc) => {
+                      const tipe = doc.tipe_dokumen?.toLowerCase();
+                      return (
+                        tipe === "proses_kepengurusan_tanah" ||
+                        tipe === "sengketa_lahan"
+                      );
+                    })
+                    .map((doc, idx) => {
+                      // PERBAIKAN KUNCI: Mapping data sesuai response BE
+                      const judul =
+                        doc.judul_dokumen ||
+                        doc.tipe_dokumen?.replace(/_/g, " ") ||
+                        "Progres Sengketa";
+                      const keterangan =
+                        doc.keterangan ||
+                        "Dokumen/Bukti perkembangan kasus sengketa.";
+                      const fileUrl = doc.url_penyimpanan || doc.file_url;
 
-                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-300 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-bold text-gray-900">
-                            {doc.judul_dokumen}
-                          </h4>
-                          <span className="text-[10px] text-gray-500 font-bold bg-white px-2 py-1 rounded border border-gray-200 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />{" "}
-                            {doc.tanggal_upload || "Hari ini"}
-                          </span>
+                      return (
+                        <div key={idx} className="relative">
+                          {/* Titik Timeline */}
+                          <div className="absolute -left-[27px] top-1.5 w-4 h-4 rounded-full bg-blue-100 border-2 border-blue-500"></div>
+
+                          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-300 transition-colors">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-bold text-gray-900 uppercase text-xs">
+                                {judul}
+                              </h4>
+                              <span className="text-[10px] text-gray-500 font-bold bg-white px-2 py-1 rounded border border-gray-200 flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> Log #{idx + 1}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-4">
+                              {keterangan}
+                            </p>
+
+                            {fileUrl && (
+                              <a
+                                href={getFileUrl(fileUrl, "FARM")}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
+                              >
+                                <FileText className="w-3.5 h-3.5" /> Lihat
+                                Lampiran
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-600 mb-4">
-                          {doc.keterangan || "Tidak ada keterangan tambahan."}
-                        </p>
-
-                        {doc.file_url && (
-                          <a
-                            href={getFileUrl(doc.file_url, "FARM")}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
-                          >
-                            <FileText className="w-3.5 h-3.5" /> Lihat Lampiran
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
                 </div>
               )}
             </div>
@@ -458,6 +510,15 @@ export default function ManajemenSengketa() {
             </div>
 
             <form onSubmit={handleSubmitProgres} className="p-6 space-y-4">
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-2">
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  <b>Fungsi Logbook:</b> Gunakan form ini untuk "mencicil"
+                  pelaporan. Setiap ada hasil rapat mediasi, foto musyawarah,
+                  atau surat panggilan, laporkan di sini agar terekam rapi di
+                  sistem. <b>Status lahan akan tetap Sengketa</b> sampai Anda
+                  menekan tombol "Selesaikan Sengketa".
+                </p>
+              </div>
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
                   Judul Dokumen <span className="text-red-500">*</span>
@@ -564,15 +625,23 @@ export default function ManajemenSengketa() {
             </div>
 
             <form onSubmit={handleSelesaikanSengketa} className="p-6 space-y-4">
-              <div className="bg-yellow-50 p-3 rounded-xl border border-yellow-100 mb-2">
-                <p className="text-[11px] text-yellow-800 font-medium">
-                  {/* PERBAIKAN DI SINI: Mengubah " menjadi &quot; */}
-                  Sesuai standar ISPO, untuk mengubah status lahan menjadi
-                  &quot;Bebas Sengketa&quot;, Anda <b>wajib</b> melampirkan 3
-                  dokumen legalitas terbaru di bawah ini.
+              
+              {/* PERBAIKAN: TEMPLATE INSTRUKSI DISESUAIKAN DENGAN SMART CHECK BE */}
+              <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 mb-4 space-y-3">
+                <p className="text-[11px] text-yellow-800 font-medium leading-relaxed">
+                  Tahap ini dilakukan <b>HANYA JIKA</b> sengketa sudah benar-benar selesai (Damai).
                 </p>
+                <ul className="text-[10px] text-yellow-700 list-disc ml-4 space-y-2">
+                  <li>
+                    <b>Surat Damai / Putusan (WAJIB):</b> Berita Acara Kesepakatan Damai / Putusan Pengadilan yang menyatakan konflik usai.
+                  </li>
+                  <li>
+                    <b>STDB & SPPL (OPSIONAL):</b> Hanya perlu diunggah jika ada pembaruan dokumen setelah sengketa, atau jika sebelumnya Anda belum pernah mengunggahnya.
+                  </li>
+                </ul>
               </div>
 
+              {/* INPUT 1: SURAT DAMAI (TETAP WAJIB) */}
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
                   1. Surat Damai / Inkrah{" "}
@@ -591,12 +660,15 @@ export default function ManajemenSengketa() {
                   }
                 />
               </div>
+
+              {/* INPUT 2: STDB (SEKARANG OPSIONAL) */}
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
-                  2. Dokumen STDB Baru <span className="text-red-500">*</span>
+                <label className="flex text-xs font-bold text-gray-600 mb-1.5 uppercase items-center justify-between">
+                  <span>2. Dokumen STDB Baru</span>
+                  <span className="text-[9px] text-gray-400 normal-case">(Opsional)</span>
                 </label>
                 <input
-                  required
+                  // Hapus atribut required
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
@@ -605,12 +677,15 @@ export default function ManajemenSengketa() {
                   }
                 />
               </div>
+
+              {/* INPUT 3: SPPL (SEKARANG OPSIONAL) */}
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
-                  3. Dokumen SPPL Baru <span className="text-red-500">*</span>
+                <label className="flex text-xs font-bold text-gray-600 mb-1.5 uppercase items-center justify-between">
+                  <span>3. Dokumen SPPL Baru</span>
+                  <span className="text-[9px] text-gray-400 normal-case">(Opsional)</span>
                 </label>
                 <input
-                  required
+                  // Hapus atribut required
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"

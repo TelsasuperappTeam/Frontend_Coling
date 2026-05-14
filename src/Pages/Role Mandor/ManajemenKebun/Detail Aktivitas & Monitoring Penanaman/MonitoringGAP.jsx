@@ -12,6 +12,7 @@ import {
   Sprout, // TAMBAHAN IKON JUDUL
 } from "lucide-react";
 import { API_ENDPOINTS, getFileUrl } from "../../../../config/constants";
+import { showToast, confirmDialog } from "../../../../utils/notif";
 
 // CONFIG & ENUM
 // Dokumentasi: Bagian ini mendefinisikan pilihan (dropdown) yang akan
@@ -725,7 +726,7 @@ export default function MonitoringGAP() {
     pupuk: [],
     opt: [],
   });
-  
+
   const [openSection, setOpenSection] = useState("sanitasi");
   const [unitData, setUnitData] = useState(null); // Menyimpan info Blok Header
 
@@ -874,13 +875,28 @@ export default function MonitoringGAP() {
   // --- FORM HANDLERS (SAVE) ---
   const handleSave = async () => {
     if (isSaving) return;
+
     if (!blokId) {
-      alert("Gagal: blokId tidak ditemukan.");
+      showToast.error("Gagal: Data Blok tidak ditemukan.");
       return;
     }
     if (!popupType) return;
 
+    // Popup Konfirmasi sebelum menyimpan
+    const isSetuju = await confirmDialog({
+      title: "Simpan Data Monitoring?",
+      text: "Pastikan data aktivitas dan foto bukti yang diunggah sudah benar.",
+      confirmText: "Ya, Simpan Data",
+      cancelText: "Periksa Lagi",
+      isDanger: false,
+    });
+
+    if (!isSetuju) return;
+
+    setShowPopup(false); 
+
     setIsSaving(true);
+    showToast.loading("Menyimpan data monitoring...");
 
     try {
       const token = localStorage.getItem("token");
@@ -907,7 +923,10 @@ export default function MonitoringGAP() {
 
       if (popupType === "piringan_kondisi") {
         if (!formData.tanggal_monitoring) {
-          alert("Harap isi Tanggal Sensus terlebih dahulu!");
+          showToast.dismiss();
+          showToast.error(
+            "Kolom Tanggal belum diisi. Silakan lengkapi terlebih dahulu.",
+          );
           return;
         }
         headers["Content-Type"] = "application/json";
@@ -967,13 +986,15 @@ export default function MonitoringGAP() {
         body: finalBody,
       });
 
+      showToast.dismiss();
+
       if (!res.ok) {
         let errorMsg = "Gagal simpan data";
         try {
           const errResponse = await res.json();
           if (Array.isArray(errResponse.detail)) {
             errorMsg =
-              "Mohon maaf, sepertinya ada isian form yang masih kosong atau salah ketik angka. Silakan periksa kembali.";
+              "Masih ada kolom atau file dokumen yang belum diisi. Silakan lengkapi form terlebih dahulu.";
           } else {
             errorMsg = errResponse.detail || errorMsg;
           }
@@ -983,14 +1004,16 @@ export default function MonitoringGAP() {
         throw new Error(errorMsg);
       }
 
-      alert("Berhasil disimpan!");
-      setShowPopup(false);
+
+      // BARU MUNCULKAN TOAST SUKSESNYA
+      showToast.success("Data monitoring berhasil disimpan!");
 
       if (popupType.includes("piringan")) fetchSectionData("piringan_kondisi");
       else fetchSectionData(popupType);
     } catch (e) {
+      showToast.dismiss();
       console.error("Error Detail:", e);
-      alert(e.message);
+      showToast.error(e.message);
     } finally {
       setIsSaving(false);
     }
@@ -1127,7 +1150,7 @@ export default function MonitoringGAP() {
     const config = MONITORING_CONFIG[popupType];
 
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
         <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh]">
           <div className="flex justify-between items-center px-4 py-3 sm:p-5 border-b border-gray-100 bg-gray-50 rounded-t-xl">
             <h3 className="font-bold text-gray-800 text-sm sm:text-base">
@@ -1307,7 +1330,7 @@ export default function MonitoringGAP() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-5 sm:mb-8 border-b border-gray-200 pb-3">
           <div className="flex-1 flex items-center gap-3">
             <div className="bg-green-100 p-2 sm:p-3 rounded-lg text-green-700">
-                <Sprout className="w-6 h-6 sm:w-8 sm:h-8" />
+              <Sprout className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
             <div>
               <h1 className="text-lg sm:text-2xl md:text-3xl font-extrabold text-green-700 leading-tight">
@@ -1329,7 +1352,10 @@ export default function MonitoringGAP() {
             {renderTable("sanitasi")}
           </AccordionItem>
 
-          <AccordionItem id="coverCrop" title={MONITORING_CONFIG.coverCrop.title}>
+          <AccordionItem
+            id="coverCrop"
+            title={MONITORING_CONFIG.coverCrop.title}
+          >
             {renderTable("coverCrop")}
           </AccordionItem>
 
@@ -1381,7 +1407,10 @@ export default function MonitoringGAP() {
                     {!monitoringData.piringan_kondisi ||
                     monitoringData.piringan_kondisi.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-12 text-center bg-gray-50">
+                        <td
+                          colSpan={4}
+                          className="py-12 text-center bg-gray-50"
+                        >
                           <div className="flex flex-col items-center justify-center opacity-60">
                             <ClipboardList
                               size={28}

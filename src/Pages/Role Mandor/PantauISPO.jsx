@@ -23,7 +23,7 @@ import {
   getFileUrl,
 } from "./../../config/constants";
 
-import { showToast } from "./../../utils/notif";
+import { showToast, confirmDialog } from "./../../utils/notif";
 
 export default function PantauISPO() {
   const navigate = useNavigate(); // TAMBAHAN: Inisialisasi navigasi
@@ -76,7 +76,6 @@ export default function PantauISPO() {
           deskripsi:
             "Jika lahan dalam sengketa, unggah melalui fitur luas tanah. Data akan otomatis ditampilkan di sini.",
           actionType: "sync",
-          requirementCode: "--",
           link: "/petani/manajemensengketa",
         },
 
@@ -208,7 +207,7 @@ export default function PantauISPO() {
           deskripsi:
             "Bukti ini diunggah melalui fitur luas lahan saat melengkapi data tanah.",
           actionType: "link",
-          link: "/petani/luaslahan",
+          link: "/petani/dashboard",
         },
         {
           label: "Rekaman penanaman pada lahan miring/konservasi",
@@ -1104,6 +1103,21 @@ export default function PantauISPO() {
 
   const handleGenerateDocument = async (docId, title) => {
     if (loadingDocId !== null) return;
+
+    // =======================================================
+    // TAMBAHAN FE: POP-UP KONFIRMASI SEBELUM GENERATE DOKUMEN
+    // =======================================================
+    const isConfirmed = await confirmDialog({
+      title: "Buat Dokumen Otomatis?",
+      text: `Sistem akan membuat file "${title}". Proses ini mungkin memakan waktu beberapa saat. Lanjutkan?`,
+      confirmText: "Ya, Buat Dokumen",
+      cancelText: "Batal",
+      isDanger: false, // Menggunakan warna biru/hijau aman standar Anda
+    });
+
+    if (!isConfirmed) return; // Hentikan fungsi jika user menekan Batal
+    // =======================================================
+
     setLoadingDocId(docId);
 
     try {

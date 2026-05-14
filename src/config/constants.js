@@ -353,7 +353,7 @@ export const API_ENDPOINTS = {
       GENERATE_DOKUMEN_SPPL: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/laporan-sppl`,
 
       // (POST) Download dokumen rencana operasional ISPO di Halaman Pantau ISPO
-      GENERATE_DOKUMEN_PENJUALAN: `${API_BASE_URLS.ISPO}/ispo/prinsip-4/generate-realisasi-penjualan`,
+      GENERATE_DOKUMEN_PENJUALAN: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/realisasi-penjualan`,
 
       // (GET) Progres ISPO Petani di Halaman Dashboard
       GET_PROGRES_ISPO_PETANI: `${API_BASE_URLS.ISPO}/ispo/progress`,
