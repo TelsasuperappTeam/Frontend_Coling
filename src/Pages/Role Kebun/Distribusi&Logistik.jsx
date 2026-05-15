@@ -212,9 +212,9 @@ const DistribusiLogistik = () => {
                       Memuat daftar logistik...
                     </p>
                   ) : mitraLogistik.length === 0 ? (
-                    <p className="text-center text-xs text-gray-400 py-6 col-span-full">
+                    <div className="text-center py-10 text-gray-500 text-sm bg-gray-50 rounded-2xl border border-gray-200">
                       Belum ada mitra logistik yang tersedia saat ini.
-                    </p>
+                    </div>
                   ) : (
                     mitraLogistik.map((mitra) => (
                       <div
@@ -308,9 +308,9 @@ const DistribusiLogistik = () => {
                       Memuat daftar progres pengiriman...
                     </p>
                   ) : progresPengiriman.length === 0 ? (
-                    <p className="text-center text-xs text-gray-400 py-6">
+                    <div className="text-center py-10 text-gray-500 text-sm bg-gray-50 rounded-2xl border border-gray-200">
                       Belum ada riwayat atau progres pengajuan armada.
-                    </p>
+                    </div>
                   ) : (
                     progresPengiriman.map((item) => (
                       <ProgressItem key={item.id} item={item} />

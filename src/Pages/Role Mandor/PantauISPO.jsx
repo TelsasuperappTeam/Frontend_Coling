@@ -46,10 +46,9 @@ export default function PantauISPO() {
         {
           label: "Legalitas Kepemilikan Lahan",
           deskripsi:
-            "SHM, Girik, AJB, atau Surat Keterangan Proses. Diunggah melalui fitur tampilan utama saat menambahkan data luas tanah. Jika sudah dilengkapi, akan otomatis tersinkronisasi.",
-          actionType: "sync",
-          requirementCode: "P1_KEPEMILIKAN",
-          link: "/petani/luaslahan",
+            "SHM, Girik, AJB, atau Surat Keterangan Proses. Dapat dilihat pada informasi lahan klik (Lihat Lebih Detail) baik lahan mineral atau gambut",
+          actionType: "link",
+          link: "/petani/dashboard",
         },
       ],
     },
@@ -74,8 +73,8 @@ export default function PantauISPO() {
           label:
             "Dokumen progres musyawarah dan peta lahan sengketa (opsional)",
           deskripsi:
-            "Jika lahan dalam sengketa, unggah melalui fitur luas tanah. Data akan otomatis ditampilkan di sini.",
-          actionType: "sync",
+            "Jika lahan dalam sengketa, unggah melalui fitur luas tanah. Dapat dilihat pada informasi lahan klik (Lihat Lebih Detail) baik lahan mineral atau gambut.",
+          actionType: "link",
           link: "/petani/manajemensengketa",
         },
 
@@ -83,9 +82,8 @@ export default function PantauISPO() {
         {
           label: "Dokumen kesepakatan terkait penyelesaian sengketa (opsional)",
           deskripsi:
-            "Diunggah melalui fitur luas tanah saat proses sengketa berlangsung atau selesai.",
-          actionType: "sync",
-          requirementCode: "P1_SENGKETA",
+            "Diunggah melalui fitur luas tanah saat proses sengketa berlangsung atau selesai. Dapat dilihat pada informasi lahan klik (Lihat Lebih Detail) baik lahan mineral atau gambut ",
+          actionType: "link",
           link: "/petani/manajemensengketa",
         },
       ],
@@ -96,10 +94,9 @@ export default function PantauISPO() {
         {
           label: "Dokumen STD-B atau Surat Tanda Daftar Usaha Perkebunan",
           deskripsi:
-            "Wajib diunggah saat melengkapi data tanah. Gunakan STD-B untuk <25ha, dan IUP untuk >25ha.",
-          actionType: "sync",
-          requirementCode: "P1_IZIN_USAHA", // DONE
-          link: "/petani/luaslahan",
+            "Wajib diunggah saat melengkapi data tanah. Gunakan STD-B untuk <25ha, dan IUP untuk >25ha. Dapat dilihat pada informasi lahan klik (Lihat Lebih Detail) baik lahan mineral atau gambut",
+          actionType: "link",
+          link: "/petani/dashboard",
         },
       ],
     },
@@ -109,10 +106,9 @@ export default function PantauISPO() {
         {
           label: "Dokumen SPPL (Surat Pengelolaan dan Pemantauan Lingkungan)",
           deskripsi:
-            "Diunggah melalui fitur tampilan utama saat melengkapi data tanah.",
-          actionType: "sync",
-          requirementCode: "P1_SPPL", // DONE
-          link: "/petani/luaslahan",
+            "Diunggah melalui fitur tampilan utama saat melengkapi data tanah. Dapat dilihat pada informasi lahan klik (Lihat Lebih Detail) baik lahan mineral atau gambut.",
+          actionType: "link",
+          link: "/petani/dashboard",
         },
         {
           label: "Catatan pelaksanaan penerapan SPPL",
@@ -122,7 +118,7 @@ export default function PantauISPO() {
           link: "/petani/manajemenkebun/budidayamonitoring",
         },
         {
-          label: "Dokumen laporan pelaksanaan SPPL",
+          label: "Dokumen otomatis laporan pelaksanaan SPPL",
           deskripsi:
             "Laporan ini dibuat otomatis oleh sistem berdasarkan catatan pelaksanaan SPPL yang telah diinput di menu Pantau ISPO, dan petani harus mengajukan ke kebun dulu baru data bisa muncul di sini.",
           actionType: "auto",
@@ -205,7 +201,7 @@ export default function PantauISPO() {
         {
           label: "Rekaman kegiatan pembukaan lahan tanpa membakar",
           deskripsi:
-            "Bukti ini diunggah melalui fitur luas lahan saat melengkapi data tanah.",
+            "Bukti ini diunggah melalui fitur luas lahan saat melengkapi data tanah. Dapat dilihat pada informasi lahan klik (Lihat Lebih Detail) baik lahan mineral atau gambut.",
           actionType: "link",
           link: "/petani/dashboard",
         },

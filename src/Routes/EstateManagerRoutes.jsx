@@ -12,8 +12,7 @@ import EstateManagerLayout from "../layouts/EstateManagerLayout";
 import { ROLES } from "../config/constants";
 
 import DashboardEM from "../Pages/Role Estate Manager/DashboardEM/DashboardEM";
-import Penjualan from "../Pages/Role Estate Manager/Penjualan";
-import DistribusiLogistik from "../Pages/Role Estate Manager/Distribusi&Logistik";
+import RiwayatTransaksiEM from "../Pages/Role Estate Manager/RiwayatTransaksiEM";
 import InventarisKebun from "../Pages/Role Estate Manager/InventarisKebun";
 import KemitraanPetani from "../Pages/Role Estate Manager/KemitraanPetani";
 import Operasional from "../Pages/Role Estate Manager/Operasional/Operasional";
@@ -40,18 +39,10 @@ const EstateManagerRoutes = () => {
           }
         />
         <Route
-          path="penjualan"
+          path="riwayattransaksi"
           element={
             <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
-              <Penjualan />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="distribusi&logistik"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
-              <DistribusiLogistik />
+              <RiwayatTransaksiEM />
             </PrivateRoute>
           }
         />

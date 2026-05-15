@@ -8,7 +8,6 @@ import {
   Clock,
   X,
   CheckCircle,
-  Truck,
   FileText,
   Loader2,
   AlertCircle,
@@ -22,7 +21,6 @@ import {
 } from "lucide-react";
 
 import { API_ENDPOINTS, API_BASE_URLS } from "../../../../config/constants";
-import Swal from "sweetalert2";
 import { showToast, confirmDialog } from "../../../../utils/notif";
 
 export default function Panen() {

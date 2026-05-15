@@ -12,8 +12,7 @@ import GMDistrikLayout from "../layouts/GMDistrikLayout"; // Layout khusus untuk
 import { ROLES } from "../config/constants";
 
 import DashboardGMDistrik from "../Pages/Role GM Distrik/DashboardGMDistrik/DashboardGMDistrik";
-import Penjualan from "../Pages/Role GM Distrik/Penjualan";
-import DistribusiLogistik from "../Pages/Role GM Distrik/Distribusi&Logistik";
+import RiwayatTransaksiGM from "../Pages/Role GM Distrik/RiwayatTransaksiGM";
 import InventarisKebun from "../Pages/Role GM Distrik/InventarisKebun";
 import KemitraanPetani from "../Pages/Role GM Distrik/KemitraanPetani";
 import Operasional from "../Pages/Role GM Distrik/Operasional/Operasional"
@@ -42,19 +41,10 @@ const GMDistrikRoutes = () => {
         />
 
         <Route
-          path="penjualan"
+          path="riwayattransaksi"
           element={
             <PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]}>
-              <Penjualan />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="distribusi&logistik"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]}>
-              <DistribusiLogistik />
+              <RiwayatTransaksiGM />
             </PrivateRoute>
           }
         />

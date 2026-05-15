@@ -14,12 +14,13 @@ const KemitraanPetani = () => {
 
   const [pendingPanen, setPendingPanen] = useState([]);
   const [pendingTanam, setPendingTanam] = useState([]);
+  const [pendingIspo, setPendingIspo] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [petaniMembers, setPetaniMembers] = useState([]);
   const [loadingManajemen, setLoadingManajemen] = useState(false);
 
-  // 🔥 WAJIB UNTUK GM
+  // WAJIB UNTUK GM
   const [selectedKebunId, setSelectedKebunId] = useState(null);
 
   // ================= GET ROLE =================
@@ -64,57 +65,43 @@ const KemitraanPetani = () => {
     }
   }, [role]);
 
-  // ================= FETCH VALIDASI =================
+  // ================= FETCH VALIDASI (KHUSUS EM) =================
   const fetchValidasiData = useCallback(async () => {
-    // 🔥 WAJIB: GM harus punya kebun dulu
-    if (role === "general_manager_distrik" && !selectedKebunId) return;
-
     setLoading(true);
 
     try {
       const token = localStorage.getItem("token");
-
       const headers = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       };
 
-      // 🔥 CONDITIONAL QUERY
-      const queryParam =
-        role === "general_manager_distrik"
-          ? `?target_kebun_auth_id=${selectedKebunId}`
-          : "";
+      // Tembak 3 API sekaligus secara paralel (Tanpa query param karena EM sudah terikat 1 kebun di BE)
+      const [resPanen, resTanam, resIspo] = await Promise.all([
+        fetch(API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING, {
+          headers,
+        }),
+        fetch(API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK, { headers }),
+        fetch(API_ENDPOINTS.ISPO.KEBUN.GET_PETANI_PENDING_SUBMISSION_ISPO, {
+          headers,
+        }),
+      ]);
 
-      const resPanen = await fetch(
-        `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING}${queryParam}`,
-        { headers },
-      );
+      const dataPanen = resPanen.ok ? await resPanen.json() : [];
+      const dataTanam = resTanam.ok ? await resTanam.json() : [];
+      const dataIspo = resIspo.ok ? await resIspo.json() : [];
 
-      if (!resPanen.ok) {
-        throw new Error("Gagal fetch rencana panen");
-      }
+      setPendingPanen(Array.isArray(dataPanen) ? dataPanen : []);
+      setPendingTanam(Array.isArray(dataTanam) ? dataTanam : []);
 
-      const dataPanen = await resPanen.json();
-
-      const resTanam = await fetch(
-        `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK}${queryParam}`,
-        { headers },
-      );
-
-      if (!resTanam.ok) {
-        throw new Error("Gagal fetch rencana tanam");
-      }
-
-      const dataTanam = await resTanam.json();
-
-      if (Array.isArray(dataPanen)) setPendingPanen(dataPanen);
-      if (Array.isArray(dataTanam)) setPendingTanam(dataTanam);
+      // Simpan data ISPO
+      setPendingIspo(Array.isArray(dataIspo) ? dataIspo : []);
     } catch (error) {
       console.error("Gagal mengambil data validasi:", error);
     } finally {
       setLoading(false);
     }
-  }, [selectedKebunId, role]);
+  }, []);
 
   // ================= FETCH PETANI =================
   const fetchPetaniMembers = async () => {
@@ -404,7 +391,7 @@ const KemitraanPetani = () => {
                   {pendingPanen.map((item) => (
                     <ValidationCard
                       key={item.id}
-                      title={item.nama_blok || `Unit ${item.id}`}
+                      title={item.nama_unit || `Unit ${item.id}`}
                       kebunName={item.nama_petani || "Mandor Relasi"}
                     >
                       <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
@@ -459,7 +446,113 @@ const KemitraanPetani = () => {
                 </div>
               )}
             </SectionCard>
-            
+
+{/* VALIDASI DOKUMEN ISPO (STYLE TABEL KEBUN) */}
+            <SectionCard title="Daftar Validasi Dokumen ISPO Mandor">
+              <p className="text-xs text-gray-500 mb-6 -mt-4">
+                Tabel pengajuan dokumen sertifikasi oleh petani yang harus dicek kebun (Role Anda: Read Only).
+              </p>
+
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
+                      <th className="p-4 font-bold rounded-tl-xl text-center">No</th>
+                      <th className="p-4 font-bold">Nama Petani</th>
+                      <th className="p-4 font-bold">Nama Dokumen</th>
+                      <th className="p-4 font-bold">Prinsip ISPO</th>
+                      <th className="p-4 font-bold">File Dokumen</th>
+                      <th className="p-4 font-bold">Status</th>
+                      <th className="p-4 font-bold text-center rounded-tr-xl">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-xs text-gray-700 bg-white">
+                    {/* 1. CEK KONDISI LOADING DULU */}
+                    {loading ? (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="p-8 text-center text-gray-400"
+                        >
+                          <div className="text-center py-10 text-gray-400 text-xs">
+                            Memuat data validasi ISPO petani...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : pendingIspo.length === 0 ? (
+                      /* 2. JIKA TIDAK LOADING & DATA KOSONG */
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="p-6 text-center text-gray-400"
+                        >
+                          Tidak ada dokumen sertifikasi yang menunggu validasi.
+                        </td>
+                      </tr>
+                    ) : (
+                      /* 3. JIKA TIDAK LOADING & DATA ADA */
+                      pendingIspo.map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
+                        >
+                          <td className="p-4 font-bold text-center">
+                            {index + 1}
+                          </td>
+
+                          {/* MENGGUNAKAN NAMA PETANI */}
+                          <td className="p-4 font-bold text-[#B5302D]">
+                            {item.nama_petani || item.nama || "Tidak Diketahui"}
+                          </td>
+
+                          {/* MENGGUNAKAN JENIS DOKUMEN */}
+                          <td className="p-4 font-medium">
+                            {item.jenis_dokumen || item.requirement_code || "-"}
+                          </td>
+
+                          {/* MENGGUNAKAN PRINSIP ISPO */}
+                          <td className="p-4 text-gray-500 font-semibold">
+                            {item.prinsip_ispo || "-"}
+                          </td>
+
+                          {/* LINK FILE */}
+                          <td className="p-4">
+                            {item.file_url ? (
+                              <a
+                                href={getFileUrl(item.file_url, "ISPO")}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 text-blue-600 hover:underline font-bold"
+                              >
+                                <FileText className="w-3 h-3" /> Buka File
+                              </a>
+                            ) : (
+                              <span className="text-gray-400 italic">Tidak ada file</span>
+                            )}
+                          </td>
+
+                          {/* STATUS */}
+                          <td className="p-4 italic text-gray-400">
+                            <span className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-2 py-1 rounded-md text-[10px] font-bold not-italic">
+                              {item.status || "PENDING"}
+                            </span>
+                          </td>
+
+                          {/* AKSI READ ONLY (EM/GM) */}
+                          <td className="p-4 text-center">
+                            <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 uppercase tracking-wider">
+                              Read Only
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
           </>
         )}
 

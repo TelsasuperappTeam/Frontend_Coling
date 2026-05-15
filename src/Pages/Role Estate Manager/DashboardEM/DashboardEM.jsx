@@ -6,42 +6,38 @@ import {
   Loader2,
   Check,
   User,
+  MapPin,
+  Phone,
   FileText,
   Truck,
   Calendar,
   Coins,
+  CheckCircle2,
+  History,
 } from "lucide-react";
 
-/**
- * --- Komponen Card Reusable ---
- * Menggunakan styling yang lebih modern dengan rounded corners yang lebih besar,
- * shadow yang lebih soft, dan header yang lebih clean.
- */
 const Card = ({ title, children, rightContent, footer, icon: Icon }) => (
-  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-full overflow-hidden">
-    {/* Header Lebih Compact (Versi Petani) */}
-    <div className="bg-[#EF8523] px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
-      <div className="flex items-center gap-3">
+  <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col h-[320px] overflow-hidden">
+    <div className="bg-[#EF8523] px-4 py-3 sm:px-4 flex justify-between items-center flex-shrink-0">
+      <div className="flex items-center gap-2.5">
         {Icon && (
           <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-sm flex items-center justify-center">
-            <Icon className="text-white w-5 h-5" />
+            <Icon className="text-white w-4 h-4" />
           </div>
         )}
-        <h3 className="font-bold text-white text-base sm:text-lg tracking-wide">
+        <h3 className="font-bold text-white text-sm sm:text-base tracking-wide">
           {title}
         </h3>
       </div>
       {rightContent && <div>{rightContent}</div>}
     </div>
 
-    {/* Body dengan Padding Lebih Kecil agar Grafik Lega */}
-    <div className="p-4 sm:p-5 flex-grow flex flex-col relative">
+    <div className="p-3 sm:p-4 flex-grow flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
       {children}
     </div>
 
-    {/* Footer Opsional */}
     {footer && (
-      <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+      <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-100 text-sm text-gray-500 flex-shrink-0">
         {footer}
       </div>
     )}
@@ -68,7 +64,7 @@ export default function DashboardEM() {
   const [isLoadingPending, setIsLoadingPending] = useState(false);
   const [isValidasiLoading, setIsValidasiLoading] = useState(false);
 
-  // --- STATE DATA ---
+  // --- STATE DATA PROFILE ---
   const [profile, setProfile] = useState({
     nama_kebun: "",
     role: ROLES.ESTATE_MANAGER,
@@ -80,60 +76,27 @@ export default function DashboardEM() {
     nama_kebun_naungan: "",
   });
 
-  // --- STATE GRAFIK HARGA TBS (Dinamis) ---
-  const [hargaTbsData, setHargaTbsData] = useState([]);
-  const [isLoadingHargaTbs, setIsLoadingHargaTbs] = useState(false);
-  const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear());
-  const [kebunIdNaungan, setKebunIdNaungan] = useState(null); // Untuk menyimpan ID Kebun milik EM
+  const [kebunIdNaungan, setKebunIdNaungan] = useState(null);
 
-  // Data dinamis dari API
+  // --- STATE CARD 1: RELASI MANDOR (READ ONLY) ---
   const [pendingPetani, setPendingPetani] = useState([]);
 
-  // --- DATA VALIDASI (DINAMIS & STATIC) ---
-  // Rencana Tanam & Panen diubah menjadi array kosong untuk diisi API
-  // Dokumen ISPO tetap static sesuai instruksi
+  // --- STATE CARD 2: VALIDASI DATA ---
   const [validasiData, setValidasiData] = useState({
     rencanaTanam: [],
     rencanaPanen: [],
-    dokumenISPO: [
-      { id: 1, nama: "Joko Anwar" },
-      { id: 2, nama: "Rina Nose" },
-    ],
+    dokumenISPO: [],
   });
 
-  // Data dummy untuk progres penjualan TBS, bisa dihapus jika sudah ada API
-  const [progresPenjualan] = useState([
-    {
-      id: 1,
-      kebun: "Kebun Mahar",
-      pabrik: "PT. Agro Lestari Pabrik",
-      tanggal: "20 Okt 2023",
-      status: "Diterima",
-    },
-    {
-      id: 2,
-      kebun: "Kebun Dhimas",
-      pabrik: "PT. Sawit Makmur",
-      tanggal: "21 Okt 2023",
-      status: "Ditolak",
-    },
-  ]);
+  // --- STATE CARD 3: PENGIRIMAN TBS MINI ---
+  const [pengirimanMini, setPengirimanMini] = useState([]);
+  const [isLoadingPengirimanMini, setIsLoadingPengirimanMini] = useState(false);
 
-  // Data dummy untuk pengiriman TBS, bisa dihapus jika sudah ada API
-  const [pengirimanTBS] = useState([
-    {
-      id: 1,
-      kebun: "Kebun Mahar",
-      pabrik: "PT. Agro Lestari Pabrik",
-      steps: ["Proses", "Penjemputan", "Pengiriman"],
-    },
-    {
-      id: 2,
-      kebun: "Kebun Dhimas",
-      pabrik: "PT. Sawit Makmur",
-      steps: ["Proses", "Penjemputan", "Pengiriman"],
-    },
-  ]);
+  // --- STATE CARD 4: GRAFIK HARGA TBS ---
+  const [hargaTbsData, setHargaTbsData] = useState([]);
+  const [isLoadingHargaTbs, setIsLoadingHargaTbs] = useState(false);
+  const [tahunTbs, setTahunTbs] = useState(new Date().getFullYear());
+
   // --- HELPER AUTH ---
   const getToken = () =>
     localStorage.getItem("accessToken") || localStorage.getItem("token");
@@ -172,7 +135,7 @@ export default function DashboardEM() {
             ? JSON.stringify(userData.koordinat)
             : "",
         });
-        // Ambil kebun_ref_id untuk digunakan sebagai kebun_id di grafik
+
         if (userData.kebun_ref_id) {
           setKebunIdNaungan(userData.kebun_ref_id);
         }
@@ -187,49 +150,34 @@ export default function DashboardEM() {
   }, []);
 
   /**
-   * --- FETCH PENDING PETANI ---
-   */
-  /**
-   * --- FETCH PENDING PETANI ---
+   * --- 1. FETCH PERMINTAAN RELASI MANDOR (READ ONLY) ---
    */
   const fetchPendingPetani = useCallback(async () => {
     setIsLoadingPending(true);
     try {
       const token = getToken();
-      if (!token) {
-        console.warn("Token tidak ditemukan, silakan login kembali.");
-        return;
-      }
+      if (!token) return;
 
       const response = await fetch(API_ENDPOINTS.USER.KEBUN.PENDING_PETANI, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`, // <-- Di sinilah Backend membaca role Anda
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
 
-      // Penanganan khusus untuk Dependency Role dari Backend
       if (response.status === 403) {
         throw new Error(
-          "Akses Ditolak: Anda tidak memiliki akses sebagai Estate Manager atau Kebun.",
+          "Akses Ditolak: Anda tidak memiliki akses sebagai Estate Manager.",
         );
       }
-
-      if (response.status === 401) {
-        throw new Error("Sesi Anda telah habis. Silakan login kembali.");
-      }
-
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error("Gagal mengambil data permintaan petani");
-      }
 
       const data = await response.json();
       setPendingPetani(data);
     } catch (error) {
       console.error("Error fetching pending petani:", error);
-      // Opsional: Anda bisa set state error di sini untuk ditampilkan di Card jika mau
-      // setErrorPending(error.message);
     } finally {
       setIsLoadingPending(false);
     }
@@ -240,9 +188,7 @@ export default function DashboardEM() {
   }, [fetchPendingPetani]);
 
   /**
-   * --- FETCH VALIDASI ITEMS (RENCANA TANAM & PANEN) ---
-   * Mengambil data dinamis untuk widget validasi dari endpoint backend.
-   * (SESUAI BE MAHAR)
+   * --- 2. FETCH PERMINTAAN VALIDASI (TERMASUK ISPO DINAMIS) ---
    */
   const fetchValidasiRequests = useCallback(async () => {
     setIsValidasiLoading(true);
@@ -255,38 +201,88 @@ export default function DashboardEM() {
         "Content-Type": "application/json",
       };
 
-      // 1. Fetch Pending Rencana Panen (SESUAI BE MAHAR)
       const resPanen = await fetch(
         API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING,
         { headers },
       );
       const dataPanen = resPanen.ok ? await resPanen.json() : [];
 
-      // 2. Fetch Pending Rencana Tanam / Blok (SESUAI BE MAHAR)
       const resTanam = await fetch(
         API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK,
         { headers },
       );
       const dataTanam = resTanam.ok ? await resTanam.json() : [];
 
-      // Update state validasiData, merge dengan dokumenISPO static
-      setValidasiData((prev) => ({
-        ...prev,
+      const resDokumen = await fetch(
+        API_ENDPOINTS.ISPO.KEBUN.GET_PETANI_PENDING_SUBMISSION_ISPO,
+        { headers },
+      );
+      const dataDokumen = resDokumen.ok ? await resDokumen.json() : [];
+
+      setValidasiData({
         rencanaPanen: Array.isArray(dataPanen) ? dataPanen : [],
         rencanaTanam: Array.isArray(dataTanam) ? dataTanam : [],
-      }));
+        dokumenISPO: Array.isArray(dataDokumen) ? dataDokumen : [],
+      });
     } catch (error) {
       console.error("Error fetching validasi data:", error);
     } finally {
       setIsValidasiLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchValidasiRequests();
+  }, [fetchValidasiRequests]);
+
   /**
-   * --- FETCH GRAFIK HARGA TBS (Dinamis u/ EM) ---
+   * --- 3. FETCH STATUS PENGIRIMAN TBS MINI ---
+   */
+  useEffect(() => {
+    const fetchPengirimanMini = async () => {
+      setIsLoadingPengirimanMini(true);
+      try {
+        const token = getToken();
+        if (!token) return;
+        const urlBase = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.GET_LIST;
+
+        const [resAktif, resHistori] = await Promise.all([
+          fetch(`${urlBase}?is_history=false`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${urlBase}?is_history=true`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        let dataAktif = resAktif.ok ? await resAktif.json() : [];
+        let dataHistori = resHistori.ok ? await resHistori.json() : [];
+
+        let combinedData = [...dataAktif, ...dataHistori];
+
+        combinedData = combinedData.filter(
+          (item) =>
+            (item.pemeriksaan === null || item.pemeriksaan === undefined) &&
+            item.status_permintaan?.toLowerCase() !== "ditolak",
+        );
+
+        combinedData.sort((a, b) => b.id - a.id);
+        setPengirimanMini(combinedData.slice(0, 3));
+      } catch (error) {
+        console.error("Error fetching pengiriman mini:", error);
+      } finally {
+        setIsLoadingPengirimanMini(false);
+      }
+    };
+
+    fetchPengirimanMini();
+  }, []);
+
+  /**
+   * --- 4. FETCH GRAFIK HARGA TBS ---
    */
   useEffect(() => {
     const fetchGrafikHarga = async () => {
-      // Tunggu sampai ID kebun naungan ditemukan
       if (!kebunIdNaungan) return;
 
       setIsLoadingHargaTbs(true);
@@ -294,7 +290,6 @@ export default function DashboardEM() {
         const token = getToken();
         if (!token) return;
 
-        // Gunakan .replace untuk memasukkan ID Kebun ke URL constants
         const baseUrl =
           API_ENDPOINTS.FARM?.KEBUN?.TRANSAKSI?.GET_HARGA_TBS_GRAPH.replace(
             "{kebun_id}",
@@ -314,13 +309,17 @@ export default function DashboardEM() {
 
         const resData = await response.json();
 
-        // Mapping Objek BE (labels & data_harga) ke format Array FE
         let chartData = [];
         if (resData && resData.labels && resData.data_harga) {
           chartData = resData.labels.map((namaBulan, index) => ({
             bulan: namaBulan,
             harga: Number(resData.data_harga[index]) || 0,
+            dokumen: resData.meta_dokumen ? resData.meta_dokumen[index] : null,
           }));
+        } else {
+          chartData = Array.isArray(resData)
+            ? resData
+            : resData.data || resData.grafik || [];
         }
         setHargaTbsData(chartData);
       } catch (error) {
@@ -332,10 +331,6 @@ export default function DashboardEM() {
 
     fetchGrafikHarga();
   }, [kebunIdNaungan, tahunTbs]);
-
-  useEffect(() => {
-    fetchValidasiRequests();
-  }, [fetchValidasiRequests]);
 
   const handleProfileSaved = (dataSaved) => {
     if (dataSaved) {
@@ -399,18 +394,15 @@ export default function DashboardEM() {
             </div>
           ) : (
             <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
-              {/* --- BAGIAN FOTO PROFIL (YANG DIUBAH) --- */}
               <div className="flex-shrink-0 mx-auto md:mx-0 group">
                 <div className="p-1 bg-white/20 rounded-2xl backdrop-blur-sm">
                   {profile.foto ? (
-                    /* Jika ada foto, tampilkan IMG */
                     <img
                       src={profile.foto}
                       alt="Foto Profil"
                       className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl object-cover shadow-inner bg-white"
                     />
                   ) : (
-                    /* Jika tidak ada foto, tampilkan ICON */
                     <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl shadow-inner bg-white flex items-center justify-center text-gray-400">
                       <User
                         className="w-12 h-12 sm:w-16 sm:h-16"
@@ -420,28 +412,24 @@ export default function DashboardEM() {
                   )}
                 </div>
               </div>
-              {/* --- AKHIR BAGIAN FOTO --- */}
 
-              {/* BAGIAN DATA TEKS (TETAP SAMA) */}
-              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 sm:gap-y-2 w-full">
-                <div className="space-y-1 sm:space-y-2">
+              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 w-full">
+                <div className="space-y-3">
                   <DataRow label="Nama Lengkap" value={profile.nama_kebun} />
                   <DataRow label="Role" value={profile.role} />
                 </div>
-                <div className="space-y-1 sm:space-y-2">
+                <div className="space-y-3">
                   <DataRow label="Email" value={profile.email} />
                   <DataRow
                     label="Nomor Telepon"
                     value={profile.nomor_telepon}
                   />
                 </div>
-                <div className="space-y-1 sm:space-y-2">
+                <div className="space-y-3">
                   <DataRow
                     label="Relasi Kebun"
                     value={profile.nama_kebun_naungan}
                   />
-                </div>
-                <div className="space-y-1 sm:space-y-2">
                   <DataRow label="Alamat Kebun" value={profile.alamat_kebun} />
                 </div>
               </div>
@@ -458,20 +446,19 @@ export default function DashboardEM() {
           SECTION 2: WIDGETS
          ========================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* CARD 1: PERMINTAAN RELASI (Design: Clean List with Actions) */}
-        <Card title="Permintaan Relasi" icon={User}>
+        {/* CARD 1: PERMINTAAN RELASI (READ ONLY) */}
+        <Card title="Permintaan Relasi Mandor (Read Only)" icon={User}>
           {isLoadingPending ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+            <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Memuat data...
             </div>
           ) : pendingPetani.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
                 <Check className="w-8 h-8 text-gray-300" />
               </div>
-              <p className="text-sm font-medium">
-                Tidak ada data permintaan validasi relasi
-              </p>
+              <p className="text-sm font-medium">Tidak ada permintaan baru.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -480,35 +467,20 @@ export default function DashboardEM() {
                   key={item.id}
                   className="group border border-gray-100 rounded-2xl p-4 relative bg-white hover:bg-orange-50/30 hover:border-orange-200 transition-all duration-300 shadow-sm"
                 >
-                  <div className="pl-3 pr-20 space-y-1.5 py-1">
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">Nama</span>
-                      <span className="font-bold text-gray-800">
-                        : {item.nama_lengkap}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">
-                        No Telpon
-                      </span>
-                      <span className="text-gray-700 font-medium">
-                        : {item.no_hp}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">Email</span>
-                      <span className="text-gray-700 font-medium truncate">
-                        : {item.email}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-[80px_auto] items-center text-xs sm:text-sm">
-                      <span className="font-medium text-gray-500">Role</span>
-                      <span className="text-gray-700 font-medium capitalize">
-                        : {item.role}
-                      </span>
+                  <div className="absolute left-0 top-4 bottom-4 w-1 bg-[#EF8523] rounded-r-full"></div>
+                  <div className="pl-3 pr-4">
+                    <h4 className="font-bold text-gray-800 text-sm mb-1">
+                      {item.nama_lengkap}
+                    </h4>
+                    <div className="text-xs text-gray-500 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Phone size={12} className="text-gray-400" />{" "}
+                        {item.no_hp}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={12} className="text-gray-400" />{" "}
+                        <span className="truncate">{item.email}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -523,25 +495,24 @@ export default function DashboardEM() {
           icon={FileText}
           footer={
             <button
-              // TAMBAHKAN ONCLICK DI SINI:
               onClick={() => navigate("/estate_manager/kemitraanpetani")}
-              className="bg-[#B5302D] text-white text-xs px-5 py-2.5 rounded-full font-bold hover:bg-red-800 hover:shadow-lg transition-all transform active:scale-95"
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
-              Detail Validasi
+              Lihat Detail Validasi &rarr;
             </button>
           }
         >
           {isValidasiLoading ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+            <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Memuat data...
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Loop Validasi Data (Tanam, Panen, Dokumen) */}
               {Object.entries({
                 "Rencana Tanam": validasiData.rencanaTanam,
                 "Rencana Panen": validasiData.rencanaPanen,
-                "Dokumen ISPO": validasiData.dokumenISPO, // Static
+                "Dokumen ISPO": validasiData.dokumenISPO,
               }).map(([title, items], idx) => (
                 <div
                   key={idx}
@@ -563,9 +534,16 @@ export default function DashboardEM() {
                         >
                           <span className="font-medium text-gray-700 group-hover:text-black transition-colors flex items-center gap-2">
                             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-[#EF8523]"></span>
-                            {/* LOGIC DISPLAY NAMA (Sesuai Data Source) */}
                             {title === "Dokumen ISPO" ? (
-                              item.nama
+                              <span>
+                                {item.nama_petani || item.nama || "Petani"}
+                                <span className="text-[10px] text-gray-400 ml-1 font-normal truncate max-w-[120px] inline-block align-bottom">
+                                  -{" "}
+                                  {item.jenis_dokumen ||
+                                    item.requirement_code ||
+                                    "Dokumen Sertifikasi"}
+                                </span>
+                              </span>
                             ) : (
                               <span>
                                 {item.nama_petani}
@@ -591,112 +569,119 @@ export default function DashboardEM() {
           )}
         </Card>
 
-        {/* CARD 3: PROGRES PENJUALAN TBS */}
-        <Card title="Progres Penjualan TBS Relasi" icon={Calendar}>
-          <div className="space-y-0">
-            {progresPenjualan.map((item, index) => (
-              <div key={item.id} className="relative pl-6 py-3 group">
-                {index !== progresPenjualan.length - 1 && (
-                  <div className="absolute left-[9px] top-6 bottom-[-12px] w-0.5 bg-gray-200 group-hover:bg-green-200 transition-colors"></div>
-                )}
-                <div
-                  className={`absolute left-0 top-4 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 ${
-                    item.status === "Diterima" ? "bg-green-500" : "bg-red-500"
-                  }`}
-                ></div>
-
-                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h4 className="text-sm font-bold text-gray-800 leading-tight">
-                        {item.pabrik}
-                      </h4>
-
-                      <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
-                        {item.kebun}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-gray-500 flex items-center gap-1">
-                      <Calendar size={10} /> Tanggal Pengajuan: {item.tanggal}
-                    </p>
-                  </div>
-
-                  {/* BAGIAN KANAN: Status */}
-                  <div
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                      item.status === "Diterima"
-                        ? "bg-green-50 border-green-200 text-green-700"
-                        : "bg-red-50 border-red-200 text-red-700"
-                    }`}
-                  >
-                    {item.status}
-                  </div>
-                </div>
+        {/* CARD 3: PENGIRIMAN TBS RELASI */}
+        <Card
+          title="Status Pengiriman TBS (Read Only)"
+          icon={Truck}
+          footer={
+            <button
+              onClick={() => navigate("/estate_manager/distribusilogistik")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Semua &rarr;
+            </button>
+          }
+        >
+          <div className="space-y-4">
+            {isLoadingPengirimanMini ? (
+              <div className="h-32 flex items-center justify-center text-gray-400 text-xs">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Memuat data...
               </div>
-            ))}
-          </div>
-        </Card>
+            ) : pengirimanMini.length === 0 ? (
+              <div className="h-32 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
+                <p className="text-xs">
+                  Belum ada armada yang sedang berjalan.
+                </p>
+              </div>
+            ) : (
+              pengirimanMini.map((item) => {
+                const statusPermintaan = (
+                  item.status_permintaan || "menunggu"
+                ).toLowerCase();
+                const rawProgress = item.progress_db || "menunggu_pengiriman";
+                const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
 
-        {/* CARD 4: PENGIRIMAN TBS RELASI */}
-        <Card title="Pengiriman TBS Relasi" icon={Truck}>
-          <div className="space-y-6">
-            {pengirimanTBS.map((item) => (
-              <div
-                key={item.id}
-                className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  {/* Icon Truck */}
-                  <div className="p-1.5 bg-white rounded-lg shadow-sm text-[#EF8523]">
-                    <Truck size={16} />
-                  </div>
+                let badgeClass =
+                  "bg-yellow-50 text-yellow-700 border-yellow-100";
+                let label = "Menunggu Konfirmasi";
+                let IconStatus = History;
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm font-bold text-gray-800 leading-tight">
-                      {item.pabrik}
-                    </h4>
-                    <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-md border border-green-200">
-                      {item.kebun}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between relative px-2">
-                  <div className="absolute left-0 right-0 top-1/2 h-1 bg-gray-200 -z-0 rounded-full"></div>
+                if (statusPermintaan === "diterima") {
+                  if (pDB === "terima") {
+                    badgeClass = "bg-green-50 text-green-700 border-green-100";
+                    label = "Tiba di Pabrik";
+                    IconStatus = CheckCircle2;
+                  } else {
+                    badgeClass = "bg-blue-50 text-blue-700 border-blue-100";
+                    label = item.progress_publik || "Dalam Perjalanan";
+                    IconStatus = Truck;
+                  }
+                }
 
-                  {item.steps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="relative z-10 flex flex-col items-center"
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm transition-all ${
-                          idx === 1
-                            ? "bg-white border-[#EF8523] text-[#EF8523]"
-                            : "bg-white border-gray-300 text-gray-400"
-                        }`}
-                      >
-                        <span className="text-[10px] font-bold">{idx + 1}</span>
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-[16px] border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative overflow-hidden group"
+                  >
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#EF8523] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                          Tujuan Pabrik
+                        </p>
+                        <p className="text-sm font-bold text-gray-800 leading-snug line-clamp-1 pr-2">
+                          {item.alamat_pengiriman_pabrik || "Pabrik Tujuan"}
+                        </p>
                       </div>
                       <span
-                        className={`text-[10px] font-bold mt-2 px-2 py-0.5 rounded-full ${
-                          idx === 1
-                            ? "text-[#EF8523] bg-orange-50"
-                            : "text-gray-400"
-                        }`}
+                        className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${badgeClass}`}
                       >
-                        {step}
+                        <IconStatus className="w-3 h-3" />
+                        {label}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase">
+                          No. Resi
+                        </p>
+                        <p className="text-[11px] font-mono font-bold text-gray-700 mt-0.5">
+                          {item.kode_resi || `REQ-${item.id}`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase">
+                          Est. Tiba
+                        </p>
+                        <p className="text-[11px] font-bold text-[#EF8523] flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3 text-orange-400" />
+                          {item.tanggal_permintaan_sampai || "-"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
 
-        {/* FITUR 5: Harga TBS - DINAMIS VERSION */}
-        <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}>
+        {/* CARD 4: Harga TBS */}
+        <Card
+          title="Harga TBS Sesuai Aturan Pemerintah"
+          icon={Coins}
+          footer={
+            <button
+              onClick={() => navigate("/estate_manager/manajemenoperasional")}
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+            >
+              Lihat Informasi Harga Terbaru &rarr;
+            </button>
+          }
+        >
           <div className="relative h-full flex flex-col pt-2 w-full">
             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
@@ -705,16 +690,15 @@ export default function DashboardEM() {
                 </span>
               </div>
 
-              {/* Dropdown Filter Tahun Dinamis */}
               <select
                 value={tahunTbs}
                 onChange={(e) => setTahunTbs(parseInt(e.target.value))}
-                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer"
+                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer focus:ring-1 focus:ring-[#EF8523]"
               >
                 {[...Array(5)].map((_, i) => {
                   const year = new Date().getFullYear() - i;
                   return (
-                    <option key={year} value={year}>
+                    <option key={year} value={year} className="font-bold">
                       {year}
                     </option>
                   );
@@ -723,18 +707,19 @@ export default function DashboardEM() {
             </div>
 
             {isLoadingHargaTbs ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Memuat data...
               </div>
             ) : hargaTbsData.length === 0 ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium italic">
+              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium">
                 Belum ada riwayat harga TBS untuk tahun ini.
               </div>
             ) : (
               (() => {
                 const dataBE = hargaTbsData;
                 const hargaTertinggi = Math.max(
-                  ...dataBE.map((d) => d.harga || 0),
+                  ...dataBE.map((d) => Number(d.harga) || 0),
                 );
                 const maxHarga = Math.max(4000, hargaTertinggi + 500);
                 const svgHeight = 140;
@@ -748,18 +733,20 @@ export default function DashboardEM() {
                 ];
 
                 const minWidthPerPoint = 70;
-                const svgWidth = Math.max(
+                const calculatedWidth = Math.max(
                   dataBE.length * minWidthPerPoint,
                   500,
                 );
+                const svgWidth = calculatedWidth;
                 const paddingX = 40;
                 const effectiveWidth = svgWidth - paddingX * 2;
 
                 const points = dataBE.map((d, i) => {
                   const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
                   const x = paddingX + (i / divider) * effectiveWidth;
-                  const y = svgHeight - (d.harga / maxHarga) * svgHeight;
-                  return { x, y, harga: d.harga, bulan: d.bulan };
+                  const hargaNum = Number(d.harga) || 0;
+                  const y = svgHeight - (hargaNum / maxHarga) * svgHeight;
+                  return { x, y, harga: hargaNum, bulan: d.bulan || "-" };
                 });
 
                 const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
@@ -767,8 +754,7 @@ export default function DashboardEM() {
 
                 return (
                   <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
-                    {/* SUMBU Y FIXED */}
-                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-sm">
+                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 backdrop-blur-[1px] flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
                       {yLabels.map((l, idx) => (
                         <span key={idx} className="text-right pr-2">
                           {l.replace(".0k", "k")}
@@ -776,8 +762,7 @@ export default function DashboardEM() {
                       ))}
                     </div>
 
-                    {/* AREA GRAFIK SCROLLABLE */}
-                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin">
+                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
                       <div
                         style={{ width: `${svgWidth}px`, height: "100%" }}
                         className="relative"
@@ -789,7 +774,7 @@ export default function DashboardEM() {
                         >
                           <defs>
                             <linearGradient
-                              id="emGradient"
+                              id="scrollGradient"
                               x1="0"
                               y1="0"
                               x2="0"
@@ -807,7 +792,6 @@ export default function DashboardEM() {
                               />
                             </linearGradient>
                           </defs>
-                          {/* Garis Grid */}
                           {[0, 35, 70, 105, 140].map((y) => (
                             <line
                               key={y}
@@ -819,14 +803,16 @@ export default function DashboardEM() {
                               strokeWidth="1"
                             />
                           ))}
-                          <path d={areaPath} fill="url(#emGradient)" />
+
+                          <path d={areaPath} fill="url(#scrollGradient)" />
                           <polyline
                             fill="none"
                             stroke="#EF8523"
                             strokeWidth="3"
-                            points={linePath}
                             strokeLinejoin="round"
+                            points={linePath}
                           />
+
                           {points.map((pt, i) => (
                             <g key={i}>
                               <circle
@@ -858,19 +844,19 @@ export default function DashboardEM() {
                             </g>
                           ))}
                         </svg>
-                        {/* Label Bulan */}
+
                         <div className="absolute bottom-0 left-0 w-full h-6">
                           {points.map((pt, i) => (
                             <div
                               key={i}
-                              className="absolute flex flex-col items-center"
+                              className="absolute flex flex-col items-center top-0"
                               style={{
                                 left: `${pt.x}px`,
                                 transform: "translateX(-50%)",
                               }}
                             >
                               <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
-                              <span className="text-[9px] font-bold text-gray-500 uppercase">
+                              <span className="text-[9px] font-bold text-gray-500 uppercase whitespace-nowrap">
                                 {pt.bulan.substring(0, 3)}
                               </span>
                             </div>

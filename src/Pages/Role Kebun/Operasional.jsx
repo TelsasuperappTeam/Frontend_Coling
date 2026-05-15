@@ -1532,26 +1532,30 @@ const Operasional = () => {
       {showModalPengurus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60"
             onClick={() => setShowModalPengurus(false)}
           />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">
+          <div className="relative bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            {/* Header Modal */}
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+              <h3 className="font-bold text-lg flex items-center gap-2 relative z-10">
+                <Users className="w-5 h-5" />{" "}
                 {isEditMode ? "Edit Pengurus" : "Tambah Pengurus Baru"}
               </h3>
               <button
                 onClick={() => setShowModalPengurus(false)}
-                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                className="p-1.5 hover:bg-white/20 rounded-full transition-colors relative z-10"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmitPengurus} className="p-6 space-y-4">
+              {/* Nama Anggota */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Nama Anggota
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                  Nama Anggota <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1560,15 +1564,16 @@ const Operasional = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, nama_anggota: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                  placeholder="Masukkan nama"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
+                  placeholder="Masukkan nama lengkap"
                 />
               </div>
 
+              {/* Jabatan & No HP */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Jabatan
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                    Jabatan <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1580,12 +1585,12 @@ const Operasional = () => {
                         jabatan_pengurus: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                     placeholder="Contoh: Ketua"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                     No. HP
                   </label>
                   <input
@@ -1594,14 +1599,15 @@ const Operasional = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, no_hp: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                     placeholder="0812..."
                   />
                 </div>
               </div>
 
+              {/* Tugas & Tanggung Jawab */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                   Tugas & Tanggung Jawab
                 </label>
                 <textarea
@@ -1610,24 +1616,25 @@ const Operasional = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, tugas_pengurus: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all resize-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all resize-none"
                   placeholder="Jelaskan secara singkat..."
                 />
               </div>
 
+              {/* Tombol Aksi */}
               <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
-                <button
-                  type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90 transition-colors"
-                >
-                  <Save className="w-4 h-4" /> Simpan
-                </button>
                 <button
                   type="button"
                   onClick={() => setShowModalPengurus(false)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 transition-colors"
+                  className="flex-1 py-3 text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
                 >
                   Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 text-xs font-bold text-white bg-[#EF8523] hover:bg-[#d6731b] rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                >
+                  <Save className="w-4 h-4" /> Simpan
                 </button>
               </div>
             </form>
@@ -1639,34 +1646,37 @@ const Operasional = () => {
       {showModalTBS && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60"
             onClick={() => setShowModalTBS(false)}
           />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg flex items-center gap-2">
+          <div className="relative bg-white rounded-[24px] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
+            {/* Header Modal */}
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+              <h3 className="font-bold text-lg flex items-center gap-2 relative z-10">
                 <FileText className="w-5 h-5" /> Input SK TBS
               </h3>
               <button
                 onClick={() => setShowModalTBS(false)}
-                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                className="p-1.5 hover:bg-white/20 rounded-full transition-colors relative z-10"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmitTBS} className="p-6 space-y-4">
+              {/* Row Bulan & Tahun */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Bulan
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                    Bulan <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="bulan"
                     required
                     value={tbsFormData.bulan}
                     onChange={handleTBSChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                   >
                     <option value="">Pilih...</option>
                     <option value="1">Januari</option>
@@ -1684,8 +1694,8 @@ const Operasional = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Tahun
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                    Tahun <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -1693,49 +1703,70 @@ const Operasional = () => {
                     required
                     value={tbsFormData.tahun}
                     onChange={handleTBSChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                     placeholder="Contoh: 2026"
                   />
                 </div>
               </div>
 
+              {/* Input Harga */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Harga per Kg (Rp)
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                  Harga per Kg (Rp) <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  name="harga"
-                  step="0.01"
-                  required
-                  value={tbsFormData.harga}
-                  onChange={handleTBSChange}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
-                  placeholder="Contoh: 2500"
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <span className="text-gray-500 font-bold text-sm">Rp</span>
+                  </div>
+                  <input
+                    type="number"
+                    name="harga"
+                    step="0.01"
+                    required
+                    value={tbsFormData.harga}
+                    onChange={handleTBSChange}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
+                    placeholder="2500"
+                  />
+                </div>
               </div>
 
+              {/* Input File SK */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Upload SK (.pdf)
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                  Upload SK (.pdf) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="file"
                   name="file"
-                  accept="application/pdf"
+                  accept=".pdf"
                   required
                   onChange={handleTBSChange}
-                  className="w-full px-4 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 cursor-pointer"
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#EF8523] file:text-white hover:file:bg-[#d6731b] cursor-pointer"
                 />
               </div>
 
-              <div className="pt-4 flex gap-3">
+              {/* Tombol Aksi */}
+              <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowModalTBS(false)}
+                  className="flex-1 py-3 text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
                 <button
                   type="submit"
                   disabled={isSubmittingTBS}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90 disabled:bg-gray-400"
+                  className="flex-1 py-3 text-xs font-bold text-white bg-[#EF8523] hover:bg-[#d6731b] rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  {isSubmittingTBS ? "Mengupload..." : "Simpan Harga"}
+                  {isSubmittingTBS ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Proses...
+                    </>
+                  ) : (
+                    "Simpan Data"
+                  )}
                 </button>
               </div>
             </form>
@@ -1747,22 +1778,28 @@ const Operasional = () => {
       {showModalJual && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60"
             onClick={() => setShowModalJual(false)}
           />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">Catat Penjualan Barang</h3>
+          <div className="relative bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            {/* Header Modal */}
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+              <h3 className="font-bold text-lg flex items-center gap-2 relative z-10">
+                <ShoppingCart className="w-5 h-5" /> Catat Penjualan Barang
+              </h3>
               <button
                 onClick={() => setShowModalJual(false)}
-                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                className="p-1.5 hover:bg-white/20 rounded-full transition-colors relative z-10"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
             <form onSubmit={handleSubmitJual} className="p-6 space-y-4">
+              {/* Pilih Petani */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                   Pilih Petani <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1774,7 +1811,7 @@ const Operasional = () => {
                       petani_user_id: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                 >
                   <option value="">-- Pilih Petani --</option>
                   {opsiPetani.map((p) => (
@@ -1785,8 +1822,9 @@ const Operasional = () => {
                 </select>
               </div>
 
+              {/* Jenis Barang */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                   Jenis Barang <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1794,7 +1832,6 @@ const Operasional = () => {
                   value={jualFormData.jenis_barang}
                   onChange={(e) => {
                     const jenis = e.target.value;
-                    // Reset dinamis_item_id jika jenis diganti, lalu fetch barang baru
                     setJualFormData({
                       ...jualFormData,
                       jenis_barang: jenis,
@@ -1802,7 +1839,7 @@ const Operasional = () => {
                     });
                     fetchOpsiBarang(jenis);
                   }}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                 >
                   <option value="">-- Pilih Jenis --</option>
                   <option value="Bibit">Bibit</option>
@@ -1811,10 +1848,10 @@ const Operasional = () => {
                 </select>
               </div>
 
+              {/* Pilih Barang dari Inventaris */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Pilih Barang di Inventaris{" "}
-                  <span className="text-red-500">*</span>
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                  Pilih Barang di Inventaris <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
@@ -1826,7 +1863,7 @@ const Operasional = () => {
                       dinamis_item_id: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none disabled:bg-gray-200"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] disabled:bg-gray-200 transition-all"
                 >
                   <option value="">
                     {jualFormData.jenis_barang
@@ -1834,7 +1871,6 @@ const Operasional = () => {
                       : "Pilih Jenis Barang Dulu"}
                   </option>
 
-                  {/* JIKA BE MENGIRIM ARRAY KOSONG (Stok di DB Habis/Belum diinput) */}
                   {opsiBarang.length === 0 && jualFormData.jenis_barang && (
                     <option value="" disabled>
                       -- Stok Kosong di Inventaris Barang Anda! --
@@ -1857,7 +1893,6 @@ const Operasional = () => {
                       itemId = b.id;
                     }
 
-                    // 2. AMBIL NAMA BARANG
                     const itemName =
                       b.nama_varietas ||
                       b.nama_pupuk ||
@@ -1883,9 +1918,10 @@ const Operasional = () => {
                 </select>
               </div>
 
+              {/* Jumlah dan Total Harga */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                     Jumlah Barang <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1899,12 +1935,12 @@ const Operasional = () => {
                         jumlah: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Total Harga
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
+                    Total Harga (Rp)
                   </label>
                   <input
                     type="number"
@@ -1915,25 +1951,33 @@ const Operasional = () => {
                         total_harga: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
+                    placeholder="0"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="submit"
-                  disabled={isSubmittingJual}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90"
-                >
-                  {isSubmittingJual ? "Memproses..." : "Catat Penjualan"}
-                </button>
+              {/* Tombol Aksi */}
+              <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowModalJual(false)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-800 bg-gray-200"
+                  className="flex-1 py-3 text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
                 >
                   Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingJual}
+                  className="flex-1 py-3 text-xs font-bold text-white bg-[#EF8523] hover:bg-[#d6731b] rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingJual ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Proses...
+                    </>
+                  ) : (
+                    "Catat Penjualan"
+                  )}
                 </button>
               </div>
             </form>
@@ -1945,22 +1989,28 @@ const Operasional = () => {
       {showModalPinjam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60"
             onClick={() => setShowModalPinjam(false)}
           />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">Catat Peminjaman Alat</h3>
+          <div className="relative bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            {/* Header Modal */}
+            <div className="bg-[#EF8523] p-5 text-white flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+              <h3 className="font-bold text-lg flex items-center gap-2 relative z-10">
+                <ClipboardList className="w-5 h-5" /> Catat Peminjaman Alat
+              </h3>
               <button
                 onClick={() => setShowModalPinjam(false)}
-                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                className="p-1.5 hover:bg-white/20 rounded-full transition-colors relative z-10"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
             <form onSubmit={handleSubmitPinjam} className="p-6 space-y-4">
+              {/* Pilih Petani */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                   Pilih Petani <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1972,7 +2022,7 @@ const Operasional = () => {
                       petani_user_id: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                 >
                   <option value="">-- Pilih Petani --</option>
                   {opsiPetani.map((p) => (
@@ -1983,8 +2033,9 @@ const Operasional = () => {
                 </select>
               </div>
 
+              {/* Pilih Peralatan */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                   Pilih Peralatan <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1996,7 +2047,7 @@ const Operasional = () => {
                       dinamis_peralatan_id: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                 >
                   <option value="">-- Pilih Alat di Inventaris --</option>
 
@@ -2019,7 +2070,7 @@ const Operasional = () => {
                       alat.nama ||
                       "Alat Tidak Bernama";
 
-                    // DI SINI KITA TAMBAHKAN "alat.jumlah_per_buah" SESUAI RESPONS BE TERBARU
+                    // Mengambil nilai sisa stok sesuai dengan respons BE
                     const sisaAlat =
                       alat.jumlah_per_buah ??
                       alat.jumlah_tersisa ??
@@ -2039,9 +2090,10 @@ const Operasional = () => {
                 </select>
               </div>
 
+              {/* Row Jumlah dan Tanggal */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                     Jumlah Dipinjam <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -2054,11 +2106,11 @@ const Operasional = () => {
                         jumlah_dipinjam: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
                     Tanggal Peminjaman <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -2071,25 +2123,32 @@ const Operasional = () => {
                         tanggal_peminjaman: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] transition-all text-gray-700"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="submit"
-                  disabled={isSubmittingPinjam}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#B5302D] hover:opacity-90"
-                >
-                  {isSubmittingPinjam ? "Memproses..." : "Catat Peminjaman"}
-                </button>
+              {/* Tombol Aksi */}
+              <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowModalPinjam(false)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-800 bg-gray-200"
+                  className="flex-1 py-3 text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
                 >
                   Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPinjam}
+                  className="flex-1 py-3 text-xs font-bold text-white bg-[#EF8523] hover:bg-[#d6731b] rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingPinjam ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Proses...
+                    </>
+                  ) : (
+                    "Catat Peminjaman"
+                  )}
                 </button>
               </div>
             </form>

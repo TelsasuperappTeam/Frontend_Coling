@@ -29,7 +29,7 @@ export default function ManajemenSengketa() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [formProgres, setFormProgres] = useState({
-    judul_dokumen: "",
+    tanggal_kegiatan: "",
     keterangan: "",
     file_dokumen: null,
   });
@@ -42,6 +42,15 @@ export default function ManajemenSengketa() {
     stdb: null,
     sppl: null,
   });
+
+  // === EVALUASI KELENGKAPAN DOKUMEN DARI BACKEND (SMART CHECK) ===
+  const isStdbExist = dokumenTerkumpul.some((doc) =>
+    doc.tipe_dokumen?.toLowerCase().includes("stdb"),
+  );
+  const isSpplExist = dokumenTerkumpul.some((doc) =>
+    doc.tipe_dokumen?.toLowerCase().includes("sppl"),
+  );
+
   // =========================================================================
   // 1. FETCH LAHAN SENGKETA (DARI /farm/me/lahan)
   // =========================================================================
@@ -143,23 +152,28 @@ export default function ManajemenSengketa() {
   // =========================================================================
   const handleSubmitProgres = async (e) => {
     e.preventDefault();
-    if (!formProgres.file_dokumen) {
-      return showToast.error("Mohon lampirkan file bukti progres!");
+    if (!formProgres.file_dokumen || !formProgres.tanggal_kegiatan) {
+      return showToast.error("Mohon lengkapi Tanggal Kegiatan dan File bukti progres!");
     }
 
     setIsUploading(true);
-    // Opsional: Bisa panggil showToast.loading("Mengunggah dokumen...") di sini jika perlu
 
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      formData.append("judul_dokumen", formProgres.judul_dokumen);
+      
+      // Hapus judul_dokumen, gunakan tanggal_kegiatan
+      formData.append("tanggal_kegiatan", formProgres.tanggal_kegiatan);
       formData.append("keterangan", formProgres.keterangan);
-
       formData.append("file_progres", formProgres.file_dokumen);
 
+      const targetBatchId =
+        selectedLahan.tipe === "Mineral"
+          ? selectedLahan.batch_id
+          : selectedLahan.gambut_id;
+
       const res = await fetch(
-        `${API_BASE_URLS.FARM}/farm/me/lahan/${selectedLahan.id}/progres-sengketa`,
+        `${API_BASE_URLS.FARM}/farm/me/lahan/${targetBatchId}/progres-sengketa`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -171,7 +185,7 @@ export default function ManajemenSengketa() {
         showToast.success("Progres berhasil ditambahkan!");
         setShowUploadModal(false);
         setFormProgres({
-          judul_dokumen: "",
+          tanggal_kegiatan: "",
           keterangan: "",
           file_dokumen: null,
         });
@@ -192,13 +206,26 @@ export default function ManajemenSengketa() {
   // =========================================================================
   const handleSelesaikanSengketa = async (e) => {
     e.preventDefault();
+
     if (!formResolve.surat_damai) {
       return showToast.error(
         "Mohon lampirkan dokumen Surat Damai / Putusan Inkrah!",
       );
     }
 
-    // --- TAMBAHKAN KONFIRMASI DIALOG DI SINI ---
+    // --- VALIDASI FE BERDASARKAN SMART CHECK BE ---
+    if (!isStdbExist && !formResolve.stdb) {
+      return showToast.error(
+        "Lahan ini belum memiliki dokumen STDB di sistem. Anda WAJIB melampirkannya sekarang!",
+      );
+    }
+    if (!isSpplExist && !formResolve.sppl) {
+      return showToast.error(
+        "Lahan ini belum memiliki dokumen SPPL di sistem. Anda WAJIB melampirkannya sekarang!",
+      );
+    }
+
+    // ---  KONFIRMASI DIALOG DI SINI ---
     const isConfirmed = await confirmDialog({
       title: "Selesaikan Sengketa?",
       text: "Pastikan semua dokumen valid. Status lahan akan kembali aktif dan terintegrasi otomatis ke ISPO.",
@@ -227,8 +254,14 @@ export default function ManajemenSengketa() {
         formData.append("file_sppl", formResolve.sppl);
       }
 
+      // PERBAIKAN FE: Gunakan batch_id untuk Mineral atau gambut_id untuk Gambut sesuai instruksi BE
+      const targetBatchId =
+        selectedLahan.tipe === "Mineral"
+          ? selectedLahan.batch_id
+          : selectedLahan.gambut_id;
+
       const res = await fetch(
-        `${API_BASE_URLS.FARM}/farm/me/lahan/${selectedLahan.id}/selesaikan-sengketa`,
+        `${API_BASE_URLS.FARM}/farm/me/lahan/${targetBatchId}/selesaikan-sengketa`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
@@ -441,15 +474,20 @@ export default function ManajemenSengketa() {
                       );
                     })
                     .map((doc, idx) => {
-                      // PERBAIKAN KUNCI: Mapping data sesuai response BE
+                      // PERBAIKAN KUNCI: Ambil data judul, keterangan, dan tanggal dari respon BE
                       const judul =
                         doc.judul_dokumen ||
                         doc.tipe_dokumen?.replace(/_/g, " ") ||
                         "Progres Sengketa";
                       const keterangan =
                         doc.keterangan ||
-                        "Dokumen/Bukti perkembangan kasus sengketa.";
+                        "Tidak ada keterangan tambahan yang dicatat.";
                       const fileUrl = doc.url_penyimpanan || doc.file_url;
+                      
+                      // Format Tanggal
+                      const tgl = doc.tanggal_kegiatan
+                        ? new Date(doc.tanggal_kegiatan).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })
+                        : "Tanggal Tidak Diketahui";
 
                       return (
                         <div key={idx} className="relative">
@@ -457,15 +495,18 @@ export default function ManajemenSengketa() {
                           <div className="absolute -left-[27px] top-1.5 w-4 h-4 rounded-full bg-blue-100 border-2 border-blue-500"></div>
 
                           <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-300 transition-colors">
-                            <div className="flex justify-between items-start mb-2">
-                              <h4 className="font-bold text-gray-900 uppercase text-xs">
+                            <div className="flex justify-between items-start mb-2 gap-3">
+                              <h4 className="font-bold text-gray-900 uppercase text-xs leading-snug">
                                 {judul}
                               </h4>
-                              <span className="text-[10px] text-gray-500 font-bold bg-white px-2 py-1 rounded border border-gray-200 flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> Log #{idx + 1}
+                              {/* Menampilkan Tanggal Kegiatan Menggantikan "Log #1" */}
+                              <span className="text-[10px] text-gray-500 font-bold bg-white px-2 py-1 rounded border border-gray-200 flex items-center gap-1 shrink-0">
+                                <Clock className="w-3 h-3" /> {tgl}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-600 mb-4">
+                            
+                            {/* Menampilkan Keterangan dari BE */}
+                            <p className="text-xs text-gray-600 mb-4 leading-relaxed">
                               {keterangan}
                             </p>
 
@@ -510,42 +551,34 @@ export default function ManajemenSengketa() {
             </div>
 
             <form onSubmit={handleSubmitProgres} className="p-6 space-y-4">
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-2">
-                <p className="text-[11px] text-blue-800 leading-relaxed">
-                  <b>Fungsi Logbook:</b> Gunakan form ini untuk "mencicil"
-                  pelaporan. Setiap ada hasil rapat mediasi, foto musyawarah,
-                  atau surat panggilan, laporkan di sini agar terekam rapi di
-                  sistem. <b>Status lahan akan tetap Sengketa</b> sampai Anda
-                  menekan tombol "Selesaikan Sengketa".
-                </p>
-              </div>
+              {/* INPUT TANGGAL KEGIATAN */}
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
-                  Judul Dokumen <span className="text-red-500">*</span>
+                  Tanggal Kegiatan <span className="text-red-500">*</span>
                 </label>
                 <input
                   required
-                  type="text"
-                  placeholder="Cth: Berita Acara Mediasi Desa ke-1"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-[#EF8523] outline-none"
-                  value={formProgres.judul_dokumen}
+                  type="date"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] outline-none transition-all"
+                  value={formProgres.tanggal_kegiatan}
                   onChange={(e) =>
                     setFormProgres({
                       ...formProgres,
-                      judul_dokumen: e.target.value,
+                      tanggal_kegiatan: e.target.value,
                     })
                   }
                 />
               </div>
+
+              {/* INPUT KETERANGAN */}
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
-                  Keterangan / Hasil <span className="text-red-500">*</span>
+                  Keterangan / Catatan Singkat
                 </label>
                 <textarea
-                  required
                   rows="3"
-                  placeholder="Jelaskan ringkasan hasil rapat atau progres saat ini..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-[#EF8523] outline-none resize-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] outline-none transition-all resize-none"
+                  placeholder="Misal: Hasil mediasi tahap 1 dengan pihak terkait..."
                   value={formProgres.keterangan}
                   onChange={(e) =>
                     setFormProgres({
@@ -555,15 +588,17 @@ export default function ManajemenSengketa() {
                   }
                 ></textarea>
               </div>
+
+              {/* INPUT FILE */}
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
-                  File Lampiran <span className="text-red-500">*</span>
+                  File Bukti (Foto/Dokumen) <span className="text-red-500">*</span>
                 </label>
                 <input
                   required
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#EF8523] file:text-white hover:file:bg-[#d6731b]"
                   onChange={(e) =>
                     setFormProgres({
                       ...formProgres,
@@ -571,12 +606,9 @@ export default function ManajemenSengketa() {
                     })
                   }
                 />
-                <p className="text-[10px] text-gray-400 mt-1">
-                  *Format: PDF/JPG/PNG. Lampirkan foto surat atau dokumentasi
-                  fisik.
-                </p>
               </div>
 
+              {/* TOMBOL AKSI */}
               <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
                 <button
                   type="button"
@@ -588,14 +620,14 @@ export default function ManajemenSengketa() {
                 <button
                   type="submit"
                   disabled={isUploading}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-[#EF8523] hover:bg-[#d9751d] rounded-xl flex items-center justify-center gap-2"
+                  className="flex-1 py-3 text-sm font-bold text-white bg-[#EF8523] hover:bg-[#d6731b] rounded-xl flex items-center justify-center gap-2"
                 >
                   {isUploading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <UploadCloud className="w-4 h-4" />
                   )}{" "}
-                  Simpan Progres
+                  Upload Progres
                 </button>
               </div>
             </form>
@@ -625,18 +657,38 @@ export default function ManajemenSengketa() {
             </div>
 
             <form onSubmit={handleSelesaikanSengketa} className="p-6 space-y-4">
-              
-              {/* PERBAIKAN: TEMPLATE INSTRUKSI DISESUAIKAN DENGAN SMART CHECK BE */}
               <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 mb-4 space-y-3">
                 <p className="text-[11px] text-yellow-800 font-medium leading-relaxed">
-                  Tahap ini dilakukan <b>HANYA JIKA</b> sengketa sudah benar-benar selesai (Damai).
+                  Sistem mendeteksi kelengkapan dokumen lahan Anda. Berikut
+                  adalah dokumen yang harus dilampirkan:
                 </p>
                 <ul className="text-[10px] text-yellow-700 list-disc ml-4 space-y-2">
                   <li>
-                    <b>Surat Damai / Putusan (WAJIB):</b> Berita Acara Kesepakatan Damai / Putusan Pengadilan yang menyatakan konflik usai.
+                    <b>Surat Damai / Putusan:</b> (WAJIB)
                   </li>
                   <li>
-                    <b>STDB & SPPL (OPSIONAL):</b> Hanya perlu diunggah jika ada pembaruan dokumen setelah sengketa, atau jika sebelumnya Anda belum pernah mengunggahnya.
+                    <b>Dokumen STDB:</b>{" "}
+                    {isStdbExist ? (
+                      <span className="text-green-600 font-bold">
+                        Sudah ada di sistem (Opsional diperbarui)
+                      </span>
+                    ) : (
+                      <span className="text-red-500 font-bold">
+                        Belum ada di sistem (WAJIB diunggah)
+                      </span>
+                    )}
+                  </li>
+                  <li>
+                    <b>Dokumen SPPL:</b>{" "}
+                    {isSpplExist ? (
+                      <span className="text-green-600 font-bold">
+                        Sudah ada di sistem (Opsional diperbarui)
+                      </span>
+                    ) : (
+                      <span className="text-red-500 font-bold">
+                        Belum ada di sistem (WAJIB diunggah)
+                      </span>
+                    )}
                   </li>
                 </ul>
               </div>
@@ -661,14 +713,23 @@ export default function ManajemenSengketa() {
                 />
               </div>
 
-              {/* INPUT 2: STDB (SEKARANG OPSIONAL) */}
+              {/* INPUT 2: STDB (DINAMIS WAJIB/OPSIONAL) */}
               <div>
                 <label className="flex text-xs font-bold text-gray-600 mb-1.5 uppercase items-center justify-between">
-                  <span>2. Dokumen STDB Baru</span>
-                  <span className="text-[9px] text-gray-400 normal-case">(Opsional)</span>
+                  <span>
+                    2. Dokumen STDB Baru{" "}
+                    {!isStdbExist && <span className="text-red-500">*</span>}
+                  </span>
+                  <span
+                    className={`text-[9px] normal-case font-bold ${isStdbExist ? "text-green-600" : "text-red-500"}`}
+                  >
+                    {isStdbExist
+                      ? "(Opsional - Sudah Ada)"
+                      : "(Wajib Diunggah)"}
+                  </span>
                 </label>
                 <input
-                  // Hapus atribut required
+                  required={!isStdbExist}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
@@ -678,14 +739,23 @@ export default function ManajemenSengketa() {
                 />
               </div>
 
-              {/* INPUT 3: SPPL (SEKARANG OPSIONAL) */}
+              {/* INPUT 3: SPPL (DINAMIS WAJIB/OPSIONAL) */}
               <div>
                 <label className="flex text-xs font-bold text-gray-600 mb-1.5 uppercase items-center justify-between">
-                  <span>3. Dokumen SPPL Baru</span>
-                  <span className="text-[9px] text-gray-400 normal-case">(Opsional)</span>
+                  <span>
+                    3. Dokumen SPPL Baru{" "}
+                    {!isSpplExist && <span className="text-red-500">*</span>}
+                  </span>
+                  <span
+                    className={`text-[9px] normal-case font-bold ${isSpplExist ? "text-green-600" : "text-red-500"}`}
+                  >
+                    {isSpplExist
+                      ? "(Opsional - Sudah Ada)"
+                      : "(Wajib Diunggah)"}
+                  </span>
                 </label>
                 <input
-                  // Hapus atribut required
+                  required={!isSpplExist}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"

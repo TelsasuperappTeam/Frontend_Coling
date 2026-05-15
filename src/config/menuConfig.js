@@ -42,19 +42,17 @@ export const menuConfig = {
   ],
   [ROLES.ESTATE_MANAGER]: [
     { label: "Tampilan Utama", path: "/estate_manager/dashboard", icon: LayoutDashboard },
-    { label: "Inventaris", path: "/estate_manager/inventaris", icon: Package },
+    { label: "Inventaris", path: "/estate_manager/inventaris", icon: Warehouse },
     { label: "Operasional", path: "/estate_manager/manajemenoperasional", icon: ClipboardList },
     { label: "Kemitraan Petani", path: "/estate_manager/kemitraanpetani", icon: Users },
-    { label: "Penjualan", path: "/estate_manager/penjualan", icon: ShoppingCart },
-    { label: "Distribusi & Logistik", path: "/estate_manager/distribusi&logistik", icon: Truck },
+    { label: "Riwayat Penjulan", path: "/estate_manager/riwayattransaksi", icon: History },
   ],
   [ROLES.GENERAL_MANAGER_DISTRIK]: [
     { label: "Tampilan Utama", path: "/general_manager_distrik/dashboard", icon: LayoutDashboard },
-    { label: "Inventaris", path: "/general_manager_distrik/inventaris", icon: Package },
+    { label: "Inventaris", path: "/general_manager_distrik/inventaris", icon: Warehouse },
     { label: "Operasional", path: "/general_manager_distrik/manajemenoperasional", icon: ClipboardList },
     { label: "Kemitraan Petani", path: "/general_manager_distrik/kemitraanpetani", icon: Users },
-    { label: "Penjualan", path: "/general_manager_distrik/penjualan", icon: ShoppingCart },
-    { label: "Distribusi & Logistik", path: "/general_manager_distrik/distribusi&logistik", icon: Truck },
+    { label: "Riwayat Penjualan", path: "/general_manager_distrik/riwayattransaksi", icon: History },
   ],
   [ROLES.TRANSPORT]: [
     { label: "Tampilan Utama", path: "/logistik/dashboard", icon: LayoutDashboard },

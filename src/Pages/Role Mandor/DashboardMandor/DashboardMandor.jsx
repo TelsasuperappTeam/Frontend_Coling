@@ -29,6 +29,8 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
+  FileText,
+  Eye,
 } from "lucide-react";
 import { showToast, confirmDialog } from "../../../utils/notif";
 
@@ -741,14 +743,15 @@ export default function DashboardMandor() {
                   title="Daftar Lahan Baru"
                 >
                   <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
-                  <span className="hidden sm:inline">Tambah/Perbarui Lahan</span>
+                  <span className="hidden sm:inline">
+                    Tambah/Perbarui Lahan
+                  </span>
                   <span className="sm:hidden">Tambah</span>
                 </button>
               </div>
             }
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              
               {/* --- BAGIAN 1: LAHAN MINERAL (WARNA HIJAU TUA) --- */}
               <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group h-full flex flex-col">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-700 opacity-80" />
@@ -805,7 +808,8 @@ export default function DashboardMandor() {
                   onClick={() => setShowModalMineral(true)}
                   className="mt-auto w-full flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-green-700 hover:bg-green-800 py-2.5 rounded-lg transition-colors shadow-sm active:scale-[0.98]"
                 >
-                  Lihat Detail Lahan Mineral <ChevronRight className="w-4 h-4" />
+                  Lihat Detail Lahan Mineral{" "}
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
@@ -854,8 +858,9 @@ export default function DashboardMandor() {
                       <p className="text-sm font-black text-[#B5302D] mt-0.5">
                         {lahanData.lahan_gambut
                           .reduce(
-                            (sum, item) => sum + (item.luas_total_diajukan || 0),
-                            0
+                            (sum, item) =>
+                              sum + (item.luas_total_diajukan || 0),
+                            0,
                           )
                           .toFixed(2)}{" "}
                         <span className="text-[10px] text-gray-500 font-semibold">
@@ -1589,6 +1594,8 @@ export default function DashboardMandor() {
                       }
                     />
                   </div>
+
+                  {/* KOTAK STATUS LUAS */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-white p-4 rounded-xl border border-orange-100/50 shadow-sm">
                       <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
@@ -1642,6 +1649,76 @@ export default function DashboardMandor() {
                       </p>
                     </div>
                   </div>
+
+                  {/* ========================================= */}
+                  {/* DOKUMEN LAHAN MINERAL (FIX SESUAI LOG BE) */}
+                  {/* ========================================= */}
+                  <div className="mt-5 pt-5 border-t border-orange-200/60">
+                    <h5 className="text-[11px] font-extrabold text-[#EF8523] uppercase tracking-wider mb-3">
+                      Dokumen Pendukung Lahan
+                    </h5>
+
+                    {(() => {
+                      // KUNCI PERBAIKAN: Gunakan key 'dokumen' sesuai Log BE Anda
+                      const batchDocs = lahanData.lahan_mineral.detail_batch[selectedMineralIndex]?.dokumen || [];
+                      const parentDocs = lahanData.lahan_mineral.dokumen || [];
+                      
+                      // Gabungkan dokumen dari Batch dan Induk
+                      const combinedDocs = [...batchDocs, ...parentDocs];
+
+                      if (combinedDocs.length === 0) {
+                        return (
+                          <div className="bg-white/60 border border-dashed border-orange-200 rounded-xl p-4 text-center">
+                            <p className="text-[11px] text-orange-600/70 font-bold">
+                              Tidak ada dokumen pendukung yang dilampirkan.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {combinedDocs.map((doc, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-3 bg-white rounded-xl border border-orange-100 shadow-sm hover:border-[#EF8523] transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-orange-50 rounded-lg text-[#EF8523]">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">
+                                    {doc.tipe_dokumen?.replace(/_/g, " ") || "DOKUMEN"}
+                                  </p>
+                                  <p className="text-[11px] font-bold text-gray-800 line-clamp-1 mt-0.5">
+                                    {doc.judul_dokumen || "Lampiran Lahan"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* KUNCI PERBAIKAN: Gunakan url_penyimpanan sesuai Log BE */}
+                              {doc.url_penyimpanan ? (
+                                <a
+                                  href={getFileUrl(doc.url_penyimpanan, "FARM")}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                              ) : (
+                                <span className="text-[9px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded shrink-0">
+                                  Kosong
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   {/* --- TAMBAHAN LOGIKA SENGKETA MINERAL --- */}
                   {lahanData.lahan_mineral.detail_batch[selectedMineralIndex]
                     ?.ada_sengketa && (
@@ -1785,6 +1862,8 @@ export default function DashboardMandor() {
                       }
                     />
                   </div>
+
+                  {/* KOTAK STATUS LUAS */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-white p-4 rounded-xl border border-red-100/50 shadow-sm">
                       <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
@@ -1834,6 +1913,72 @@ export default function DashboardMandor() {
                       </p>
                     </div>
                   </div>
+
+                  {/* ========================================= */}
+                  {/* DOKUMEN LAHAN GAMBUT (FIX SESUAI LOG BE)  */}
+                  {/* ========================================= */}
+                  <div className="mt-5 pt-5 border-t border-red-200/60">
+                    <h5 className="text-[11px] font-extrabold text-[#B5302D] uppercase tracking-wider mb-3">
+                      Dokumen Pendukung Lahan
+                    </h5>
+
+                    {(() => {
+                      // KUNCI PERBAIKAN: Gunakan key 'dokumen' sesuai Log BE
+                      const dokumenList = lahanData.lahan_gambut[selectedGambutIndex]?.dokumen || [];
+
+                      if (dokumenList.length === 0) {
+                        return (
+                          <div className="bg-white/60 border border-dashed border-red-200 rounded-xl p-4 text-center">
+                            <p className="text-[11px] text-red-600/70 font-bold">
+                              Tidak ada dokumen pendukung yang dilampirkan.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {dokumenList.map((doc, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-3 bg-white rounded-xl border border-red-100 shadow-sm hover:border-[#B5302D] transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-50 rounded-lg text-[#B5302D]">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">
+                                    {doc.tipe_dokumen?.replace(/_/g, " ") || "DOKUMEN"}
+                                  </p>
+                                  <p className="text-[11px] font-bold text-gray-800 line-clamp-1 mt-0.5">
+                                    {doc.judul_dokumen || "Lampiran Lahan"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* KUNCI PERBAIKAN: Gunakan url_penyimpanan sesuai Log BE */}
+                              {doc.url_penyimpanan ? (
+                                <a
+                                  href={getFileUrl(doc.url_penyimpanan, "FARM")}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                              ) : (
+                                <span className="text-[9px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded shrink-0">
+                                  Kosong
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   {/* --- TAMBAHAN LOGIKA SENGKETA GAMBUT --- */}
                   {lahanData.lahan_gambut[selectedGambutIndex]
                     ?.ada_sengketa && (
@@ -1842,7 +1987,7 @@ export default function DashboardMandor() {
                       <div>
                         <h4 className="font-extrabold text-red-800 text-sm flex items-center gap-2">
                           <AlertCircle className="w-5 h-5 text-red-600" />
-                          Area Dalam Status Sengketa! ter{" "}
+                          Area Dalam Status Sengketa!
                         </h4>
                         <p className="text-[11px] sm:text-xs text-red-600/90 mt-1 leading-relaxed max-w-lg">
                           Area gambut ini sedang bermasalah. Anda wajib

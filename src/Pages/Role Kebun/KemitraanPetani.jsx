@@ -327,7 +327,7 @@ const KemitraanPetani = () => {
                   {pendingPanen.map((item) => (
                     <ValidationCard
                       key={item.id}
-                      title={item.nama_blok || `Unit ${item.id}`}
+                      title={item.nama_unit || `Unit ${item.id}`}
                     >
                       <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
                         {/* --- DATA UTAMA: Mapping response BE Rencana Panen --- */}
