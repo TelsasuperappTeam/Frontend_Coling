@@ -575,9 +575,10 @@ export default function DashboardGMDistrik() {
             }
           >
             {isValidasiLoading ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
-              </div>
+                <div className="h-32 flex items-center justify-center text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Memuat data...
+                </div>
             ) : (
               <div className="space-y-4">
                 {Object.entries({

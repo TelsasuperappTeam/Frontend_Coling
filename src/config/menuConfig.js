@@ -61,7 +61,7 @@ export const menuConfig = {
       activeCheck: "/general_manager_distrik/manajemenoperasional",
       icon: ClipboardList 
     },
-    { label: "Kemitraan Petani", path: "/general_manager_distrik/kemitraanpetani", icon: Users },
+    { label: "Kemitraan Petani", path: "/general_manager_distrik/kemitraanpetani", icon: ClipboardList },
     { label: "Riwayat Penjualan", path: "/general_manager_distrik/riwayattransaksi", icon: History },
   ],
   [ROLES.TRANSPORT]: [

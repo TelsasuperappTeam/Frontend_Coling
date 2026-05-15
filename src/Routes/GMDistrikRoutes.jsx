@@ -8,15 +8,15 @@
 
 import { Routes, Route } from "react-router-dom";
 import PrivateRoute from "../components/PrivateRoute";
-import GMDistrikLayout from "../layouts/GMDistrikLayout"; // Layout khusus untuk role Kebun
+import GMDistrikLayout from "../layouts/GMDistrikLayout";
 import { ROLES } from "../config/constants";
 
 import DashboardGMDistrik from "../Pages/Role GM Distrik/DashboardGMDistrik/DashboardGMDistrik";
 import RiwayatTransaksiGM from "../Pages/Role GM Distrik/RiwayatTransaksiGM";
 import InventarisKebun from "../Pages/Role GM Distrik/InventarisKebun";
 import KemitraanPetani from "../Pages/Role GM Distrik/KemitraanPetani";
-import Operasional from "../Pages/Role GM Distrik/Operasional/Operasional"
-import Operasional2 from "../Pages/Role GM Distrik/Operasional/Operasional2"
+import Operasional from "../Pages/Role GM Distrik/Operasional/Operasional";
+import Operasional2 from "../Pages/Role GM Distrik/Operasional/Operasional2";
 
 const GMDistrikRoutes = () => {
   return (
@@ -69,22 +69,15 @@ const GMDistrikRoutes = () => {
 
         <Route
           path="manajemenoperasional"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]}>
-              <Operasional />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Path-nya diubah jadi masuk ke dalam "manajemenoperasional/organisasi" */}
-        <Route
-          path="manajemenoperasional/organisasi"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]}>
-              <Operasional2 />
-            </PrivateRoute>
-          }
-        />
+          element={<PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]} />}
+        >
+          {/* Ini akan me-render Operasional.jsx saat URL tepat di /manajemenoperasional */}
+          <Route index element={<Operasional />} />
+          
+          {/* Ini untuk menangani URL /manajemenoperasional/organisasi */}
+          <Route path="organisasi" element={<Operasional2 />} />
+        </Route>
+        
       </Route>
     </Routes>
   );

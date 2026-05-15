@@ -9,6 +9,7 @@ import {
   MapPin,
   Search,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 import {
   API_ENDPOINTS,
@@ -468,7 +469,7 @@ const Operasional2 = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
-            <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
+            <ClipboardList className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">

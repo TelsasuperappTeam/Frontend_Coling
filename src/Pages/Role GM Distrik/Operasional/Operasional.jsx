@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   MapPin,
+  ClipboardList,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 // Sesuaikan import config dengan struktur folder Anda
@@ -373,7 +374,7 @@ const Operasional = () => {
         {/* Judul Kiri */}
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shrink-0">
-            <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
+            <ClipboardList className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">

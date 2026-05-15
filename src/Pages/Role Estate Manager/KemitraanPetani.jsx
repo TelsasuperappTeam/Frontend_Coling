@@ -152,7 +152,7 @@ const KemitraanPetani = () => {
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             {activeTab === "validasi" ? (
-              <ShieldCheck className="w-8 h-8 text-[#B5302D]" />
+              <Users className="w-8 h-8 text-[#B5302D]" />
             ) : (
               <Users className="w-8 h-8 text-[#B5302D]" />
             )}
@@ -180,7 +180,7 @@ const KemitraanPetani = () => {
             }`}
           >
             <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span className="whitespace-nowrap">Pengajuan (Read Only)</span>
+            <span className="whitespace-nowrap">Pengajuan</span>
           </button>
           <button
             onClick={() => setActiveTab("manajemen")}

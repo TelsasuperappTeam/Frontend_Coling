@@ -202,7 +202,7 @@ const KemitraanPetani = () => {
         {/* Judul Kiri */}
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shrink-0">
-            <ShieldCheck className="w-8 h-8 text-[#B5302D]" />
+            <Users className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
@@ -320,7 +320,7 @@ const KemitraanPetani = () => {
               : "text-gray-500 hover:bg-gray-200 hover:text-gray-700"
           }`}
         >
-          <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          <Users className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
           <span className="whitespace-nowrap">Validasi</span>
         </button>
         <button

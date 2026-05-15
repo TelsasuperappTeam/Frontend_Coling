@@ -9,6 +9,7 @@ import {
   MapPin,
   Search,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 // Sesuaikan import config dengan konstanta Anda
 import {
@@ -494,7 +495,7 @@ const Operasional2 = () => {
         {/* Judul Kiri */}
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shrink-0">
-            <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
+            <ClipboardList className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
