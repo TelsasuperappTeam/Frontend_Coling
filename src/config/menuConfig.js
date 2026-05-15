@@ -43,14 +43,24 @@ export const menuConfig = {
   [ROLES.ESTATE_MANAGER]: [
     { label: "Tampilan Utama", path: "/estate_manager/dashboard", icon: LayoutDashboard },
     { label: "Inventaris", path: "/estate_manager/inventaris", icon: Warehouse },
-    { label: "Operasional", path: "/estate_manager/manajemenoperasional", icon: ClipboardList },
+    { 
+      label: "Operasional", 
+      path: "/estate_manager/manajemenoperasional/transaksi", 
+      activeCheck: "/estate_manager/manajemenoperasional",
+      icon: ClipboardList 
+    },
     { label: "Kemitraan Petani", path: "/estate_manager/kemitraanpetani", icon: Users },
     { label: "Riwayat Penjulan", path: "/estate_manager/riwayattransaksi", icon: History },
   ],
   [ROLES.GENERAL_MANAGER_DISTRIK]: [
     { label: "Tampilan Utama", path: "/general_manager_distrik/dashboard", icon: LayoutDashboard },
     { label: "Inventaris", path: "/general_manager_distrik/inventaris", icon: Warehouse },
-    { label: "Operasional", path: "/general_manager_distrik/manajemenoperasional", icon: ClipboardList },
+    { 
+      label: "Operasional", 
+      path: "/general_manager_distrik/manajemenoperasional", 
+      activeCheck: "/general_manager_distrik/manajemenoperasional",
+      icon: ClipboardList 
+    },
     { label: "Kemitraan Petani", path: "/general_manager_distrik/kemitraanpetani", icon: Users },
     { label: "Riwayat Penjualan", path: "/general_manager_distrik/riwayattransaksi", icon: History },
   ],

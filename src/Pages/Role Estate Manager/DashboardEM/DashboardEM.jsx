@@ -447,11 +447,11 @@ export default function DashboardEM() {
          ========================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* CARD 1: PERMINTAAN RELASI (READ ONLY) */}
-        <Card title="Permintaan Relasi Mandor (Read Only)" icon={User}>
+        <Card title="Permintaan Relasi Mandor" icon={User}>
           {isLoadingPending ? (
             <div className="flex items-center justify-center h-full text-gray-400 text-xs">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              Memuat data...
+              Memuat Data...
             </div>
           ) : pendingPetani.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
@@ -505,7 +505,7 @@ export default function DashboardEM() {
           {isValidasiLoading ? (
             <div className="flex items-center justify-center h-full text-gray-400 text-xs">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              Memuat data...
+              Memuat Data...
             </div>
           ) : (
             <div className="space-y-4">
@@ -571,11 +571,11 @@ export default function DashboardEM() {
 
         {/* CARD 3: PENGIRIMAN TBS RELASI */}
         <Card
-          title="Status Pengiriman TBS (Read Only)"
+          title="Pengiriman Aktif"
           icon={Truck}
           footer={
             <button
-              onClick={() => navigate("/estate_manager/distribusilogistik")}
+              onClick={() => navigate("/estate_manager/riwayattransaksi")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
               Lihat Semua &rarr;
@@ -586,7 +586,7 @@ export default function DashboardEM() {
             {isLoadingPengirimanMini ? (
               <div className="h-32 flex items-center justify-center text-gray-400 text-xs">
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Memuat data...
+                Memuat Data...
               </div>
             ) : pengirimanMini.length === 0 ? (
               <div className="h-32 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-200">
@@ -673,14 +673,6 @@ export default function DashboardEM() {
         <Card
           title="Harga TBS Sesuai Aturan Pemerintah"
           icon={Coins}
-          footer={
-            <button
-              onClick={() => navigate("/estate_manager/manajemenoperasional")}
-              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
-            >
-              Lihat Informasi Harga Terbaru &rarr;
-            </button>
-          }
         >
           <div className="relative h-full flex flex-col pt-2 w-full">
             <div className="flex justify-between items-center mb-4 px-1">
@@ -709,7 +701,7 @@ export default function DashboardEM() {
             {isLoadingHargaTbs ? (
               <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs">
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Memuat data...
+                Memuat Data...
               </div>
             ) : hargaTbsData.length === 0 ? (
               <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium">

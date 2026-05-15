@@ -444,9 +444,14 @@ const Operasional2 = () => {
           setDaftarKebun(data);
 
           if (data.length > 0) {
-            const firstId = data[0].auth_id || data[0].id || "kebun-0";
-            setSelectedKebunId(firstId);
-            fetchDataOrganisasi(firstId);
+            // --- LOGIKA BACA MEMORI BROWSER ---
+            const savedId = sessionStorage.getItem("selected_kebun_operasional");
+            const isValid = data.find(k => (k.auth_id || k.id)?.toString() === savedId?.toString());
+            const idToUse = isValid ? (isValid.auth_id || isValid.id) : (data[0].auth_id || data[0].id || "kebun-0");
+
+            setSelectedKebunId(idToUse);
+            sessionStorage.setItem("selected_kebun_operasional", idToUse); // Simpan default
+            fetchDataOrganisasi(idToUse);
           }
         }
       } else {
@@ -483,9 +488,12 @@ const Operasional2 = () => {
 
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
+{/* 1. HEADER & DROPDOWN PILIH KEBUN */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+        
+        {/* Judul Kiri */}
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-50 rounded-2xl">
+          <div className="p-3 bg-red-50 rounded-2xl shrink-0">
             <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
@@ -499,112 +507,118 @@ const Operasional2 = () => {
           </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto overflow-hidden">
-          <button
-            onClick={() => navigate("../manajemenoperasional")}
-            className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
-          >
-            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">Penjualan/Peminjaman</span>
-          </button>
-          <button className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
-            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">Organisasi</span>
-          </button>
-        </div>
-      </div>
-
-      {/* --- UI DROPDOWN PILIH KEBUN (Memanjang Penuh) --- */}
-      {isGM && (
-        <div className="mb-8 relative z-30">
-          {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
-          {isDropdownOpen && (
-            <div
-              className="fixed inset-0 z-20"
-              onClick={() => setIsDropdownOpen(false)}
-            />
-          )}
-
-          {/* Tombol Utama (Bentuk Bar Memanjang) */}
-          <div
-            onClick={() =>
-              daftarKebun.length > 0 && setIsDropdownOpen(!isDropdownOpen)
-            }
-            className={`flex items-center justify-between w-full px-5 py-3 rounded-xl border cursor-pointer transition-all relative z-30 ${
-              isDropdownOpen
-                ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md"
-                : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <MapPin
-                className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
+        {/* Dropdown Kanan (Sejajar dengan Judul di Desktop khusus GM) */}
+        {isGM && (
+          <div className="relative z-30 w-full lg:w-72 shrink-0">
+            {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+            {isDropdownOpen && (
+              <div
+                className="fixed inset-0 z-20"
+                onClick={() => setIsDropdownOpen(false)}
               />
-              <div className="flex flex-col text-left">
-                <span
-                  className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
-                >
-                  Pilih Kebun untuk Dipantau:
-                </span>
-                <span
-                  className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}
-                >
-                  {daftarKebun.length === 0
-                    ? "Memuat data..."
-                    : daftarKebun.find(
-                        (k) => (k.auth_id || k.id) === selectedKebunId,
-                      )?.nama_lengkap ||
-                      daftarKebun.find(
-                        (k) => (k.auth_id || k.id) === selectedKebunId,
-                      )?.nama_kebun ||
-                      "-- Silakan Pilih --"}
-                </span>
+            )}
+
+            {/* Tombol Utama */}
+            <div
+              onClick={() =>
+                daftarKebun.length > 0 && setIsDropdownOpen(!isDropdownOpen)
+              }
+              className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl border cursor-pointer transition-all relative z-30 ${
+                isDropdownOpen
+                  ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md"
+                  : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <MapPin
+                  className={`w-4 h-4 sm:w-5 sm:h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
+                />
+                <div className="flex flex-col text-left">
+                  <span
+                    className={`text-[9px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
+                  >
+                    Pilih Kebun:
+                  </span>
+                  <span
+                    className={`font-bold text-xs sm:text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"} line-clamp-1`}
+                  >
+                    {daftarKebun.length === 0
+                      ? "Memuat data..."
+                      : daftarKebun.find(
+                          (k) => (k.auth_id || k.id) === selectedKebunId,
+                        )?.nama_lengkap ||
+                        daftarKebun.find(
+                          (k) => (k.auth_id || k.id) === selectedKebunId,
+                        )?.nama_kebun ||
+                        "-- Silakan Pilih --"}
+                  </span>
+                </div>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
+              />
+            </div>
+
+            {/* Menu Pilihan (Dropdown Menjuntai) */}
+            <div
+              className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+                isDropdownOpen
+                  ? "opacity-100 scale-y-100"
+                  : "opacity-0 scale-y-0 pointer-events-none"
+              }`}
+            >
+              <div className="max-h-60 overflow-y-auto py-1">
+                {daftarKebun.map((kb) => {
+                  const idKebun = kb.auth_id || kb.id;
+                  const namaKebun =
+                    kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
+                  const isSelected = idKebun === selectedKebunId;
+
+                  return (
+                    <div
+                      key={idKebun}
+                      onClick={() => {
+                        setSelectedKebunId(idKebun);
+                        // --- SIMPAN PILIHAN USER KE MEMORI ---
+                        sessionStorage.setItem("selected_kebun_operasional", idKebun);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`px-4 py-3 text-xs sm:text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                        isSelected
+                          ? "bg-red-50 text-[#B5302D] font-bold"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {namaKebun}
+                      {isSelected && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#B5302D]" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <ChevronDown
-              className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
-            />
           </div>
+        )}
+      </div>
 
-          {/* Menu Pilihan (Dropdown Menjuntai Lebar Penuh) */}
-          <div
-            className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
-              isDropdownOpen
-                ? "opacity-100 scale-y-100"
-                : "opacity-0 scale-y-0 pointer-events-none"
-            }`}
-          >
-            <div className="max-h-60 overflow-y-auto py-1">
-              {daftarKebun.map((kb) => {
-                const idKebun = kb.auth_id || kb.id;
-                const namaKebun =
-                  kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
-                const isSelected = idKebun === selectedKebunId;
+      {/* GARIS PEMBATAS */}
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
 
-                return (
-                  <div
-                    key={idKebun}
-                    onClick={() => {
-                      setSelectedKebunId(idKebun);
-                      setIsDropdownOpen(false);
-                    }}
-                    className={`px-5 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
-                      isSelected
-                        ? "bg-red-50 text-[#B5302D] font-bold"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {namaKebun}
-                    {isSelected && (
-                      <div className="w-2 h-2 rounded-full bg-[#B5302D]" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* TAB SWITCHER DI BAWAH GARIS MEMANJANG */}
+      <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 w-full mb-6 sm:mb-8 overflow-hidden shadow-sm">
+        <button
+          onClick={() => navigate("../manajemenoperasional")}
+          className="flex-1 flex justify-center items-center gap-2 px-2 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+        >
+          <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          <span className="whitespace-nowrap">Penjualan/Peminjaman</span>
+        </button>
+        <button className="flex-1 flex justify-center items-center gap-2 px-2 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-[#B5302D] shadow-sm">
+          <Users className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          <span className="whitespace-nowrap">Organisasi</span>
+        </button>
+      </div>
 
       {/* --- KONTEN ORGANISASI (Hanya muncul jika kebun sudah dipilih) --- */}
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 z-10 relative">

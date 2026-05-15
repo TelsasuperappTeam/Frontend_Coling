@@ -5,6 +5,7 @@ import {
   ChevronDown,
   FileText,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 
@@ -147,7 +148,7 @@ const KemitraanPetani = () => {
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
       {/* --- HEADER --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             {activeTab === "validasi" ? (
@@ -195,6 +196,8 @@ const KemitraanPetani = () => {
         </div>
       </div>
 
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
+
       {/* --- CONTENT AREA --- */}
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
         {activeTab === "validasi" && (
@@ -207,8 +210,9 @@ const KemitraanPetani = () => {
               </p>
 
               {loading ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
-                  Memuat data...
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                  Memuat Data...
                 </div>
               ) : pendingTanam.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 text-xs">
@@ -379,8 +383,9 @@ const KemitraanPetani = () => {
               </p>
 
               {loading ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
-                  Memuat data...
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                  Memuat Data...
                 </div>
               ) : pendingPanen.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 text-xs">
@@ -447,17 +452,20 @@ const KemitraanPetani = () => {
               )}
             </SectionCard>
 
-{/* VALIDASI DOKUMEN ISPO (STYLE TABEL KEBUN) */}
+            {/* VALIDASI DOKUMEN ISPO (STYLE TABEL KEBUN) */}
             <SectionCard title="Daftar Validasi Dokumen ISPO Mandor">
               <p className="text-xs text-gray-500 mb-6 -mt-4">
-                Tabel pengajuan dokumen sertifikasi oleh petani yang harus dicek kebun (Role Anda: Read Only).
+                Tabel pengajuan dokumen sertifikasi oleh petani yang harus dicek
+                kebun (Role Anda: Read Only).
               </p>
 
               <div className="overflow-x-auto rounded-xl border border-gray-200">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-[#EF8523] text-white text-[11px] uppercase tracking-wider">
-                      <th className="p-4 font-bold rounded-tl-xl text-center">No</th>
+                      <th className="p-4 font-bold rounded-tl-xl text-center">
+                        No
+                      </th>
                       <th className="p-4 font-bold">Nama Petani</th>
                       <th className="p-4 font-bold">Nama Dokumen</th>
                       <th className="p-4 font-bold">Prinsip ISPO</th>
@@ -476,8 +484,9 @@ const KemitraanPetani = () => {
                           colSpan="7"
                           className="p-8 text-center text-gray-400"
                         >
-                          <div className="text-center py-10 text-gray-400 text-xs">
-                            Memuat data validasi ISPO petani...
+                          <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                            Memuat Data...
                           </div>
                         </td>
                       </tr>
@@ -529,7 +538,9 @@ const KemitraanPetani = () => {
                                 <FileText className="w-3 h-3" /> Buka File
                               </a>
                             ) : (
-                              <span className="text-gray-400 italic">Tidak ada file</span>
+                              <span className="text-gray-400 italic">
+                                Tidak ada file
+                              </span>
                             )}
                           </td>
 
@@ -564,8 +575,9 @@ const KemitraanPetani = () => {
             </p>
 
             {loadingManajemen ? (
-              <div className="text-center py-10 text-gray-400 text-xs">
-                Memuat data mandor...
+              <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                Memuat Data...
               </div>
             ) : petaniMembers.length === 0 ? (
               <div className="text-center py-10 text-gray-400 text-xs">

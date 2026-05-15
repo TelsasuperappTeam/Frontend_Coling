@@ -62,23 +62,16 @@ const EstateManagerRoutes = () => {
             </PrivateRoute>
           }
         />
-        <Route
-          path="manajemenoperasional"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
-              <Operasional />
-            </PrivateRoute>
-          }
-        />
-        {/* Path-nya diubah jadi masuk ke dalam "manajemenoperasional/organisasi" */}
-        <Route
-          path="manajemenoperasional/organisasi"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
-              <Operasional2 />
-            </PrivateRoute>
-          }
-        />
+        <Route 
+          path="manajemenoperasional" 
+          element={<PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]} />}
+        >
+          {/* Saat URL /estate_manager/manajemenoperasional/transaksi */}
+          <Route path="transaksi" element={<Operasional />} />
+          
+          {/* Saat URL /estate_manager/manajemenoperasional/organisasi */}
+          <Route path="organisasi" element={<Operasional2 />} />
+        </Route>
       </Route>
     </Routes>
   );

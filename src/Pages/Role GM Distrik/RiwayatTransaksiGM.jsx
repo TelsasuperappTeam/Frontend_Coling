@@ -141,8 +141,10 @@ const RiwayatTransaksiGM = () => {
 
   return (
     <div className="p-4 sm:p-8 md:p-10 min-h-screen font-sans text-gray-800">
-      {/* HEADER HERO */}
-      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
+      {/* 1. HEADER & DROPDOWN PILIH KEBUN */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+        
+        {/* Judul Kiri */}
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
             <History className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
@@ -156,57 +158,73 @@ const RiwayatTransaksiGM = () => {
             </p>
           </div>
         </div>
-      </div>
 
-      <hr className="border-gray-200 mb-6 sm:mb-8" />
+        {/* Dropdown Kanan (Sejajar dengan Judul di Desktop) */}
+        <div className="relative z-30 w-full lg:w-72 shrink-0">
+          {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+          {isDropdownOpen && (
+            <div className="fixed inset-0 z-20" onClick={() => setIsDropdownOpen(false)} />
+          )}
 
-      {/* DROPDOWN PEMILIHAN KEBUN */}
-      <div className="mb-6 sm:mb-8 relative z-30">
-        {isDropdownOpen && <div className="fixed inset-0" onClick={() => setIsDropdownOpen(false)} />}
-        <div
-          onClick={() => kebunList.length > 0 && setIsDropdownOpen(!isDropdownOpen)}
-          className={`flex items-center justify-between w-full px-5 py-3.5 rounded-2xl border cursor-pointer transition-all relative z-30 shadow-sm ${
-            isDropdownOpen ? "bg-[#B5302D] border-[#B5302D] text-white" : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <MapPin className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`} />
-            <div className="flex flex-col text-left">
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}>
-                Pilih Kebun untuk Dipantau:
-              </span>
-              <span className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}>
-                {kebunList.length === 0
-                  ? "Memuat data..."
-                  : kebunList.find((k) => (k.auth_id || k.id) === selectedKebunId)?.nama_lengkap || "-- Pilih Kebun --"}
-              </span>
+          {/* Tombol Utama */}
+          <div
+            onClick={() => kebunList.length > 0 && setIsDropdownOpen(!isDropdownOpen)}
+            className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl border cursor-pointer transition-all relative z-30 shadow-sm ${
+              isDropdownOpen 
+                ? "bg-[#B5302D] border-[#B5302D] text-white" 
+                : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <MapPin className={`w-4 h-4 sm:w-5 sm:h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`} />
+              <div className="flex flex-col text-left">
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}>
+                  Pilih Kebun:
+                </span>
+                <span className={`font-bold text-xs sm:text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"} line-clamp-1`}>
+                  {kebunList.length === 0
+                    ? "Memuat data..."
+                    : kebunList.find((k) => (k.auth_id || k.id) === selectedKebunId)?.nama_lengkap || "-- Silakan Pilih --"}
+                </span>
+              </div>
+            </div>
+            <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`} />
+          </div>
+
+          {/* Menu Pilihan (Dropdown Menjuntai) */}
+          <div className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+            isDropdownOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"
+          }`}>
+            <div className="max-h-60 overflow-y-auto py-1">
+              {kebunList.map((kb) => (
+                <div
+                  key={kb.id}
+                  onClick={() => { 
+                    setSelectedKebunId(kb.auth_id || kb.id); 
+                    setIsDropdownOpen(false); 
+                  }}
+                  className={`px-4 py-3 text-xs sm:text-sm cursor-pointer flex items-center justify-between transition-colors ${
+                    selectedKebunId === (kb.auth_id || kb.id) 
+                      ? "bg-red-50 text-[#B5302D] font-bold" 
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {kb.nama_lengkap || kb.nama_kebun}
+                  {selectedKebunId === (kb.auth_id || kb.id) && (
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#B5302D]" />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-          <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`} />
-        </div>
-
-        <div className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden transition-all duration-200 origin-top z-30 ${
-          isDropdownOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"
-        }`}>
-          <div className="max-h-60 overflow-y-auto py-1">
-            {kebunList.map((kb) => (
-              <div
-                key={kb.id}
-                onClick={() => { setSelectedKebunId(kb.auth_id || kb.id); setIsDropdownOpen(false); }}
-                className={`px-5 py-3.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
-                  selectedKebunId === (kb.auth_id || kb.id) ? "bg-red-50 text-[#B5302D] font-bold" : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {kb.nama_lengkap || kb.nama_kebun}
-                {selectedKebunId === (kb.auth_id || kb.id) && <div className="w-2 h-2 rounded-full bg-[#B5302D]" />}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
-      {/* TAB SWITCHER */}
-      <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 mb-6 sm:mb-8 w-full shadow-sm">
+      {/* GARIS PEMBATAS */}
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
+
+      {/* TAB SWITCHER (TIDAK DIUBAH LOGIKANYA, HANYA DIPINDAH BAWAH GARIS) */}
+      <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 w-full mb-6 sm:mb-8 overflow-hidden shadow-sm">
         <button
           onClick={() => { setActiveTab("aktif"); setExpandedId(null); }}
           className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-6 py-3 sm:py-3.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${

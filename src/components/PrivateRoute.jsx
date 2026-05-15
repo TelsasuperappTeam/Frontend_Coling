@@ -6,7 +6,7 @@
 // Jika semua valid, komponen `children` (halaman yang dilindungi) akan ditampilkan.
 
 
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { getRoleRedirectPath } from "../utils/roleRedirect";
 
 export default function PrivateRoute({ children, allowedRoles = [] }) {
@@ -24,5 +24,7 @@ export default function PrivateRoute({ children, allowedRoles = [] }) {
     return <Navigate to={fallback} replace />;
   }
 
-  return children;
+  // JIKA LOLOS PENGECEKAN:
+  // Render children (jika rute tunggal) ATAU <Outlet /> (jika rute bersarang)
+  return children ? children : <Outlet />;
 }

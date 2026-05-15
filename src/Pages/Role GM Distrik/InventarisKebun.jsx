@@ -55,7 +55,6 @@ export default function Inventaris() {
             setSelectedKebunId(firstKebunId);
           }
           // --------------------------------------------------
-
         } else {
           console.error("Gagal mendapatkan daftar kebun, status:", res.status);
           setKebunList([]);
@@ -305,19 +304,19 @@ export default function Inventaris() {
     },
   };
 
-return (
+  return (
     // Tambahkan class 'relative' pada div paling luar
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
-      
-      {/* 1. HEADER (Margin bawah disamakan jadi mb-6 agar gap konsisten) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
+      {/* 1. HEADER & DROPDOWN PILIH KEBUN */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+        {/* Judul Kiri */}
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-50 rounded-2xl">
+          <div className="p-3 bg-red-50 rounded-2xl shrink-0">
             <Warehouse className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
-              Pemantauan Inventaris Kebun
+              Inventaris Kebun
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm">
               Pantau stok alat, peralatan, pupuk, pestisida, dan bibit pada tiap
@@ -325,78 +324,100 @@ return (
             </p>
           </div>
         </div>
-      </div>
 
-      {/* 2. UI DROPDOWN PILIH KEBUN (Memanjang Penuh) */}
-      <div className="mb-8 relative z-30">
-        {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
-        {isDropdownOpen && (
-          <div 
-            className="fixed inset-0 z-20" 
-            onClick={() => setIsDropdownOpen(false)}
-          />
-        )}
+        {/* Dropdown Kanan (Sejajar dengan Judul di Desktop) */}
+        <div className="relative z-30 w-full lg:w-72 shrink-0">
+          {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+          {isDropdownOpen && (
+            <div
+              className="fixed inset-0 z-20"
+              onClick={() => setIsDropdownOpen(false)}
+            />
+          )}
 
-        {/* Tombol Utama (Bentuk Bar Memanjang) */}
-        <div
-          onClick={() => kebunList.length > 0 && setIsDropdownOpen(!isDropdownOpen)}
-          className={`flex items-center justify-between w-full px-5 py-3 rounded-xl border cursor-pointer transition-all relative z-30 ${
-            isDropdownOpen 
-              ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md" 
-              : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <MapPin className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`} />
-            <div className="flex flex-col text-left">
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}>
-                Pilih Kebun:
-              </span>
-              <span className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}>
-                {kebunList.length === 0 
-                  ? "Memuat data..." 
-                  : kebunList.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_lengkap || 
-                    kebunList.find(k => (k.auth_id || k.id) === selectedKebunId)?.nama_kebun || 
-                    "-- Silakan Pilih --"}
-              </span>
+          {/* Tombol Utama */}
+          <div
+            onClick={() =>
+              kebunList.length > 0 && setIsDropdownOpen(!isDropdownOpen)
+            }
+            className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl border cursor-pointer transition-all relative z-30 ${
+              isDropdownOpen
+                ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md"
+                : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <MapPin
+                className={`w-4 h-4 sm:w-5 sm:h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
+              />
+              <div className="flex flex-col text-left">
+                <span
+                  className={`text-[9px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
+                >
+                  Pilih Kebun:
+                </span>
+                <span
+                  className={`font-bold text-xs sm:text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"} line-clamp-1`}
+                >
+                  {kebunList.length === 0
+                    ? "Memuat data..."
+                    : kebunList.find(
+                        (k) => (k.auth_id || k.id) === selectedKebunId,
+                      )?.nama_lengkap ||
+                      kebunList.find(
+                        (k) => (k.auth_id || k.id) === selectedKebunId,
+                      )?.nama_kebun ||
+                      "-- Silakan Pilih --"}
+                </span>
+              </div>
+            </div>
+            <ChevronDown
+              className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
+            />
+          </div>
+
+          {/* Menu Pilihan (Dropdown Menjuntai) */}
+          <div
+            className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+              isDropdownOpen
+                ? "opacity-100 scale-y-100"
+                : "opacity-0 scale-y-0 pointer-events-none"
+            }`}
+          >
+            <div className="max-h-60 overflow-y-auto py-1">
+              {kebunList.map((kb) => {
+                const idKebun = kb.auth_id || kb.id;
+                const namaKebun =
+                  kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
+                const isSelected = idKebun === selectedKebunId;
+
+                return (
+                  <div
+                    key={idKebun}
+                    onClick={() => {
+                      setSelectedKebunId(idKebun);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`px-4 py-3 text-xs sm:text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                      isSelected
+                        ? "bg-red-50 text-[#B5302D] font-bold"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {namaKebun}
+                    {isSelected && (
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#B5302D]" />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`} />
-        </div>
-
-        {/* Menu Pilihan (Dropdown Menjuntai Lebar Penuh) */}
-        <div 
-          className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
-            isDropdownOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0 pointer-events-none"
-          }`}
-        >
-          <div className="max-h-60 overflow-y-auto py-1">
-            {kebunList.map((kb) => {
-              const idKebun = kb.auth_id || kb.id;
-              const namaKebun = kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
-              const isSelected = idKebun === selectedKebunId;
-
-              return (
-                <div
-                  key={idKebun}
-                  onClick={() => {
-                    setSelectedKebunId(idKebun);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`px-5 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
-                    isSelected 
-                      ? "bg-red-50 text-[#B5302D] font-bold" 
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {namaKebun}
-                  {isSelected && <div className="w-2 h-2 rounded-full bg-[#B5302D]" />}
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
+
+      {/* GARIS PEMBATAS */}
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
 
       {/* 3. KONTEN TABEL INVENTARIS */}
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 z-10 relative">
@@ -412,8 +433,9 @@ return (
           <div className="space-y-8 bg-transparent">
             <SectionCard title="Inventaris Alat">
               {isLoadingData ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+                <div className="text-center py-10 text-gray-400 text-sm">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-[#B5302D]" />
+                  Memuat Data ...
                 </div>
               ) : (
                 <Section
@@ -425,8 +447,9 @@ return (
 
             <SectionCard title="Inventaris Barang">
               {isLoadingData ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+                <div className="text-center py-10 text-gray-400 text-sm">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-[#B5302D]" />
+                  Memuat Data ...
                 </div>
               ) : (
                 <div className="flex flex-col gap-8">
@@ -448,7 +471,6 @@ return (
           </div>
         )}
       </div>
-
     </div>
   );
 }

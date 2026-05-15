@@ -96,7 +96,9 @@ const KemitraanPetani = () => {
         Authorization: `Bearer ${token}`,
       };
 
-      const queryParam = selectedKebunId ? `?target_kebun_auth_id=${selectedKebunId}` : "";
+      const queryParam = selectedKebunId
+        ? `?target_kebun_auth_id=${selectedKebunId}`
+        : "";
 
       const urlPanen = `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_RENCANA_PANEN_PENDING}${queryParam}`;
       const urlTanam = `${API_ENDPOINTS.FARM.KEBUN.APPROVAL.GET_PENDING_BLOK}${queryParam}`;
@@ -135,15 +137,15 @@ const KemitraanPetani = () => {
 
     try {
       const token = localStorage.getItem("token");
-      
+
       // Pastikan penggabungan URL aman dari error tanda tanya ganda
       let url = API_ENDPOINTS.USER.KEBUN.PETANI_MEMBERS;
       if (selectedKebunId) {
-        url += url.includes("?") 
-          ? `&target_kebun_auth_id=${selectedKebunId}` 
+        url += url.includes("?")
+          ? `&target_kebun_auth_id=${selectedKebunId}`
           : `?target_kebun_auth_id=${selectedKebunId}`;
       }
-      
+
       // --- BUKTI UNTUK BACKEND ---
       console.log(`[BUKTI FE] Menembak API Petani Members -> ${url}`);
 
@@ -160,10 +162,13 @@ const KemitraanPetani = () => {
       }
 
       const data = await res.json();
-      
+
       // --- BUKTI UNTUK BACKEND ---
-      console.log(`[BUKTI FE] Data Mandor dari BE untuk Kebun ID ${selectedKebunId}:`, data);
-      
+      console.log(
+        `[BUKTI FE] Data Mandor dari BE untuk Kebun ID ${selectedKebunId}:`,
+        data,
+      );
+
       setPetaniMembers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching petani members:", error);
@@ -192,142 +197,144 @@ const KemitraanPetani = () => {
 
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
-      {/* --- HEADER --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
-        <div className="flex flex-col gap-4 w-full">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-50 rounded-2xl">
-              <ShieldCheck className="w-8 h-8 text-[#B5302D]" />
+      {/* 1. HEADER & DROPDOWN PILIH KEBUN */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+        {/* Judul Kiri */}
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-red-50 rounded-2xl shrink-0">
+            <ShieldCheck className="w-8 h-8 text-[#B5302D]" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
+              Pengajuan Kemitraan
+            </h1>
+            <p className="text-gray-500 text-xs sm:text-sm">
+              Pantau rencana kerja dan dokumen sertifikasi mandor.
+            </p>
+          </div>
+        </div>
+
+        {/* Dropdown Kanan (Sejajar dengan Judul di Desktop khusus GM) */}
+        {userRole === "general_manager_distrik" && (
+          <div className="relative z-30 w-full lg:w-72 shrink-0">
+            {/* Overlay tersembunyi untuk menutup dropdown saat klik luar */}
+            {isDropdownOpen && (
+              <div
+                className="fixed inset-0 z-20"
+                onClick={() => setIsDropdownOpen(false)}
+              />
+            )}
+
+            {/* Tombol Utama */}
+            <div
+              onClick={() =>
+                kebunList.length > 0 && setIsDropdownOpen(!isDropdownOpen)
+              }
+              className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl border cursor-pointer transition-all relative z-30 ${
+                isDropdownOpen
+                  ? "bg-[#B5302D] border-[#B5302D] text-white shadow-md"
+                  : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <MapPin
+                  className={`w-4 h-4 sm:w-5 sm:h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
+                />
+                <div className="flex flex-col text-left">
+                  <span
+                    className={`text-[9px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
+                  >
+                    Pilih Kebun:
+                  </span>
+                  <span
+                    className={`font-bold text-xs sm:text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"} line-clamp-1`}
+                  >
+                    {kebunList.length === 0
+                      ? "Memuat data..."
+                      : kebunList.find(
+                          (k) => (k.auth_id || k.id) === selectedKebunId,
+                        )?.nama_lengkap ||
+                        kebunList.find(
+                          (k) => (k.auth_id || k.id) === selectedKebunId,
+                        )?.nama_kebun ||
+                        "-- Silakan Pilih --"}
+                  </span>
+                </div>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
+              />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
-                Pengajuan Kemitraan (Read-Only)
-              </h1>
-              <p className="text-gray-500 text-xs sm:text-sm">
-                Pantau rencana kerja dan dokumen sertifikasi mandor.
-              </p>
+
+            {/* Menu Pilihan (Dropdown Menjuntai) */}
+            <div
+              className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top z-30 ${
+                isDropdownOpen
+                  ? "opacity-100 scale-y-100"
+                  : "opacity-0 scale-y-0 pointer-events-none"
+              }`}
+            >
+              <div className="max-h-60 overflow-y-auto py-1">
+                {kebunList.map((kb) => {
+                  const idKebun = kb.auth_id || kb.id;
+                  const namaKebun =
+                    kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
+                  const isSelected = idKebun === selectedKebunId;
+
+                  return (
+                    <div
+                      key={idKebun}
+                      onClick={() => {
+                        setSelectedKebunId(idKebun);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`px-4 py-3 text-xs sm:text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                        isSelected
+                          ? "bg-red-50 text-[#B5302D] font-bold"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {namaKebun}
+                      {isSelected && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#B5302D]" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-
-          {/* --- UI DROPDOWN DINAMIS SESUAI DASHBOARD --- */}
-          {userRole === "general_manager_distrik" && (
-            <div className={`relative w-full sm:w-auto ${isDropdownOpen ? "z-[999]" : ""}`}>
-              {isDropdownOpen && (
-                <div
-                  className="fixed inset-0"
-                  onClick={() => setIsDropdownOpen(false)}
-                />
-              )}
-
-              <div
-                onClick={() =>
-                  kebunList.length > 0 && setIsDropdownOpen(!isDropdownOpen)
-                }
-                className={`flex items-center justify-between gap-4 px-4 py-2 rounded-xl border shadow-sm cursor-pointer transition-all relative min-w-[220px] ${
-                  isDropdownOpen
-                    ? "bg-[#B5302D] border-[#B5302D] text-white"
-                    : "bg-red-50 border-red-100 text-[#B5302D] hover:bg-red-100"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <MapPin
-                    className={`w-5 h-5 ${isDropdownOpen ? "text-white" : "text-[#B5302D]"}`}
-                  />
-                  <div className="flex flex-col text-left">
-                    <span
-                      className={`text-[10px] font-bold uppercase tracking-wider ${isDropdownOpen ? "text-red-200" : "text-[#B5302D]"}`}
-                    >
-                      Pilih Kebun:
-                    </span>
-                    <span
-                      className={`font-bold text-sm ${isDropdownOpen ? "text-white" : "text-gray-800"}`}
-                    >
-                      {kebunList.length === 0
-                        ? "Memuat data..."
-                        : kebunList.find(
-                            (k) => (k.auth_id || k.id) === selectedKebunId,
-                          )?.nama_lengkap ||
-                          kebunList.find(
-                            (k) => (k.auth_id || k.id) === selectedKebunId,
-                          )?.nama_kebun ||
-                          "-- Silakan Pilih --"}
-                    </span>
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-300 ${isDropdownOpen ? "rotate-180 text-white" : "text-[#B5302D]"}`}
-                />
-              </div>
-
-              {/* Menu Pilihan Dropdown */}
-              <div
-                className={`absolute left-0 right-0 top-full mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden transition-all duration-200 origin-top ${
-                  isDropdownOpen
-                    ? "opacity-100 scale-y-100"
-                    : "opacity-0 scale-y-0 pointer-events-none"
-                }`}
-              >
-                <div className="max-h-60 overflow-y-auto py-1">
-                  {kebunList.map((kb) => {
-                    const idKebun = kb.auth_id || kb.id;
-                    const namaKebun =
-                      kb.nama_lengkap || kb.nama_kebun || "Kebun Tanpa Nama";
-                    const isSelected = idKebun === selectedKebunId;
-
-                    return (
-                      <div
-                        key={idKebun}
-                        onClick={() => {
-                          setSelectedKebunId(idKebun);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
-                          isSelected
-                            ? "bg-red-50 text-[#B5302D] font-bold"
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {namaKebun}
-                        {isSelected && (
-                          <div className="w-2 h-2 rounded-full bg-[#B5302D]" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Tab Switcher Diletakkan Sejajar (Flex row di Desktop) */}
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto h-fit">
-          <button
-            onClick={() => setActiveTab("validasi")}
-            className={`w-1/2 sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
-              activeTab === "validasi"
-                ? "bg-white text-[#B5302D] shadow-sm"
-                : "text-gray-500 hover:bg-gray-200"
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span className="leading-tight text-center">Validasi</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("manajemen")}
-            className={`w-1/2 sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
-              activeTab === "manajemen"
-                ? "bg-white text-[#B5302D] shadow-sm"
-                : "text-gray-500 hover:bg-gray-200"
-            }`}
-          >
-            <Users className="w-4 h-4 shrink-0" />
-            <span className="leading-tight text-center">Manajemen Mandor</span>
-          </button>
-        </div>
+        )}
       </div>
 
-      <hr className="border-gray-200 mb-8" />
+      {/* GARIS PEMBATAS */}
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
+
+      {/* TAB SWITCHER DI BAWAH GARIS MEMANJANG */}
+      <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 w-full mb-6 sm:mb-8 overflow-hidden shadow-sm">
+        <button
+          onClick={() => setActiveTab("validasi")}
+          className={`flex-1 flex justify-center items-center gap-2 px-2 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            activeTab === "validasi"
+              ? "bg-white text-[#B5302D] shadow-sm"
+              : "text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          <span className="whitespace-nowrap">Validasi</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("manajemen")}
+          className={`flex-1 flex justify-center items-center gap-2 px-2 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            activeTab === "manajemen"
+              ? "bg-white text-[#B5302D] shadow-sm"
+              : "text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+          }`}
+        >
+          <Users className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          <span className="whitespace-nowrap">Manajemen Mandor</span>
+        </button>
+      </div>
 
       {/* --- CONTENT AREA --- */}
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -336,12 +343,14 @@ const KemitraanPetani = () => {
             {/* 1. VALIDASI RENCANA PANEN */}
             <SectionCard title="Pemantauan Rencana Panen">
               <p className="text-xs text-gray-500 mb-6 -mt-4">
-                Daftar pengajuan rencana panen mandor yang menunggu validasi dari pihak Kebun.
+                Daftar pengajuan rencana panen mandor yang menunggu validasi
+                dari pihak Kebun.
               </p>
 
               {loading ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
-                  Memuat data...
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                  Memuat Data...
                 </div>
               ) : pendingPanen.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 text-xs">
@@ -355,21 +364,46 @@ const KemitraanPetani = () => {
                       title={item.nama_unit || `Unit ${item.id}`}
                     >
                       <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
-                        <DetailRow label="Nama Mandor" value={item.nama_petani} />
-                        <DetailRow label="Siklus Panen Ke" value={item.nomor_siklus || "-"} />
-                        <DetailRow label="Tanggal Rencana" value={item.tanggal_rencana_panen} />
-                        <DetailRow label="Usia Tanaman" value={item.usia_tanaman} />
-                        <DetailRow label="Luas Panen (Ha)" value={item.luas_lahan_dipanen} />
-                        <DetailRow label="Jenis Sawit" value={item.jenis_sawit || "-"} />
+                        <DetailRow
+                          label="Nama Mandor"
+                          value={item.nama_petani}
+                        />
+                        <DetailRow
+                          label="Siklus Panen Ke"
+                          value={item.nomor_siklus || "-"}
+                        />
+                        <DetailRow
+                          label="Tanggal Rencana"
+                          value={item.tanggal_rencana_panen}
+                        />
+                        <DetailRow
+                          label="Usia Tanaman"
+                          value={item.usia_tanaman}
+                        />
+                        <DetailRow
+                          label="Luas Panen (Ha)"
+                          value={item.luas_lahan_dipanen}
+                        />
+                        <DetailRow
+                          label="Jenis Sawit"
+                          value={item.jenis_sawit || "-"}
+                        />
 
                         {item.jenis_sawit?.toLowerCase() === "tenera" && (
-                          <DetailRow label="Varietas" value={item.nama_varietas || "-"} />
+                          <DetailRow
+                            label="Varietas"
+                            value={item.nama_varietas || "-"}
+                          />
                         )}
 
                         {item.catatan_penolakan && (
                           <div className="mt-3 pt-2 border-t border-dashed border-gray-200">
-                            <p className="font-bold text-red-500 mb-1">Catatan Penolakan Sebelumnya:</p>
-                            <p className="text-gray-600 pl-1 italic">"{item.catatan_penolakan}"</p>
+                            <p className="font-bold text-red-500 mb-1">
+                              Catatan Penolakan Sebelumnya:
+                            </p>
+                            <p className="text-gray-600 pl-1 italic">
+                              "{item.catatan_penolakan}"
+                            </p>
                           </div>
                         )}
 
@@ -387,12 +421,14 @@ const KemitraanPetani = () => {
             {/* 2. VALIDASI RENCANA TANAM */}
             <SectionCard title="Pemantauan Rencana Tanam">
               <p className="text-xs text-gray-500 mb-6 -mt-4">
-                Daftar pengajuan rencana replanting atau tanam baru (Blok Lahan) yang menunggu validasi kebun.
+                Daftar pengajuan rencana replanting atau tanam baru (Blok Lahan)
+                yang menunggu validasi kebun.
               </p>
 
               {loading ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
-                  Memuat data...
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                  Memuat Data...
                 </div>
               ) : pendingTanam.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 text-xs">
@@ -406,9 +442,18 @@ const KemitraanPetani = () => {
                       title={item.nama_unit || `Blok #${item.id}`}
                     >
                       <div className="space-y-2 text-[11px] sm:text-xs text-gray-700">
-                        <DetailRow label="Tanggal Tanam" value={item.tanggal_tanam_blok} />
-                        <DetailRow label="Luas Unit (Ha)" value={item.luas_unit} />
-                        <DetailRow label="Jenis Bibit" value={item.jenis_bibit} />
+                        <DetailRow
+                          label="Tanggal Tanam"
+                          value={item.tanggal_tanam_blok}
+                        />
+                        <DetailRow
+                          label="Luas Unit (Ha)"
+                          value={item.luas_unit}
+                        />
+                        <DetailRow
+                          label="Jenis Bibit"
+                          value={item.jenis_bibit}
+                        />
                         {item.jenis_bibit?.toLowerCase() === "tenera" && (
                           <DetailRow
                             label="Varietas"
@@ -419,8 +464,14 @@ const KemitraanPetani = () => {
                             }
                           />
                         )}
-                        <DetailRow label="Jml. Bibit Total" value={item.jumlah_total_tanaman} />
-                        <DetailRow label="Tanaman/Ha" value={item.jumlah_tanaman_per_ha} />
+                        <DetailRow
+                          label="Jml. Bibit Total"
+                          value={item.jumlah_total_tanaman}
+                        />
+                        <DetailRow
+                          label="Tanaman/Ha"
+                          value={item.jumlah_tanaman_per_ha}
+                        />
                         <DetailRow
                           label="Jarak Tanam"
                           value={
@@ -434,13 +485,20 @@ const KemitraanPetani = () => {
                           Kondisi Lahan
                         </div>
                         <div className="grid grid-cols-1 gap-2 mb-2">
-                          <DetailRow label="Jenis Tanah" value={item.jenis_tanah} />
-                          <DetailRow label="Jenis Lahan" value={item.jenis_lahan} />
+                          <DetailRow
+                            label="Jenis Tanah"
+                            value={item.jenis_tanah}
+                          />
+                          <DetailRow
+                            label="Jenis Lahan"
+                            value={item.jenis_lahan}
+                          />
                         </div>
 
                         {item.jenis_tanah === "Mineral" && (
                           <>
-                            {(item.jenis_lahan === "Miring" || item.jenis_lahan === "Konservasi") && (
+                            {(item.jenis_lahan === "Miring" ||
+                              item.jenis_lahan === "Konservasi") && (
                               <div className="bg-yellow-50 p-2 rounded border border-yellow-100 mt-1">
                                 <DetailRow
                                   label="Terasering"
@@ -452,14 +510,20 @@ const KemitraanPetani = () => {
                                 />
                                 {item.dok_bukti_terasering_url && (
                                   <div className="flex justify-between items-center mt-1 pt-1 border-t border-dashed border-gray-300">
-                                    <span className="text-gray-500 font-medium italic text-[10px]">Bukti:</span>
+                                    <span className="text-gray-500 font-medium italic text-[10px]">
+                                      Bukti:
+                                    </span>
                                     <a
-                                      href={getFileUrl(item.dok_bukti_terasering_url, "FARM")}
+                                      href={getFileUrl(
+                                        item.dok_bukti_terasering_url,
+                                        "FARM",
+                                      )}
                                       target="_blank"
                                       rel="noreferrer"
                                       className="text-blue-600 flex items-center gap-1 hover:underline font-bold text-[10px]"
                                     >
-                                      Lihat File <ExternalLink className="w-3 h-3" />
+                                      Lihat File{" "}
+                                      <ExternalLink className="w-3 h-3" />
                                     </a>
                                   </div>
                                 )}
@@ -477,14 +541,20 @@ const KemitraanPetani = () => {
                                 />
                                 {item.dok_bukti_drainase_url && (
                                   <div className="flex justify-between items-center mt-1 pt-1 border-t border-dashed border-gray-300">
-                                    <span className="text-gray-500 font-medium italic text-[10px]">Bukti:</span>
+                                    <span className="text-gray-500 font-medium italic text-[10px]">
+                                      Bukti:
+                                    </span>
                                     <a
-                                      href={getFileUrl(item.dok_bukti_drainase_url, "FARM")}
+                                      href={getFileUrl(
+                                        item.dok_bukti_drainase_url,
+                                        "FARM",
+                                      )}
                                       target="_blank"
                                       rel="noreferrer"
                                       className="text-blue-600 flex items-center gap-1 hover:underline font-bold text-[10px]"
                                     >
-                                      Lihat File <ExternalLink className="w-3 h-3" />
+                                      Lihat File{" "}
+                                      <ExternalLink className="w-3 h-3" />
                                     </a>
                                   </div>
                                 )}
@@ -498,8 +568,16 @@ const KemitraanPetani = () => {
                             <div className="flex items-center gap-1 text-emerald-800 border-b border-emerald-200 pb-1 mb-1 font-bold">
                               Detail Gambut
                             </div>
-                            <DetailRow label="Lapisan Mineral" value={item.gambut_lapisan_mineral?.join(", ") || "-"} />
-                            <DetailRow label="Kematangan" value={item.gambut_kematangan?.join(", ") || "-"} />
+                            <DetailRow
+                              label="Lapisan Mineral"
+                              value={
+                                item.gambut_lapisan_mineral?.join(", ") || "-"
+                              }
+                            />
+                            <DetailRow
+                              label="Kematangan"
+                              value={item.gambut_kematangan?.join(", ") || "-"}
+                            />
                           </div>
                         )}
                       </div>
@@ -512,7 +590,8 @@ const KemitraanPetani = () => {
             {/* 3. VALIDASI DOKUMEN ISPO */}
             <SectionCard title="Pemantauan Dokumen Sertifikasi ISPO">
               <p className="text-xs text-gray-500 mb-6 -mt-4">
-                Tabel pengajuan dokumen sertifikasi oleh mandor yang menunggu validasi dari Kebun.
+                Tabel pengajuan dokumen sertifikasi oleh mandor yang menunggu
+                validasi dari Kebun.
               </p>
 
               <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -530,15 +609,22 @@ const KemitraanPetani = () => {
                   <tbody className="text-xs text-gray-700 bg-white">
                     {loading ? (
                       <tr>
-                        <td colSpan="6" className="p-8 text-center text-gray-400">
-                          <div className="text-center py-10 text-gray-400 text-xs">
-                            Memuat data validasi ISPO...
-                          </div>
+                        <td
+                          colSpan="6"
+                          className="p-8 text-center text-gray-400"
+                        >
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                  Memuat Data...
+                </div>
                         </td>
                       </tr>
                     ) : pendingDokumen.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="p-6 text-center text-gray-400">
+                        <td
+                          colSpan="6"
+                          className="p-6 text-center text-gray-400"
+                        >
                           Tidak ada dokumen sertifikasi yang menunggu validasi.
                         </td>
                       </tr>
@@ -548,7 +634,9 @@ const KemitraanPetani = () => {
                           key={item.id}
                           className="border-b border-gray-100 hover:bg-orange-50 transition-colors"
                         >
-                          <td className="p-4 font-bold text-center">{index + 1}</td>
+                          <td className="p-4 font-bold text-center">
+                            {index + 1}
+                          </td>
                           <td className="p-4 font-bold text-[#B5302D]">
                             {item.nama_petani || "Tidak Diketahui"}
                           </td>
@@ -587,13 +675,15 @@ const KemitraanPetani = () => {
         {activeTab === "manajemen" && (
           <SectionCard title="Manajemen Mandor">
             <p className="text-xs text-gray-500 mb-6 -mt-4">
-              Daftar mandor naungan beserta profil detail dan progres ISPO mereka.
+              Daftar mandor naungan beserta profil detail dan progres ISPO
+              mereka.
             </p>
 
             {loadingManajemen ? (
-              <div className="text-center py-10 text-gray-400 text-xs">
-                Memuat data mandor...
-              </div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#B5302D]" />
+                  Memuat Data...
+                </div>
             ) : petaniMembers.length === 0 ? (
               <div className="text-center py-10 text-gray-400 text-xs">
                 Belum ada mandor yang bergabung di kebun ini.
@@ -601,10 +691,10 @@ const KemitraanPetani = () => {
             ) : (
               <div className="space-y-6">
                 {petaniMembers.map((petani) => (
-                  <PetaniProfileCard 
-                    key={petani.id} 
-                    data={petani} 
-                    selectedKebunId={selectedKebunId} 
+                  <PetaniProfileCard
+                    key={petani.id}
+                    data={petani}
+                    selectedKebunId={selectedKebunId}
                   />
                 ))}
               </div>
@@ -688,7 +778,9 @@ const PetaniProfileCard = ({ data, selectedKebunId }) => {
         setLoadingIspo(true);
         try {
           const token = localStorage.getItem("token");
-          const queryParam = selectedKebunId ? `?target_kebun_auth_id=${selectedKebunId}` : "";
+          const queryParam = selectedKebunId
+            ? `?target_kebun_auth_id=${selectedKebunId}`
+            : "";
           const url = `${API_ENDPOINTS.ISPO.KEBUN.GET_PROGRES_ISPO_PETANI_NAUNGAN.replace("{petani_id}", data.id)}${queryParam}`;
 
           const res = await fetch(url, {

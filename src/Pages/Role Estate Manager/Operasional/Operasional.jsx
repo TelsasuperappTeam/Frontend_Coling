@@ -52,7 +52,7 @@ const Operasional = () => {
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
       {/* HEADER & TAB SWITCHER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <ShoppingCart className="w-8 h-8 text-[#B5302D]" />
@@ -75,7 +75,9 @@ const Operasional = () => {
             </span>
           </button>
           <button
-            onClick={() => navigate("../manajemenoperasional/organisasi")}
+            onClick={() =>
+              navigate("/estate_manager/manajemenoperasional/organisasi")
+            }
             className="flex-1 flex justify-center items-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
             <Users className="w-4 h-4 shrink-0" />
@@ -83,6 +85,8 @@ const Operasional = () => {
           </button>
         </div>
       </div>
+
+      <hr className="border-gray-200 mb-6 sm:mb-8" />
 
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
         {/* SECTION 1 PENJUALAN BARANG */}

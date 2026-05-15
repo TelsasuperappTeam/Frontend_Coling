@@ -1,15 +1,13 @@
 // tampilan navigasi yang disesuaikan dengan masing-masing role untuk setiap pengguna mengakses fitur mereka
 
 import { useState, useRef, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Perbaikan: double import Link dihapus
 import { LayoutGrid, LogOut } from "lucide-react"; 
 import { menuConfig } from "../config/menuConfig";
 import { API_ENDPOINTS } from "../config/constants";
 
 export default function NavbarRole({ role }) {
-  // Hanya pakai state dropdown utama, fitur hamburger mobile dibuang
   const [openDropdown, setOpenDropdown] = useState(false);
-
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,12 +51,9 @@ export default function NavbarRole({ role }) {
     <>
       <nav className="bg-white fixed top-0 left-0 w-full z-50 shadow-sm border-b border-[#EF8523]/30">
         <div className="max-w-[85rem] mx-auto px-3 sm:px-6 lg:px-8">
-          {/* Container ini sekarang selalu flex-row (menyamping) di semua ukuran layar */}
           <div className="flex justify-between items-center h-14 sm:h-16 md:h-20">
             
-            {/* ========================================================= */}
-            {/* BAGIAN KIRI: LOGO (Tanpa Hamburger)                       */}
-            {/* ========================================================= */}
+            {/* BAGIAN KIRI: LOGO */}
             <div className="flex items-center shrink-0 min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2 truncate">
                 <img
@@ -67,18 +62,14 @@ export default function NavbarRole({ role }) {
                   className="h-6 w-auto sm:h-7 md:h-9 object-contain shrink-0"
                 />
                 <span className="text-[13px] sm:text-lg md:text-2xl font-black text-[#B5302D] tracking-tight truncate">
-                  {/* Di HP teksnya disingkat agar muat */}
                   Selamat Datang!
                 </span>
               </div>
             </div>
 
-            {/* ========================================================= */}
-            {/* BAGIAN KANAN: MENU (Fitur Utama & Keluar 1 Baris)         */}
-            {/* ========================================================= */}
+            {/* BAGIAN KANAN: MENU */}
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
               
-              {/* TOMBOL & DROPDOWN FITUR UTAMA */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setOpenDropdown(!openDropdown)}
@@ -94,7 +85,6 @@ export default function NavbarRole({ role }) {
                   <span className="text-[11px] sm:text-sm">Fitur Utama</span>
                 </button>
 
-                {/* --- KOTAK DROPDOWN (GRID 2 KOLOM UNTUK SEMUA LAYAR) --- */}
                 {openDropdown && (
                   <div className="absolute right-0 top-full mt-2 sm:mt-3 w-[280px] sm:w-[400px] md:w-[450px] bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-5 animate-slideDown z-50">
                     <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 sm:mb-4 border-b border-gray-100 pb-1.5 sm:pb-2">
@@ -104,11 +94,13 @@ export default function NavbarRole({ role }) {
                     <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       {menus.map((menu, i) => {
                         const Icon = menu.icon;
-                        const currentPath = location.pathname.replace(/\/$/, "");
-                        const targetPath = menu.path.replace(/\/$/, "");
-                        const isActive =
-                          currentPath === targetPath ||
-                          location.pathname.startsWith(menu.path + "/");
+                        
+                        // --- KUNCI PERBAIKAN: LOGIKA ACTIVECHECK ---
+                        // Jika di config ada 'activeCheck', kita pakai .includes()
+                        // Jika tidak ada, kita pakai kecocokan persis (===)
+                        const isActive = menu.activeCheck 
+                          ? location.pathname.includes(menu.activeCheck)
+                          : location.pathname === menu.path;
 
                         return (
                           <Link
@@ -124,9 +116,7 @@ export default function NavbarRole({ role }) {
                             <div
                               className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${isActive ? "bg-[#B5302D] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-red-50 group-hover:text-[#B5302D]"}`}
                             >
-                              {Icon && (
-                                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                              )}
+                              {Icon && <Icon className="w-4 h-4 sm:w-5 sm:h-5" />}
                             </div>
                             <span
                               className={`text-[10px] sm:text-sm font-bold line-clamp-2 leading-tight sm:leading-snug mt-0 sm:mt-0.5 ${isActive ? "text-[#B5302D]" : "text-gray-800"}`}
@@ -141,17 +131,14 @@ export default function NavbarRole({ role }) {
                 )}
               </div>
 
-              {/* Garis Pembatas (Sangat tipis di HP) */}
               <div className="h-5 sm:h-8 w-px bg-gray-200 mx-0.5 sm:mx-1"></div>
 
-              {/* TOMBOL KELUAR */}
               <button
                 onClick={handleLogout}
                 className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2.5 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg sm:rounded-xl transition-colors duration-300 font-bold"
                 title="Keluar"
               >
                 <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 sm:text-gray-500" />
-                {/* Teks "Keluar" disembunyikan di HP karena layarnya sempit, hanya Ikon saja yang tampil */}
                 <span className="hidden sm:block text-sm">Keluar</span>
               </button>
             </div>
