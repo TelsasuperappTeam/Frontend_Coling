@@ -37,7 +37,7 @@ const MandorRoutes = () => {
           }
         />
         <Route
-          path="riwayatpenjualan"
+          path="riwayatpenjualan/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
               <Riwayatpenjualan />
@@ -53,7 +53,7 @@ const MandorRoutes = () => {
           }
         />
         <Route
-          path="PantauISPO"
+          path="PantauISPO/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
               <PantauISPO />
@@ -66,6 +66,16 @@ const MandorRoutes = () => {
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
               <ManajemenSengketa />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Manajemen Kebun (Halaman Utama yang ada Tab-nya) */}
+        <Route
+          path="manajemenkebun/*"
+          element={
+            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
+              <ManajemenKebun />
             </PrivateRoute>
           }
         />
@@ -100,16 +110,6 @@ const MandorRoutes = () => {
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
               <Panen />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Manajemen Kebun (Halaman Utama yang ada Tab-nya) */}
-        <Route
-          path="manajemenkebun/*"
-          element={
-            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
-              <ManajemenKebun />
             </PrivateRoute>
           }
         />

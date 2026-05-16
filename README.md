@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Memperbaiki UI/UX user experience telsa V2.0"
+git commit -m "Memperbaiki UI/UX user experience telsa V2.0 FINAL 1"
 git push origin main
 
 Jika menggunakan server maka "npm run dev"

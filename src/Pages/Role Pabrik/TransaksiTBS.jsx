@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   ChevronUp,
@@ -13,6 +14,7 @@ import {
   Loader2,
   XCircle,
   ShoppingCart,
+  Truck,
 } from "lucide-react";
 
 import { API_ENDPOINTS, NOTIF_MESSAGES } from "../../config/constants";
@@ -23,6 +25,8 @@ import { showToast, confirmDialog } from "../../utils/notif";
 // DEKLARASI KOMPONEN UTAMA
 // ==========================================
 const TransaksiTBS = () => {
+  const navigate = useNavigate();
+
   // --- STATE UI DASAR ---
   const [activeMainSection, setActiveMainSection] = useState("rencana");
   const [activeSubRencana, setActiveSubRencana] = useState(null);
@@ -449,7 +453,6 @@ const TransaksiTBS = () => {
         </div>
       </div>
 
-      <hr className="border-gray-200" />
       {/* --- GARIS PEMBATAS --- */}
       <hr className="border-gray-200 mb-8" />
 
@@ -634,12 +637,12 @@ const TransaksiTBS = () => {
               </div>
 
               {isLoadingList ? (
-                <div className="text-center py-6 text-gray-500 text-sm">
-                  Memuat data...
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
                 </div>
               ) : kebutuhanAktif.length === 0 ? (
-                <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-xl border border-gray-200">
-                  Belum ada rencana kebutuhan yang aktif.
+                <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
+                  Tidak ada data yang tersedia di tab ini.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -809,192 +812,249 @@ const TransaksiTBS = () => {
 
       {/* ======================== KONTEN 2: PENAWARAN PEMBELIAN ============================ */}
       {activeMainSection === "penawaran" && (
-        <div className="space-y-4 animate-fadeIn">
-          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
-            <Info className="text-blue-500 shrink-0" size={20} />
-            <p className="text-xs md:text-sm text-blue-800 leading-relaxed">
-              Berikut <strong>Daftar penawaran TBS dari kebun.</strong> Periksa
-              detail setiap transaksi sebelum mengambil tindakan.
-            </p>
-          </div>
+        <div className="animate-in fade-in duration-300">
+          <SectionCard
+            title="Daftar Penawaran TBS Masuk Dari Kebun"
+            /* KANAN: BANNER CTA KEDAP-KEDIP dipindah ke rightContent agar sejajar judul */
+            rightContent={
+              <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-white border border-[#EF8523]/30 p-1.5 sm:pr-2.5 rounded-full shadow-[0_0_15px_rgba(239,133,35,0.15)] animate-pulse hover:animate-none transition-all w-full sm:w-max">
+                <div className="flex items-center gap-2 sm:gap-3 pl-0.5 sm:pl-0">
+                  <div className="bg-gradient-to-br from-[#EF8523] to-[#d9751d] p-1.5 sm:p-2 rounded-full text-white shrink-0 shadow-sm">
+                    <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] font-bold text-gray-700 leading-tight whitespace-nowrap">
+                    Silahkan <br className="hidden sm:block" />
+                    <span className="text-[#EF8523] font-black sm:ml-0 ml-1">
+                      Pantau Yang Tiba
+                    </span>
+                  </p>
+                </div>
 
-          <div className="space-y-3">
-            {isLoadingPenawaran ? (
-              <div className="text-center py-6 text-gray-500 text-sm">
-                Memuat Data...
+                <button
+                  onClick={() => navigate("/pabrik/penerimaanTBS")}
+                  className="bg-[#EF8523] hover:bg-[#d9751d] active:scale-95 text-white px-4 py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 whitespace-nowrap ml-1"
+                >
+                  Klik &rarr;
+                </button>
               </div>
-            ) : penawaranMasuk.length === 0 ? (
-              <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-xl border border-gray-200">
-                Belum ada penawaran masuk dari kebun.
-              </div>
-            ) : (
-              penawaranMasuk.map((item) => {
-                // Konversi logika dari BE
-                const estimasiTon = item.estimasi_total_tbs_grup_kg / 1000;
-                const tglPanenFormat = new Date(
-                  item.tanggal_rencana_panen,
-                ).toLocaleDateString("id-ID", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric",
-                });
+            }
+          >
+            <div className="space-y-4 sm:space-y-5">
+              {/* LIST DATA PENAWARAN (Logika 100% Utuh) */}
+              <div className="space-y-3">
+                {isLoadingPenawaran ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+            </div>
+                ) : penawaranMasuk.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 font-bold">
+                    Belum ada penawaran masuk dari kebun.
+                  </div>
+                ) : (
+                  penawaranMasuk.map((item) => {
+                    // Konversi logika dari BE
+                    const estimasiTon = item.estimasi_total_tbs_grup_kg / 1000;
+                    const tglPanenFormat = new Date(
+                      item.tanggal_rencana_panen,
+                    ).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    });
 
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all"
-                  >
-                    <div
-                      onClick={() => toggleDetail(item.id)}
-                      className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                    >
-                      {/* --- KIRI: Info Utama --- */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-[#EF8523] shrink-0">
-                          <Package size={20} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-gray-800 text-sm">
-                            {item.nama_grup}
-                          </h4>
-                          <p className="text-xs text-gray-500 font-medium truncate max-w-[180px] md:max-w-none">
-                            {item.nama_kebun} • {estimasiTon} Ton
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* --- KANAN: Status & Action --- */}
-                      <div className="flex items-center justify-between sm:justify-end gap-5 border-t sm:border-t-0 pt-3 sm:pt-0">
-                        <div className="text-left sm:text-right flex flex-col sm:items-end gap-1">
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                            Status
-                          </p>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit ${
-                              item.status_pengajuan === "MENUNGGU_PABRIK"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : item.status_pengajuan === "DISETUJUI" ||
-                                    item.status_pengajuan === "DITERIMA"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {item.status_pengajuan.replace("_", " ")}
-                          </span>
-                        </div>
-
-                        <button className="py-1.5 px-4 border border-gray-200 rounded-lg sm:rounded-full text-[11px] sm:text-xs font-bold text-gray-600 flex items-center gap-1.5 hover:bg-gray-100 transition-all">
-                          <span className="hidden sm:inline">
-                            {openDetailId === item.id ? "Tutup" : "Detail"}
-                          </span>
-                          {openDetailId === item.id ? (
-                            <ChevronUp size={14} />
-                          ) : (
-                            <ChevronDown size={14} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    {openDetailId === item.id && (
-                      <div className="border-t border-gray-100 bg-white animate-slideDown">
-                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-y-3 md:gap-x-12">
-                          {/* Mapping Berdasarkan Skema BE GrupPenjualanResponse */}
-                          {[
-                            {
-                              label: "Nama Grup/Pengajuan",
-                              value: item.nama_grup,
-                            },
-                            {
-                              label: "Asal Kebun/Gapoktan",
-                              value: item.nama_kebun,
-                            },
-                            { label: "Kontak Kebun", value: item.no_hp_kebun },
-                            {
-                              label: "Jenis Sawit",
-                              value: item.jenis_varietas_gabungan,
-                            },
-                            {
-                              label: "Range Usia Pohon",
-                              value: item.usia_pohon_range,
-                            },
-                            { label: "Rencana Panen", value: tglPanenFormat },
-                            {
-                              label: "Estimasi Total",
-                              value: `${estimasiTon} Ton`,
-                            },
-                          ].map((info, idx) => (
-                            <div
-                              key={idx}
-                              className="border-b border-gray-50 md:border-none pb-2 md:pb-0"
-                            >
-                              <label className="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tight">
-                                {info.label}
-                              </label>
-                              <p className="font-bold text-gray-900 text-sm">
-                                {info.value}
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all"
+                      >
+                        <div
+                          onClick={() => toggleDetail(item.id)}
+                          className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                        >
+                          {/* --- KIRI: Info Utama --- */}
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-[#EF8523] shrink-0">
+                              <Package size={20} />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-gray-800 text-sm">
+                                {item.nama_grup}
+                              </h4>
+                              <p className="text-xs text-gray-500 font-medium truncate max-w-[180px] md:max-w-none">
+                                {item.nama_kebun} • {estimasiTon} Ton
                               </p>
                             </div>
-                          ))}
-                          <div className="md:col-span-2">
-                            <label className="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tight">
-                              Titik Kumpul / Alamat Pickup
-                            </label>
-                            <p className="text-xs text-gray-700 leading-relaxed font-medium">
-                              {item.alamat_pickup_teks}
-                            </p>
+                          </div>
+
+                          {/* --- KANAN: Status & Action --- */}
+                          <div className="flex items-center justify-between sm:justify-end gap-5 border-t sm:border-t-0 pt-3 sm:pt-0">
+                            <div className="text-left sm:text-right flex flex-col sm:items-end gap-1">
+                              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                                Status
+                              </p>
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit ${
+                                  item.status_pengajuan === "MENUNGGU_PABRIK"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : item.status_pengajuan === "DISETUJUI" ||
+                                        item.status_pengajuan === "DITERIMA"
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {item.status_pengajuan.replace("_", " ")}
+                              </span>
+                            </div>
+
+                            <button className="py-1.5 px-4 border border-gray-200 rounded-lg sm:rounded-full text-[11px] sm:text-xs font-bold text-gray-600 flex items-center gap-1.5 hover:bg-gray-100 transition-all">
+                              <span className="hidden sm:inline">
+                                {openDetailId === item.id ? "Tutup" : "Detail"}
+                              </span>
+                              {openDetailId === item.id ? (
+                                <ChevronUp size={14} />
+                              ) : (
+                                <ChevronDown size={14} />
+                              )}
+                            </button>
                           </div>
                         </div>
 
-                        {/* Tombol Aksi hanya tampil jika status masih MENUNGGU_PABRIK */}
-                        {item.status_pengajuan === "MENUNGGU_PABRIK" && (
-                          <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">
-                            <button
-                              onClick={() =>
-                                handleActionPenawaran(item.id, true)
-                              }
-                              disabled={processingActionId === item.id}
-                              className="py-3 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {processingActionId === item.id ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                <CheckCircle2 size={16} />
-                              )}
-                              {processingActionId === item.id
-                                ? "Memproses..."
-                                : "Terima Penawaran"}
-                            </button>
+                        {openDetailId === item.id && (
+                          <div className="border-t border-gray-100 bg-white animate-slideDown">
+                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-y-3 md:gap-x-12">
+                              {/* Mapping Berdasarkan Skema BE GrupPenjualanResponse */}
+                              {[
+                                {
+                                  label: "Nama Grup/Pengajuan",
+                                  value: item.nama_grup,
+                                },
+                                {
+                                  label: "Asal Kebun/Gapoktan",
+                                  value: item.nama_kebun,
+                                },
+                                {
+                                  label: "Kontak Kebun",
+                                  value: item.no_hp_kebun,
+                                },
+                                {
+                                  label: "Jenis Sawit",
+                                  value: item.jenis_varietas_gabungan,
+                                },
+                                {
+                                  label: "Range Usia Pohon",
+                                  value: item.usia_pohon_range,
+                                },
+                                {
+                                  label: "Rencana Panen",
+                                  value: tglPanenFormat,
+                                },
+                                {
+                                  label: "Estimasi Total",
+                                  value: `${estimasiTon} Ton`,
+                                },
+                              ].map((info, idx) => (
+                                <div
+                                  key={idx}
+                                  className="border-b border-gray-50 md:border-none pb-2 md:pb-0"
+                                >
+                                  <label className="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tight">
+                                    {info.label}
+                                  </label>
+                                  <p className="font-bold text-gray-900 text-sm">
+                                    {info.value}
+                                  </p>
+                                </div>
+                              ))}
+                              <div className="md:col-span-2">
+                                <label className="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tight">
+                                  Titik Kumpul / Alamat Pickup
+                                </label>
+                                <p className="text-xs text-gray-700 leading-relaxed font-medium">
+                                  {item.alamat_pickup_teks}
+                                </p>
+                              </div>
+                            </div>
 
-                            <button
-                              onClick={() =>
-                                handleActionPenawaran(item.id, false)
-                              }
-                              disabled={processingActionId === item.id}
-                              className="py-3 rounded-xl bg-white border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {processingActionId === item.id ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                <XCircle size={16} />
-                              )}
-                              {processingActionId === item.id
-                                ? "Memproses..."
-                                : "Tolak"}
-                            </button>
+                            {/* Tombol Aksi hanya tampil jika status masih MENUNGGU_PABRIK */}
+                            {item.status_pengajuan === "MENUNGGU_PABRIK" && (
+                              <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">
+                                <button
+                                  onClick={() =>
+                                    handleActionPenawaran(item.id, true)
+                                  }
+                                  disabled={processingActionId === item.id}
+                                  className="py-3 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {processingActionId === item.id ? (
+                                    <Loader2
+                                      size={16}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <CheckCircle2 size={16} />
+                                  )}
+                                  {processingActionId === item.id
+                                    ? "Memproses..."
+                                    : "Terima Penawaran"}
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    handleActionPenawaran(item.id, false)
+                                  }
+                                  disabled={processingActionId === item.id}
+                                  className="py-3 rounded-xl bg-white border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {processingActionId === item.id ? (
+                                    <Loader2
+                                      size={16}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <XCircle size={16} />
+                                  )}
+                                  {processingActionId === item.id
+                                    ? "Memproses..."
+                                    : "Tolak"}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </SectionCard>
         </div>
       )}
     </div>
   );
 };
+
+// =========================================================================
+// KOMPONEN HELPER: SectionCard (Sama persis dengan PenerimaanTBS.jsx)
+// =========================================================================
+const SectionCard = ({ title, rightContent, children }) => (
+  <div className="bg-white rounded-[30px] sm:rounded-[36px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-90" />
+
+    {/* Flex wrapper agar judul di kiri, tombol/sub-tab di kanan */}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4 border-b border-gray-50 pb-4">
+      <h3 className="text-base sm:text-lg font-bold text-[#B5302D] flex items-center gap-2">
+        {title}
+      </h3>
+      {rightContent && (
+        <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar shrink-0">
+          {rightContent}
+        </div>
+      )}
+    </div>
+
+    {children}
+  </div>
+);
 
 export default TransaksiTBS;

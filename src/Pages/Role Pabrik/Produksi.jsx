@@ -203,7 +203,7 @@ export default function Produksi() {
 
     // TAMBAHKAN CEGATAN KONFIRMASI (Final Check)
     const isSetuju = await confirmDialog({
-      title: "Generate Resi CPO?",
+      title: "Generate Kode Resi ?",
       text: "Pastikan angka timbangan sudah benar. Data yang disimpan akan menerbitkan Resi Produksi dan tidak dapat diubah lagi.",
       confirmText: "Ya, Generate Resi!",
       isDanger: false,
@@ -293,10 +293,18 @@ export default function Produksi() {
               </label>
               <input
                 type="number"
+                min="1"
                 placeholder="Masukkan jumlah Kg TBS yang akan diproses..."
                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-100 focus:border-[#B5302D] outline-none transition-all"
                 value={jumlahTBS}
-                onChange={(e) => setJumlahTBS(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+
+                  /* Logika validasi: Izinkan kosong (agar bisa dihapus/backspace) ATAU angka harus lebih besar dari 0 */
+                  if (val === "" || Number(val) > 0) {
+                    setJumlahTBS(val);
+                  }
+                }}
               />
             </div>
             <button
@@ -328,7 +336,7 @@ export default function Produksi() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isLoading ? (
-              <p className="text-sm text-gray-400 col-span-2 text-center py-6">
+              <p className="text-sm text-gray-400 col-span-2 text-center py-6 font-bold">
                 Memuat Data...
               </p>
             ) : siklusAktif.length === 0 ? (
@@ -399,7 +407,7 @@ export default function Produksi() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isLoading ? (
-              <p className="text-sm text-gray-400 col-span-2 text-center py-6">
+              <p className="text-sm text-gray-400 col-span-2 text-center py-6 font-bold">
                 Memuat Data...
               </p>
             ) : riwayatProduksi.length === 0 ? (
@@ -451,7 +459,7 @@ export default function Produksi() {
                         <div className="flex items-center gap-2">
                           <Barcode className="w-4 h-4 text-blue-400 group-hover:text-blue-600" />
                           <span className="text-xs font-bold text-gray-500">
-                            Resi CPO:
+                            Kode Resi:
                           </span>
                         </div>
                         <span className="font-mono text-[11px] font-bold text-blue-700 bg-white px-2 py-1 border border-blue-100 rounded">
@@ -600,7 +608,7 @@ export default function Produksi() {
                 ) : (
                   <CheckCircle className="w-4 h-4" />
                 )}
-                Simpan & Generate Resi CPO
+                Simpan & Generate Kode Resi
               </button>
             </div>
           </div>

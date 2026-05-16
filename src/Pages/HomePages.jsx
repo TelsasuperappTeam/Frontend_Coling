@@ -110,7 +110,7 @@ const HomePages = () => {
       // Menangkap parameter error
       // ---> CONSOLE LOG ERROR JARINGAN <---
       //console.error("=== ERROR FETCH TRACEABILITY ===", error);
-      showToast.error("Terjadi kesalahan jaringan. Gagal menghubungi server.");
+      showToast.error("Terjadi kesalahan jaringan. Gagal mengambil data.");
     } finally {
       setIsLoadingTrack(false);
     }

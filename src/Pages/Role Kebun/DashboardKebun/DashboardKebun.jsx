@@ -467,13 +467,49 @@ export default function DashboardKebun() {
             <h3 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
               Data Diri Anda
             </h3>
+
             <button
               onClick={() => setShowPopupDataDiri(true)}
-              className="bg-white/20 backdrop-blur-md text-black/80 border border-white/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold hover:bg-white hover:text-[#EF8523] transition-all duration-300 whitespace-nowrap"
+              className={`rounded-full px-4 sm:px-5 py-1.5 sm:py-2 transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                isProfileIncomplete(profile)
+                  ? "bg-orange-50 text-black border border-orange-200 shadow-sm animate-pulse hover:bg-orange-100"
+                  : "bg-gray-50 text-black border border-gray-200/80 shadow-sm hover:bg-gray-100 hover:text-[#EF8523]"
+              }`}
             >
-              {isProfileIncomplete(profile)
-                ? "Lengkapi Data Diri"
-                : "Lihat Profil"}
+              {isProfileIncomplete(profile) ? (
+                <>
+                  {/* Titik Notifikasi Berdenyut (Ping Badge) tetap warna Oranye */}
+                  <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 mr-0.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF8523] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-[#EF8523]"></span>
+                  </span>
+
+                  {/* Teks Ekstra Tegas (Warna Hitam) */}
+                  <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider leading-[1.2] text-left sm:text-center">
+                    Lengkapi
+                    <br className="block sm:hidden" /> Data Diri
+                  </span>
+
+                  {/* Panah Pancingan Aksi */}
+                  <svg
+                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="3"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </>
+              ) : (
+                <span className="text-[9px] sm:text-[11px] font-bold text-black uppercase tracking-wider">
+                  Lihat Profil
+                </span>
+              )}
             </button>
           </div>
 
@@ -615,7 +651,7 @@ export default function DashboardKebun() {
           icon={FileText}
           footer={
             <button
-              onClick={() => navigate("/kebun/kemitraanpetani")}
+              onClick={() => navigate("/kebun/kemitraanpetani/validasi")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
               Lihat Semua &rarr;
@@ -660,7 +696,10 @@ export default function DashboardKebun() {
                               <span>
                                 {item.nama_petani || "Petani"}
                                 <span className="text-[10px] text-gray-400 ml-1 font-normal truncate max-w-[120px] inline-block align-bottom">
-                                  - {item.jenis_dokumen || item.requirement_code || "Dokumen Sertifikasi"}
+                                  -{" "}
+                                  {item.jenis_dokumen ||
+                                    item.requirement_code ||
+                                    "Dokumen Sertifikasi"}
                                 </span>
                               </span>
                             ) : (
@@ -694,7 +733,7 @@ export default function DashboardKebun() {
           icon={Calendar}
           footer={
             <button
-              onClick={() => navigate("/kebun/penjualan")}
+              onClick={() => navigate("/kebun/penjualan/progrespengajuan")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
               Lihat Semua &rarr;
@@ -793,7 +832,9 @@ export default function DashboardKebun() {
           icon={Truck}
           footer={
             <button
-              onClick={() => navigate("/kebun/distribusi&logistik")}
+              onClick={() =>
+                navigate("/kebun/distribusi&logistik/statuspengiriman")
+              }
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
               Lihat Semua &rarr;
@@ -888,117 +929,203 @@ export default function DashboardKebun() {
           </div>
         </Card>
 
-        {/* FITUR 5: Harga TBS */}
+        {/* FITUR 5: Harga TBS - ROLE KEBUN (MOBILE OPTIMIZED) */}
         <Card
           title="Harga TBS Sesuai Aturan Pemerintah"
           icon={Coins}
           footer={
+            // TOMBOL KHUSUS ROLE KEBUN TETAP DIPERTAHANKAN
             <button
-              onClick={() => navigate("/kebun/manajemenoperasional")}
+              onClick={() => navigate("/kebun/manajemenoperasional/organisasi")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
               Tambahkan Informasi Harga Terbaru &rarr;
             </button>
           }
         >
-          <div className="relative h-full flex flex-col pt-2 w-full">
-            <div className="flex justify-between items-center mb-4 px-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md flex items-center gap-1 animate-pulse">
-                  <span className="text-xs">↔</span> Geser grafik
-                </span>
+          <div className="relative w-full flex flex-col">
+            {/* --- HEADER & FILTER --- */}
+            <div className="flex justify-between items-center mb-3 px-1 mt-2">
+              <div className="flex items-center">
+                {/* 1. BADGE LEBIH MENCARI PERHATIAN */}
+                <div className="flex items-center gap-1.5 bg-orange-50 text-[#EF8523] border border-orange-200/80 px-3 py-1 rounded-full shadow-sm animate-pulse">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                      d="M8 7h8M8 17h8M7 12h10M10 12l-3-3m0 0l3-3m-3 3h10"
+                    />
+                  </svg>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wide uppercase">
+                    Geser Grafik
+                  </span>
+                </div>
               </div>
-              {/* Dropdown Filter Tahun */}
-              <select
-                value={tahunTbs}
-                onChange={(e) => setTahunTbs(parseInt(e.target.value))}
-                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer focus:ring-1 focus:ring-[#EF8523]"
-              >
-                {/* Looping untuk membuat pilihan 5 tahun terakhir secara otomatis */}
-                {[...Array(5)].map((_, i) => {
-                  const year = new Date().getFullYear() - i;
-                  return (
-                    <option key={year} value={year} className="font-bold">
-                      {year}
-                    </option>
-                  );
-                })}
-              </select>
+
+              {/* Dropdown Filter (Touch-Friendly) */}
+              <div className="relative group">
+                <select
+                  value={tahunTbs}
+                  onChange={(e) => setTahunTbs(parseInt(e.target.value))}
+                  className="appearance-none bg-white border border-gray-200 text-gray-700 hover:border-[#EF8523] pl-3 pr-8 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold shadow-sm outline-none cursor-pointer transition-all focus:ring-1 focus:ring-[#EF8523]"
+                >
+                  {[...Array(5)].map((_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return (
+                      <option key={year} value={year}>
+                        Tahun {year}
+                      </option>
+                    );
+                  })}
+                </select>
+                <svg
+                  className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-[#EF8523] transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    d="M19 9l-7 7-7-7"
+                  ></path>
+                </svg>
+              </div>
             </div>
 
-            {/* Tampilkan loader jika data sedang ditarik dari BE */}
+            {/* --- KONTEN GRAFIK --- */}
             {isLoadingHargaTbs ? (
-              <div className="flex items-center justify-center h-full text-gray-400 text-xs">
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Memuat data...
+              <div className="w-full h-[220px] sm:h-[240px] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
               </div>
             ) : hargaTbsData.length === 0 ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium">
-                Belum ada riwayat harga TBS untuk tahun ini.
+              <div className="w-full h-[220px] sm:h-[240px] flex items-center justify-center">
+                <p className="text-gray-400 text-[10px] sm:text-xs font-medium bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+                  Belum ada data harga TBS untuk tahun {tahunTbs}.
+                </p>
               </div>
             ) : (
               (() => {
-                // --- 1. LOGIKA PERHITUNGAN DATA ---
                 const dataBE = hargaTbsData;
 
-                // Pastikan harga diconvert ke Number agar Math.max tidak error
+                // Konversi aman menggunakan Number() seperti kode asli Anda
+                const hargaTerendah = Math.min(
+                  ...dataBE.map((d) => Number(d.harga) || 0),
+                );
                 const hargaTertinggi = Math.max(
                   ...dataBE.map((d) => Number(d.harga) || 0),
                 );
-                const maxHarga = Math.max(4000, hargaTertinggi + 500);
-                const svgHeight = 140;
+
+                let minHarga = Math.max(
+                  0,
+                  Math.floor(hargaTerendah / 500) * 500 - 500,
+                );
+                let maxHarga = Math.ceil(hargaTertinggi / 500) * 500 + 500;
+
+                const diff = maxHarga - minHarga;
+                if (diff <= 2000) maxHarga = minHarga + 2000;
+                else if (diff <= 4000) maxHarga = minHarga + 4000;
 
                 const yLabels = [
-                  `${(maxHarga / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.75) / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.5) / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.25) / 1000).toFixed(1)}k`,
-                  "0",
+                  maxHarga,
+                  minHarga + (maxHarga - minHarga) * 0.75,
+                  minHarga + (maxHarga - minHarga) * 0.5,
+                  minHarga + (maxHarga - minHarga) * 0.25,
+                  minHarga,
                 ];
 
-                const minWidthPerPoint = 70;
-                const calculatedWidth = Math.max(
+                const svgHeight = 220;
+                const paddingTop = 35;
+                const paddingBottom = 25;
+                const graphHeight = svgHeight - paddingTop - paddingBottom;
+
+                const minWidthPerPoint = 75;
+                const svgWidth = Math.max(
                   dataBE.length * minWidthPerPoint,
                   500,
                 );
-                const svgWidth = calculatedWidth;
-
-                const paddingX = 40;
+                const paddingX = 35;
                 const effectiveWidth = svgWidth - paddingX * 2;
 
-                // --- Generate Titik Koordinat (X, Y) Anti-NaN ---
                 const points = dataBE.map((d, i) => {
-                  // Mencegah pembagian dengan 0 jika datanya cuma 1
                   const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
-
                   const x = paddingX + (i / divider) * effectiveWidth;
 
+                  // Pastikan d.harga di-parse ke Number
                   const hargaNum = Number(d.harga) || 0;
-                  const y = svgHeight - (hargaNum / maxHarga) * svgHeight;
-
+                  const y =
+                    paddingTop +
+                    graphHeight -
+                    ((hargaNum - minHarga) / (maxHarga - minHarga)) *
+                      graphHeight;
                   return { x, y, harga: hargaNum, bulan: d.bulan || "-" };
                 });
 
-                // Generate Garis
-                const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
-                const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
+                const linePath = points.map((p) => `${p.x},${p.y}`).join(" L ");
+                const areaPath = `M ${points[0].x},${paddingTop + graphHeight} L ${linePath} L ${points[points.length - 1].x},${paddingTop + graphHeight} Z`;
 
                 return (
-                  <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
-                    {/* BAGIAN A: SUMBU Y (FIXED / DIAM) */}
-                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 backdrop-blur-[1px] flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
-                      {yLabels.map((l, index) => (
-                        <span key={index} className="text-right pr-2">
-                          {l.replace(".0k", "k")}
+                  <div className="w-full h-[220px] sm:h-[240px] relative overflow-hidden bg-white rounded-xl border border-gray-100 shadow-[inset_0_1px_4px_rgba(0,0,0,0.03)] mt-1">
+                    {/* SUMBU Y FIXED (Efek Glassmorphism Kaca Buram) */}
+                    <div
+                      className="absolute left-0 w-9 sm:w-11 z-20 bg-white/80 backdrop-blur-md flex flex-col justify-between text-[8px] sm:text-[9px] text-gray-500 font-extrabold border-r border-white/50 shadow-[2px_0_5px_rgba(0,0,0,0.03)]"
+                      style={{
+                        top: `${paddingTop}px`,
+                        height: `${graphHeight}px`,
+                      }}
+                    >
+                      {yLabels.map((val, idx) => (
+                        <span
+                          key={idx}
+                          className="text-right pr-1.5 sm:pr-2 -translate-y-1/2"
+                        >
+                          {val === 0 ? "0" : `${(val / 1000).toFixed(1)}k`}
                         </span>
                       ))}
                     </div>
 
-                    {/* BAGIAN B: AREA GRAFIK (SCROLLABLE) */}
-                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+                    {/* 2. EFEK BAYANGAN KANAN (MEMBERI TAHU ADA KONTEN TERSEMBUNYI) */}
+                    <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-l from-white via-white/70 to-transparent z-20 pointer-events-none flex items-center justify-end pr-1 sm:pr-2">
+                      <svg
+                        className="w-4 h-4 text-[#EF8523]/50 animate-pulse"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="3"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+
+                    {/* AREA GRAFIK SCROLLABLE */}
+                    <div
+                      className="w-full h-full overflow-x-auto overflow-y-hidden pl-9 sm:pl-11"
+                      style={{
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                      }}
+                    >
+                      <style>{`
+                        div::-webkit-scrollbar { display: none; }
+                      `}</style>
+
                       <div
-                        style={{ width: `${svgWidth}px`, height: "100%" }}
-                        className="relative"
+                        style={{
+                          width: `${svgWidth}px`,
+                          height: `${svgHeight}px`,
+                        }}
+                        className="relative pr-6"
                       >
                         <svg
                           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -1007,7 +1134,7 @@ export default function DashboardKebun() {
                         >
                           <defs>
                             <linearGradient
-                              id="scrollGradient"
+                              id="chartGradient"
                               x1="0"
                               y1="0"
                               x2="0"
@@ -1016,7 +1143,7 @@ export default function DashboardKebun() {
                               <stop
                                 offset="0%"
                                 stopColor="#EF8523"
-                                stopOpacity="0.2"
+                                stopOpacity="0.25"
                               />
                               <stop
                                 offset="100%"
@@ -1024,82 +1151,122 @@ export default function DashboardKebun() {
                                 stopOpacity="0"
                               />
                             </linearGradient>
+
+                            <filter
+                              id="glow"
+                              x="-20%"
+                              y="-20%"
+                              width="140%"
+                              height="140%"
+                            >
+                              <feDropShadow
+                                dx="0"
+                                dy="4"
+                                stdDeviation="4"
+                                floodColor="#EF8523"
+                                floodOpacity="0.15"
+                              />
+                            </filter>
                           </defs>
 
-                          {/* Garis Grid Horizontal */}
-                          {[0, 35, 70, 105, 140].map((y) => (
+                          {yLabels.map((_, idx) => {
+                            const yPos = paddingTop + (idx / 4) * graphHeight;
+                            return (
+                              <line
+                                key={`h-grid-${idx}`}
+                                x1="0"
+                                y1={yPos}
+                                x2={svgWidth}
+                                y2={yPos}
+                                stroke="#f1f5f9"
+                                strokeWidth="1.5"
+                                strokeDasharray="4 4"
+                              />
+                            );
+                          })}
+
+                          <path d={areaPath} fill="url(#chartGradient)" />
+
+                          {points.map((pt, i) => (
                             <line
-                              key={y}
-                              x1="0"
-                              y1={y}
-                              x2={svgWidth}
-                              y2={y}
-                              stroke="#f8f9fa"
-                              strokeWidth="1"
+                              key={`v-grid-${i}`}
+                              x1={pt.x}
+                              y1={pt.y}
+                              x2={pt.x}
+                              y2={paddingTop + graphHeight}
+                              stroke="#e2e8f0"
+                              strokeWidth="1.5"
+                              strokeDasharray="4 4"
                             />
                           ))}
 
-                          {/* Area & Garis Line */}
-                          <path d={areaPath} fill="url(#scrollGradient)" />
-                          <polyline
+                          <path
+                            d={`M ${linePath}`}
                             fill="none"
                             stroke="#EF8523"
-                            strokeWidth="3"
+                            strokeWidth="3.5"
                             strokeLinejoin="round"
-                            points={linePath}
+                            strokeLinecap="round"
+                            filter="url(#glow)"
                           />
 
-                          {/* Titik-titik Data & Label Harga */}
                           {points.map((pt, i) => (
-                            <g key={i}>
+                            <g key={`data-point-${i}`}>
                               <circle
                                 cx={pt.x}
                                 cy={pt.y}
-                                r="4"
+                                r="4.5"
                                 fill="white"
                                 stroke="#EF8523"
-                                strokeWidth="2.5"
+                                strokeWidth="3"
+                                className="transition-all duration-300"
                               />
-                              <g
-                                transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
-                              >
+
+                              <g transform={`translate(${pt.x}, ${pt.y - 20})`}>
                                 <rect
-                                  width="44"
-                                  height="16"
-                                  rx="4"
-                                  fill="black"
+                                  x="-23"
+                                  y="-11"
+                                  width="46"
+                                  height="18"
+                                  rx="9"
+                                  fill="#000"
+                                  opacity="0.08"
+                                  transform="translate(0, 2)"
+                                />
+                                <rect
+                                  x="-23"
+                                  y="-11"
+                                  width="46"
+                                  height="18"
+                                  rx="9"
+                                  fill="#EF8523"
+                                />
+                                <polygon
+                                  points="-3,6 3,6 0,10"
+                                  fill="#EF8523"
                                 />
                                 <text
-                                  x="22"
-                                  y="11"
+                                  x="0"
+                                  y="1"
                                   textAnchor="middle"
-                                  className="text-[9px] font-black fill-white"
+                                  dominantBaseline="middle"
+                                  className="text-[8px] sm:text-[9px] font-bold fill-white tracking-wide"
                                 >
-                                  {pt.harga.toLocaleString()}
+                                  {pt.harga.toLocaleString("id-ID")}
                                 </text>
                               </g>
+
+                              <text
+                                x={pt.x}
+                                y={paddingTop + graphHeight + 16}
+                                textAnchor="middle"
+                                className="text-[8px] sm:text-[9px] font-bold fill-gray-500 uppercase tracking-widest"
+                              >
+                                {pt.bulan.substring(0, 3)}
+                              </text>
                             </g>
                           ))}
                         </svg>
-
-                        {/* Label Bulan (Ikut Scroll di sumbu X bawah) */}
-                        <div className="absolute bottom-0 left-0 w-full h-6">
-                          {points.map((pt, i) => (
-                            <div
-                              key={i}
-                              className="absolute flex flex-col items-center top-0"
-                              style={{
-                                left: `${pt.x}px`,
-                                transform: "translateX(-50%)",
-                              }}
-                            >
-                              <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
-                              <span className="text-[9px] font-bold text-gray-500 uppercase whitespace-nowrap">
-                                {pt.bulan.substring(0, 3)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1107,12 +1274,15 @@ export default function DashboardKebun() {
               })()
             )}
 
-            {/* Footer Info */}
-            <div className="mt-2 border-t border-gray-50 pt-2 flex justify-between items-center">
-              <p className="text-[8px] text-gray-400 italic font-medium">
-                * Geser untuk melihat riwayat harga
-              </p>
-            </div>
+            {/* 3. TEKS KETERANGAN DI BAWAH (FOOTER HINT) */}
+            {hargaTbsData && hargaTbsData.length > 0 && !isLoadingHargaTbs && (
+              <div className="mt-2.5 flex items-center justify-center sm:justify-start px-2">
+                <p className="text-[9px] sm:text-[10px] text-gray-400 italic font-medium tracking-wide">
+                  * Sapu layar ke kiri atau kanan untuk melihat riwayat bulan
+                  lainnya.
+                </p>
+              </div>
+            )}
           </div>
         </Card>
       </div>

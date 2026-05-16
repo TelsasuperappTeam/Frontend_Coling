@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   ChevronUp,
@@ -10,7 +11,7 @@ import {
   Phone,
   User,
   Hash,
-  PackageCheck,
+  Database,
   CheckCircle,
   X,
   Upload,
@@ -18,6 +19,7 @@ import {
   History,
   Save,
   CheckSquare,
+  Loader2,
 } from "lucide-react";
 
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
@@ -25,6 +27,7 @@ import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 import { showToast, confirmDialog } from "../../utils/notif";
 
 const PenerimaanTBS = () => {
+  const navigate = useNavigate();
   // --- STATE TAB (Aktif vs Histori) ---
   const [activeTab, setActiveTab] = useState("aktif");
 
@@ -339,18 +342,45 @@ const PenerimaanTBS = () => {
       {/* --- LIST KARTU CONTAINER --- */}
       <SectionCard
         title={
-          isAktif
+          activeTab === "aktif" // atau isAktif, tergantung deklarasi variabel Anda
             ? "Daftar Truk Menuju Pabrik"
             : "Rekapitulasi Riwayat Pemeriksaan"
         }
+        rightContent={
+          // Hanya munculkan tombol kedap-kedip jika sedang di tab Aktif
+          activeTab === "aktif" && (
+            <div className="w-full lg:w-auto overflow-x-auto hide-scrollbar shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 bg-white border border-[#EF8523]/30 p-1.5 sm:pr-2.5 rounded-full shadow-[0_0_15px_rgba(239,133,35,0.15)] animate-pulse hover:animate-none transition-all w-max lg:ml-auto">
+                <div className="bg-gradient-to-br from-[#EF8523] to-[#d9751d] p-1.5 sm:p-2 rounded-full text-white shrink-0 shadow-sm">
+                  <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+
+                <p className="text-[10px] sm:text-[11px] font-bold text-gray-700 leading-tight whitespace-nowrap">
+                  Silahkan
+                  <br />
+                  <span className="text-[#EF8523] font-black">
+                    Pantau Stok Ram
+                  </span>
+                </p>
+
+                <button
+                  onClick={() => navigate("/pabrik/stokram")}
+                  className="bg-[#EF8523] hover:bg-[#d9751d] active:scale-95 text-white px-4 py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 whitespace-nowrap ml-1"
+                >
+                  Klik &rarr;
+                </button>
+              </div>
+            </div>
+          )
+        }
       >
         {currentLoading ? (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            Memuat Data...
+          <div className="flex justify-center py-10">
+            <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
           </div>
         ) : currentData.length === 0 ? (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            Tidak ada data yang tersedia di tab ini.
+          <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
+            Tidak ada data yang tersedia di menu ini.
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">
@@ -358,6 +388,15 @@ const PenerimaanTBS = () => {
               const rawProgress = item.progress_db || "menunggu_pengiriman";
               const pDB = rawProgress.toLowerCase().replace(/\s+/g, "_");
               const uiStatusLabel = getStatusLabel(pDB);
+
+              // --- TAMBAHKAN LOGIKA WARNA INI ---
+              let colorClass = "bg-gray-100 text-gray-500";
+              if (pDB === "terima") colorClass = "bg-green-100 text-green-700";
+              else if (pDB === "menuju_pabrik")
+                colorClass = "bg-blue-100 text-blue-700";
+              else if (pDB === "mengirim")
+                colorClass = "bg-orange-100 text-orange-700";
+              else colorClass = "bg-yellow-100 text-yellow-700";
 
               return (
                 <MainCard key={item.id}>
@@ -569,7 +608,7 @@ const PenerimaanTBS = () => {
                                     "id-ID",
                                   ) || 0}{" "}
                                   <span className="text-[9px] font-bold text-red-400">
-                                    Kg
+                                    %
                                   </span>
                                 </p>
                               </div>
@@ -656,8 +695,9 @@ const PenerimaanTBS = () => {
                         )}
                       </div>
 
-                      {/* --- GRID DETAIL INFORMASI --- */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                      {/* 4. INI GRID DETAIL INFORMASI YANG SEBELUMNYA HILANG KITA KEMBALIKAN */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-4">
+                        {/* Info Transaksi */}
                         <div className="flex flex-col gap-3 sm:gap-4">
                           <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
                             <Hash className="w-4 h-4" /> Informasi Transaksi
@@ -671,15 +711,33 @@ const PenerimaanTBS = () => {
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="text-gray-500">
-                                Tanggal Kirim:
+                                Tanggal Keberangkatan:
                               </span>
                               <span className="font-bold text-right">
                                 {item.tanggal_keberangkatan || "-"}
                               </span>
                             </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">
+                                Tanggal Tiba:
+                              </span>
+                              <span className="font-bold text-right">
+                                {item.tanggal_permintaan_sampai || "-"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">
+                                Muatan (Est):
+                              </span>
+                              <span className="font-bold text-right">
+                                {item.estimasi_total_tbs_grup_kg
+                                  ? `${(item.estimasi_total_tbs_grup_kg / 1000).toFixed(2)} Ton`
+                                  : "-"}
+                              </span>
+                            </div>
                             <div className="flex justify-between items-center pt-3 mt-1 border-t border-gray-50">
                               <span className="text-gray-500">
-                                Biaya Kirim:
+                                Biaya Pengiriman:
                               </span>
                               <span className="font-extrabold text-[#B5302D] text-sm">
                                 Rp{" "}
@@ -691,6 +749,7 @@ const PenerimaanTBS = () => {
                           </div>
                         </div>
 
+                        {/* Armada & Supir */}
                         <div className="flex flex-col gap-3 sm:gap-4">
                           <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
                             <Truck className="w-4 h-4" /> Armada & Supir
@@ -700,21 +759,44 @@ const PenerimaanTBS = () => {
                               <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 shrink-0">
                                 <User className="w-4 h-4 text-gray-400" />
                               </div>
-                              <div>
-                                <p className="font-bold text-gray-900">
+                              <div className="min-w-0">
+                                <p className="font-bold text-gray-900 truncate">
                                   {item.kru?.nama_supir || "-"}
                                 </p>
-                                <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5">
-                                  <Phone className="w-3 h-3" />{" "}
+                                <p className="text-[10px] sm:text-xs text-blue-600 font-bold flex items-center gap-1.5 mt-0.5 truncate">
+                                  <Phone className="w-3 h-3 shrink-0" />{" "}
                                   {item.kru?.nomor_telepon || "-"}
                                 </p>
                               </div>
                             </div>
+
                             <div className="grid grid-cols-2 gap-y-2.5 pt-1">
                               <p className="text-gray-500">Kendaraan</p>
                               <p className="font-semibold text-right">
                                 {item.kendaraan?.jenis_kendaraan_nama || "-"}
                               </p>
+
+                              <p className="text-gray-500">Kapasitas</p>
+                              <p className="font-semibold text-right">
+                                {item.kendaraan?.kapasitas_angkut_kg
+                                  ? `${item.kendaraan.kapasitas_angkut_kg.toLocaleString("id-ID")} Kg`
+                                  : "-"}
+                              </p>
+
+                              <p className="text-gray-500">Biaya / KM</p>
+                              <p className="font-semibold text-right">
+                                {item.kendaraan?.biaya_per_km
+                                  ? `Rp ${item.kendaraan.biaya_per_km.toLocaleString("id-ID")}`
+                                  : "-"}
+                              </p>
+
+                              <p className="text-gray-500 pt-2 border-t border-gray-50">
+                                Tipe
+                              </p>
+                              <p className="font-semibold text-right pt-2 border-t border-gray-50">
+                                {item.kendaraan?.nama_kendaraan || "-"}
+                              </p>
+
                               <p className="text-gray-500">Plat</p>
                               <p className="font-bold text-blue-600 text-right uppercase tracking-wider">
                                 {item.kendaraan?.plat_kendaraan || "-"}
@@ -723,6 +805,7 @@ const PenerimaanTBS = () => {
                           </div>
                         </div>
 
+                        {/* Rute & Estimasi */}
                         <div className="flex flex-col gap-3 sm:gap-4">
                           <h4 className="text-[11px] sm:text-xs font-bold text-[#B5302D] uppercase flex items-center gap-2">
                             <MapPin className="w-4 h-4" /> Rute & Estimasi
@@ -734,20 +817,21 @@ const PenerimaanTBS = () => {
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
                                   Dari: Kebun
                                 </p>
-                                <p className="font-medium text-gray-700">
-                                  {item.alamat_pickup_teks}
+                                <p className="font-medium text-gray-700 leading-snug">
+                                  {item.alamat_pickup_teks || "-"}
                                 </p>
                               </div>
                               <div className="relative pl-4 border-l-2 border-dashed border-gray-200">
-                                <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
+                                <div className="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-[#B5302D] border-2 border-white" />
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                                  Tujuan: Pabrik
+                                  Ke: Pabrik
                                 </p>
-                                <p className="font-medium text-gray-700">
-                                  {item.alamat_pengiriman_pabrik}
+                                <p className="font-medium text-gray-700 leading-snug">
+                                  {item.alamat_pengiriman_pabrik || "-"}
                                 </p>
                               </div>
                             </div>
+
                             <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
                               <div>
                                 <p className="text-[10px] text-gray-400 uppercase font-bold mb-0.5">
@@ -759,7 +843,9 @@ const PenerimaanTBS = () => {
                                     : "-"}
                                 </p>
                               </div>
-                              <div className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100">
+                              <div
+                                className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase text-center shadow-sm ${colorClass}`}
+                              >
                                 {uiStatusLabel}
                               </div>
                             </div>
@@ -1143,12 +1229,22 @@ const PenerimaanTBS = () => {
 };
 
 /* --- KOMPONEN HELPER --- */
-const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[24px] sm:rounded-[30px] border border-gray-200 shadow-sm p-4 sm:p-6 md:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+const SectionCard = ({ title, rightContent, children }) => (
+  <div className="bg-white rounded-[30px] sm:rounded-[36px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-90" />
-    <h3 className="text-base sm:text-lg font-bold text-[#B5302D] mb-5 flex items-center gap-2">
-      {title}
-    </h3>
+
+    {/* Flex wrapper agar judul di kiri, tombol di kanan */}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
+      <h3 className="text-base sm:text-lg font-bold text-[#B5302D] flex items-center gap-2">
+        {title}
+      </h3>
+      {rightContent && (
+        <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar shrink-0">
+          {rightContent}
+        </div>
+      )}
+    </div>
+
     {children}
   </div>
 );

@@ -280,13 +280,49 @@ export default function DashboardPabrik() {
             <h3 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
               Data Diri Anda
             </h3>
+
             <button
               onClick={() => setShowPopupDataDiri(true)}
-              className="bg-white/20 backdrop-blur-md text-black/80 border border-white/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold hover:bg-white hover:text-[#EF8523] transition-all duration-300 whitespace-nowrap"
+              className={`rounded-full px-4 sm:px-5 py-1.5 sm:py-2 transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                isProfileIncomplete(profile)
+                  ? "bg-orange-50 text-black border border-orange-200 shadow-sm animate-pulse hover:bg-orange-100"
+                  : "bg-gray-50 text-black border border-gray-200/80 shadow-sm hover:bg-gray-100 hover:text-[#EF8523]"
+              }`}
             >
-              {isProfileIncomplete(profile)
-                ? "Lengkapi Data Diri"
-                : "Lihat Profil"}
+              {isProfileIncomplete(profile) ? (
+                <>
+                  {/* Titik Notifikasi Berdenyut (Ping Badge) tetap warna Oranye */}
+                  <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 mr-0.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF8523] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-[#EF8523]"></span>
+                  </span>
+
+                  {/* Teks Ekstra Tegas (Warna Hitam) */}
+                  <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider leading-[1.2] text-left sm:text-center">
+                    Lengkapi
+                    <br className="block sm:hidden" /> Data Diri
+                  </span>
+
+                  {/* Panah Pancingan Aksi */}
+                  <svg
+                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="3"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </>
+              ) : (
+                <span className="text-[9px] sm:text-[11px] font-bold text-black uppercase tracking-wider">
+                  Lihat Profil
+                </span>
+              )}
             </button>
           </div>
 

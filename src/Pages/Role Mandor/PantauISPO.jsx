@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom"; // TAMBAHAN: Untuk navigasi Link
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText,
   Activity,
@@ -26,15 +26,23 @@ import {
 import { showToast, confirmDialog } from "./../../utils/notif";
 
 export default function PantauISPO() {
-  const navigate = useNavigate(); // TAMBAHAN: Inisialisasi navigasi
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // State untuk Tab Prinsip (1-5)
-  const [activeSubTab, setActiveSubTab] = useState(1);
+  // Membaca URL saat ini untuk menentukan tab Prinsip (1-5) mana yang aktif.
+  // Defaultnya adalah 1 jika tidak ada embel-embel di URL.
+  let activeSubTab = 1;
+  if (location.pathname.includes("prinsip2")) activeSubTab = 2;
+  else if (location.pathname.includes("prinsip3")) activeSubTab = 3;
+  else if (location.pathname.includes("prinsip4")) activeSubTab = 4;
+  else if (location.pathname.includes("prinsip5")) activeSubTab = 5;
+  else if (location.pathname.includes("prinsip1")) activeSubTab = 1;
 
   // State Dokumen Dinamis
   const [manualDocsStatus, setManualDocsStatus] = useState({});
   const [fetchingDocs, setFetchingDocs] = useState({}); // TAMBAHAN: Untuk loading per-dokumen
 
+  
   // ==========================================================================
   // DATA SUMBER (PRINSIP 1 - 5) - SESUAI INSTRUKSI 56 ITEM
   // ==========================================================================
@@ -1374,7 +1382,8 @@ export default function PantauISPO() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveSubTab(tab.id)}
+                // --- UBAH ONCLICK MENJADI NAVIGATE DINAMIS ---
+                onClick={() => navigate(`/petani/pantauISPO/prinsip${tab.id}`)}
                 className={`relative flex flex-col items-center justify-center py-4 font-bold transition-all duration-300 
                   ${activeSubTab === tab.id ? "bg-white text-[#B5302D] shadow-[0_-4px_10px_rgba(0,0,0,0.02)]" : "text-gray-400 hover:text-[#EF8523] hover:bg-white"}`}
               >

@@ -41,7 +41,7 @@ const GMDistrikRoutes = () => {
         />
 
         <Route
-          path="riwayattransaksi"
+          path="riwayattransaksi/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]}>
               <RiwayatTransaksiGM />
@@ -59,7 +59,7 @@ const GMDistrikRoutes = () => {
         />
 
         <Route
-          path="kemitraanpetani"
+          path="kemitraanpetani/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.GENERAL_MANAGER_DISTRIK]}>
               <KemitraanPetani />

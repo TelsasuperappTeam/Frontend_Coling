@@ -16,12 +16,17 @@ import {
   Hash,
   Wallet,
 } from "lucide-react";
-// Pastikan path konstanta Anda benar
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Riwayatpenjualan = () => {
-  // --- STATE TAB ---
-  const [activeTab, setActiveTab] = useState("aktif");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Membaca URL saat ini untuk menentukan tab mana yang aktif.
+  // Jika URL mengandung kata "transaksiselesai", maka tab selesai aktif. Defaultnya aktif.
+  const isSelesai = location.pathname.includes("transaksiselesai");
+  const activeTab = isSelesai ? "selesai" : "aktif";
 
   // --- STATE DATA ---
   // Menyimpan SEMUA data dari BE (aktif + history)
@@ -130,8 +135,9 @@ const Riwayatpenjualan = () => {
         {/* TAB SWITCHER */}
         <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full lg:w-auto">
           <button
+            // --- UBAH ONCLICK MENJADI NAVIGATE ---
             onClick={() => {
-              setActiveTab("aktif");
+              navigate("/petani/riwayatpenjualan/transaksiaktif");
               setExpandedId(null); // Tutup rincian saat pindah tab
             }}
             className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
@@ -147,9 +153,11 @@ const Riwayatpenjualan = () => {
               </span>
             )}
           </button>
+          
           <button
+            // --- UBAH ONCLICK MENJADI NAVIGATE ---
             onClick={() => {
-              setActiveTab("selesai");
+              navigate("/petani/riwayatpenjualan/transaksiselesai");
               setExpandedId(null); // Tutup rincian saat pindah tab
             }}
             className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${

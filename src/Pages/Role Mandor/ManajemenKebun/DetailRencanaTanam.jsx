@@ -362,7 +362,7 @@ export default function DetailRencanaTanam() {
     }
 
     setLoadingSubmit(true);
-    showToast.loading("Sedang menyimpan revisi data ke server...");
+    showToast.loading("Sedang menyimpan revisi data ke sistem...");
 
     try {
       const token = localStorage.getItem("token");

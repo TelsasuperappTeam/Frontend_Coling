@@ -63,7 +63,7 @@ export default function LuasLahan() {
 
       if (!response.ok) {
         // PERBAIKAN: Parsing detail error array dari FastAPI (Pydantic)
-        let errorMessage = "Terjadi kesalahan server";
+        let errorMessage = "Terjadi kesalahan sistem";
 
         if (data.detail) {
           if (Array.isArray(data.detail)) {
@@ -144,7 +144,7 @@ export default function LuasLahan() {
                 if (updatedForm.files[docObj.tipe_dokumen]) {
                   updatedForm.files[docObj.tipe_dokumen] = {
                     status: "success",
-                    name: "File tersimpan di server",
+                    name: "File tersimpan di sistem",
                   };
                 }
               });
@@ -269,7 +269,7 @@ export default function LuasLahan() {
         setTimeout(() => navigate("/petani/dashboard"), 10000);
       } else {
         console.error(error);
-        setErrorMsg(error.message || "Terjadi kesalahan pada server");
+        setErrorMsg(error.message || "Terjadi kesalahan pada sistem");
       }
     } finally {
       setIsLoading(false);

@@ -120,7 +120,7 @@ export default function Inventaris() {
         });
         if (!res.ok) {
           const errorData = await res.json();
-          throw new Error(errorData.detail || "Gagal menghapus data di server");
+          throw new Error(errorData.detail || "Gagal menghapus data di sistem");
         }
       }
 

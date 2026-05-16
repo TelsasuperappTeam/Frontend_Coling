@@ -1165,77 +1165,90 @@ export default function MonitoringGAP() {
           </div>
 
           <div className="p-4 sm:p-6 overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar">
-            {config.fields.map((field, idx) => (
-              <div key={idx}>
-                <label className="block text-[10px] sm:text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">
-                  {field.label}
-                </label>
-                {field.type === "select" ? (
-                  <div className="relative">
-                    <select
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] focus:border-[#EF8523] outline-none appearance-none bg-white transition"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [field.key]: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">-- Pilih --</option>
-                      {(() => {
-                        let optionsToRender = field.options;
-                        if (field.key === "dinamis_pupuk_id")
-                          optionsToRender = pupukOptions;
-                        if (field.key === "dinamis_pestisida_id")
-                          optionsToRender = pestisidaOptions;
+            {config.fields.map((field, idx) => {
+              if (
+                field.key === "jenis_tanaman_penutup_lainnya" && 
+                formData.jenis_tanaman_penutup !== "Lainnya"
+              ) {
+                return null; 
+              }
 
-                        return optionsToRender?.map((opt, i) => (
-                          <option key={i} value={opt.value}>
-                            {opt.label || opt.value}
-                          </option>
-                        ));
-                      })()}
-                    </select>
-                    <ChevronDown
-                      className="absolute right-3 top-3 text-gray-400 pointer-events-none"
-                      size={14}
-                    />
-                  </div>
-                ) : field.type === "file" ? (
-                  <div className="border border-dashed border-gray-300 rounded-lg p-3 sm:p-4 bg-gray-50 text-center hover:bg-gray-100 transition cursor-pointer">
+              return (
+                <div key={idx}>
+                  <label className="block text-[10px] sm:text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">
+                    {field.label}
+                  </label>
+                  {field.type === "select" ? (
+                    <div className="relative">
+                      <select
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] focus:border-[#EF8523] outline-none appearance-none bg-white transition"
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [field.key]: e.target.value,
+                            // (Opsional) Reset field lainnya jika user mengganti pilihan dari "Lainnya" ke yang lain
+                            ...(field.key === "jenis_tanaman_penutup" && e.target.value !== "Lainnya" ? { jenis_tanaman_penutup_lainnya: "" } : {})
+                          })
+                        }
+                        value={formData[field.key] || ""}
+                      >
+                        <option value="">-- Pilih --</option>
+                        {(() => {
+                          let optionsToRender = field.options;
+                          if (field.key === "dinamis_pupuk_id")
+                            optionsToRender = pupukOptions;
+                          if (field.key === "dinamis_pestisida_id")
+                            optionsToRender = pestisidaOptions;
+
+                          return optionsToRender?.map((opt, i) => (
+                            <option key={i} value={opt.value}>
+                              {opt.label || opt.value}
+                            </option>
+                          ));
+                        })()}
+                      </select>
+                      <ChevronDown
+                        className="absolute right-3 top-3 text-gray-400 pointer-events-none"
+                        size={14}
+                      />
+                    </div>
+                  ) : field.type === "file" ? (
+                    <div className="border border-dashed border-gray-300 rounded-lg p-3 sm:p-4 bg-gray-50 text-center hover:bg-gray-100 transition cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [field.key]: e.target.files[0],
+                          })
+                        }
+                        className="text-[10px] sm:text-xs w-full cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] sm:file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                      />
+                    </div>
+                  ) : field.type === "select_parent_piringan" ? (
+                    <div className="hidden">
+                      <input
+                        type="hidden"
+                        value={formData[field.key] || ""}
+                        readOnly
+                      />
+                    </div>
+                  ) : (
                     <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [field.key]: e.target.files[0],
-                        })
-                      }
-                      className="text-[10px] sm:text-xs w-full cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] sm:file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                    />
-                  </div>
-                ) : field.type === "select_parent_piringan" ? (
-                  <div className="hidden">
-                    <input
-                      type="hidden"
+                      type={field.type}
+                      placeholder={field.placeholder}
                       value={formData[field.key] || ""}
-                      readOnly
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] outline-none transition shadow-sm"
+                      onChange={(e) =>
+                        setFormData({ ...formData, [field.key]: e.target.value })
+                      }
                     />
-                  </div>
-                ) : (
-                  <input
-                    type={field.type}
-                    placeholder={field.placeholder}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] outline-none transition shadow-sm"
-                    onChange={(e) =>
-                      setFormData({ ...formData, [field.key]: e.target.value })
-                    }
-                  />
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className="p-4 sm:p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-xl">

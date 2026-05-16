@@ -47,7 +47,7 @@ const TransportRoutes = () => {
 
         {/* === PENGIRIMAN === */}
         <Route
-          path="pengiriman"
+          path="pengiriman/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.TRANSPORT]}>
               <Pengiriman />

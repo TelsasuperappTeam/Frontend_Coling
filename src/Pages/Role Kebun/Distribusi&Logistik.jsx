@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Truck,
   MapPin,
@@ -14,11 +15,21 @@ import {
   Hash,
   CheckCircle,
   ChevronUp,
+  Wallet,
+  Loader2,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/constants.js";
 
 const DistribusiLogistik = () => {
-  const [activeTab, setActiveTab] = useState("pencarian");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // --- LOGIKA TAB BERDASARKAN URL ---
+  // Jika URL mengandung "statuspengiriman", aktifkan tab "progres". Jika tidak, default ke "pencarian".
+  const activeTab = location.pathname.includes("statuspengiriman")
+    ? "progres"
+    : "pencarian";
+
   const [viewMode, setViewMode] = useState("main");
   const [selectedLogistik, setSelectedLogistik] = useState(null);
 
@@ -122,18 +133,20 @@ const DistribusiLogistik = () => {
     setViewMode("form"); // Langsung ke form
   };
 
-  // Kembali ke tampilan utama & reset seleksi
-  const handleBackToMain = () => {
-    setViewMode("main");
-    setSelectedLogistik(null);
-  };
-
   // Helper dinamis untuk menentukan Judul SectionCard berdasarkan viewMode & activeTab
   const getSectionTitle = () => {
     if (viewMode === "form") return "Pengajuan Jasa Logistik";
     return activeTab === "pencarian"
       ? "Cari Jasa Logistik Pengiriman TBS Anda"
       : "Status Pengiriman & Progres";
+  };
+
+  // --- TAMBAHKAN FUNGSI INI ---
+  const getSectionSubtitle = () => {
+    if (viewMode === "form") return "";
+    return activeTab === "pencarian"
+      ? "Halaman ini aktif setelah pabrik menyetujui pengajuan Anda. Silahkan pilih mitra logistik untuk mengirimkan TBS."
+      : "Pantau pergerakan armada Anda. Jika truk telah diperiksa pabrik, segera proses Bagi Hasil.";
   };
 
   return (
@@ -158,21 +171,27 @@ const DistribusiLogistik = () => {
         {viewMode === "main" && (
           <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
             <button
-              onClick={() => setActiveTab("pencarian")}
+              // UBAH ONCLICK DI SINI
+              onClick={() =>
+                navigate("/kebun/distribusi&logistik/mencarilogistik")
+              }
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === "pencarian"
                   ? "bg-white text-[#B5302D] shadow-sm"
-                  : "text-gray-500"
+                  : "text-gray-500 hover:bg-gray-200/50"
               }`}
             >
               <Search className="w-3.5 h-3.5" /> Mencari Logistik
             </button>
             <button
-              onClick={() => setActiveTab("progres")}
+              // UBAH ONCLICK DI SINI
+              onClick={() =>
+                navigate("/kebun/distribusi&logistik/statuspengiriman")
+              }
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === "progres"
                   ? "bg-white text-[#B5302D] shadow-sm"
-                  : "text-gray-500"
+                  : "text-gray-500 hover:bg-gray-200/50"
               }`}
             >
               <Truck className="w-3.5 h-3.5" /> Status Pengiriman
@@ -185,34 +204,58 @@ const DistribusiLogistik = () => {
       <hr className="border-gray-200 mb-8" />
 
       {/* --- CONTENT AREA (Wrapped in SectionCard) --- */}
-      <SectionCard title={getSectionTitle()}>
+      <SectionCard
+        title={getSectionTitle()}
+        subtitle={getSectionSubtitle()}
+        rightContent={
+          // LOGIKA UX: Hanya muncul di tab "Progres", selalu tampil sebagai pengingat
+          viewMode === "main" &&
+          activeTab === "progres" && (
+            <div className="flex items-center gap-2 sm:gap-3 bg-white border border-[#EF8523]/30 p-1.5 sm:pr-2.5 rounded-full shadow-[0_0_15px_rgba(239,133,35,0.15)] animate-pulse hover:animate-none transition-all w-max md:w-auto">
+              <div className="bg-gradient-to-br from-[#EF8523] to-[#d9751d] p-1.5 sm:p-2 rounded-full text-white shrink-0 shadow-sm">
+                <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+
+              <p className="text-[10px] sm:text-[11px] font-bold text-gray-700 leading-tight whitespace-nowrap">
+                Jika sudah diperiksa Pabrik!
+                <br />
+                <span className="text-[#EF8523] font-black">
+                  Silahkan Bagi Hasil
+                </span>
+              </p>
+
+              <button
+                onClick={() =>
+                  navigate("/kebun/riwayattransaksi/perlubagihasil")
+                }
+                className="bg-[#EF8523] hover:bg-[#d9751d] active:scale-95 text-white px-4 py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 whitespace-nowrap ml-1"
+              >
+                Klik &rarr;
+              </button>
+            </div>
+          )
+        }
+      >
         {/* VIEW: MAIN TAB CONTENT */}
         {viewMode === "main" ? (
           <div className="animate-in fade-in slide-in-from-bottom-2">
             {/* TAB 1 MENCARI PENGIRIMAN */}
             {activeTab === "pencarian" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Halaman ini baru bisa dilakukan setelah pabrik menerima
-                      pengajuan penjualan TBS Anda. Silahkan pilih mitra
-                      logistik yang tersedia untuk mengirimkan TBS Anda ke
-                      pabrik.
-                    </p>
-                  </div>
-                  <span className="bg-red-100 text-[#B5302D] px-3 py-1 rounded-full text-[10px] font-bold">
+              <div className="space-y-4">
+                {/* Badge Jumlah Mitra Tersedia (Teks keterangan lamanya SUDAH DIHAPUS) */}
+                <div className="flex justify-end mb-2">
+                  <span className="bg-red-100 text-[#B5302D] px-3 py-1.5 rounded-full text-[10px] font-black shadow-sm">
                     {mitraLogistik.length} Mitra Tersedia
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {isLoadingMitra ? (
-                    <p className="text-center text-xs text-gray-400 py-6 col-span-full">
-                      Memuat daftar logistik...
-                    </p>
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
+                    </div>
                   ) : mitraLogistik.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 text-sm bg-gray-50 rounded-2xl border border-gray-200">
+                    <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
                       Belum ada mitra logistik yang tersedia saat ini.
                     </div>
                   ) : (
@@ -237,10 +280,9 @@ const DistribusiLogistik = () => {
                             <p className="text-[11px] text-gray-500 flex items-start gap-2">
                               <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                               <span className="line-clamp-2">
-                                {mitra.alamat_logistik}
+                                {mitra.alamat_logistik || "-"}
                               </span>
                             </p>
-                            {/* No HP Logistik */}
                             <p className="text-[11px] text-gray-500 flex items-start gap-2">
                               <Phone className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                               <span>
@@ -249,7 +291,6 @@ const DistribusiLogistik = () => {
                             </p>
                           </div>
 
-                          {/* List Akomodasi (Diambil dari array list_akomodasi BE) */}
                           <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
                             <p className="text-[10px] font-bold text-gray-400 uppercase">
                               Estimasi Harga & Kapasitas
@@ -295,28 +336,21 @@ const DistribusiLogistik = () => {
 
             {/* TAB 2 PROGRES PENGAJUAN */}
             {activeTab === "progres" && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-                  <div className="text-xs text-gray-500">
-                    Pantau pergerakan dan status pengajuan armada Anda.
+              <div className="space-y-4 pt-2">
+                {/* --- TEKS KETERANGAN LAMA DIHAPUS DARI SINI --- */}
+                {isLoadingProgres ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  {isLoadingProgres ? (
-                    <p className="text-center text-xs text-gray-400 py-6">
-                      Memuat daftar progres pengiriman...
-                    </p>
-                  ) : progresPengiriman.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 text-sm bg-gray-50 rounded-2xl border border-gray-200">
-                      Belum ada riwayat atau progres pengajuan armada.
-                    </div>
-                  ) : (
-                    progresPengiriman.map((item) => (
-                      <ProgressItem key={item.id} item={item} />
-                    ))
-                  )}
-                </div>
+                ) : progresPengiriman.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
+                    Belum ada riwayat atau progres pengajuan armada.
+                  </div>
+                ) : (
+                  progresPengiriman.map((item) => (
+                    <ProgressItem key={item.id} item={item} />
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -324,7 +358,7 @@ const DistribusiLogistik = () => {
           /* --- VIEW: FORM PENGAJUAN --- */
           <div className="animate-in fade-in slide-in-from-right-4">
             <button
-              onClick={handleBackToMain}
+              onClick={() => setViewMode("main")}
               className="mb-6 flex items-center gap-2 text-gray-500 hover:text-[#B5302D] text-xs font-bold transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Kembali ke Daftar Mitra
@@ -346,7 +380,7 @@ const DistribusiLogistik = () => {
 
                 {/* FormPengajuan akan melakukan Fetch & Filter secara mandiri */}
                 <FormPengajuan
-                  onSubmit={handleBackToMain}
+                  onSubmit={() => setViewMode("main")}
                   targetName={selectedLogistik?.nama_logistik}
                   targetId={selectedLogistik?.logistik_user_id}
                 />
@@ -366,14 +400,30 @@ const DistribusiLogistik = () => {
  * Komponen wrapper standar untuk setiap section utama.
  * Dilengkapi dengan dekorasi gradient di bagian atas dan judul dinamis.
  */
-const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden hover:shadow-md transition-all">
-    {/* Decorative Header Line */}
+const SectionCard = ({ title, subtitle, rightContent, children }) => (
+  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
 
-    <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
-      {title}
-    </h3>
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex-1">
+        <h3 className="text-lg font-bold text-[#B5302D] flex items-center gap-2">
+          {title}
+        </h3>
+        {subtitle && (
+          <p className="text-xs text-gray-500 mt-1.5 leading-relaxed pr-4">
+            {subtitle}
+          </p>
+        )}
+      </div>
+
+      {/* Area Tombol Kedip: Bisa di-scroll ke kanan di Mobile */}
+      {rightContent && (
+        <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+          {rightContent}
+        </div>
+      )}
+    </div>
+
     {children}
   </div>
 );

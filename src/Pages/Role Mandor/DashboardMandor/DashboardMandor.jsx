@@ -23,7 +23,7 @@ import {
   Layers,
   Droplets,
   ChevronRight,
-  ArrowRight,
+  Clock,
   ArrowLeft,
   X,
   Save,
@@ -31,6 +31,7 @@ import {
   AlertCircle,
   FileText,
   Eye,
+  History,
 } from "lucide-react";
 import { showToast, confirmDialog } from "../../../utils/notif";
 
@@ -68,7 +69,7 @@ const isProfileIncomplete = (p) => {
   return !p.alamat_kebun || !p.koordinat_lahan || !p.foto;
 };
 
-// FUNGSI: Mengambil tanggal hari ini format YYYY-MM-DD
+// FUNGSI: Mengambil tanggal hari ini (Format YYYY-MM-DD) untuk default Form
 const getTodayDateString = () => {
   const d = new Date();
   return d.toLocaleDateString("en-CA");
@@ -141,17 +142,25 @@ export default function DashboardMandor() {
   const [isLoadingRencana, setIsLoadingRencana] = useState(false);
   const [showPopupRencana, setShowPopupRencana] = useState(false);
 
-  // State form untuk tambah rencana baru
   const [newRencana, setNewRencana] = useState({
     judul_kegiatan: "",
     tanggal_kerja: "",
     kegiatan_kerja: "",
   });
 
+  // --- TAMBAHKAN 5 BARIS INI ---
+  const [editingRencanaId, setEditingRencanaId] = useState(null);
+  const [showAllRencanaModal, setShowAllRencanaModal] = useState(false);
+  const [allRencanaData, setAllRencanaData] = useState([]);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
+  const [isSubmittingRencana, setIsSubmittingRencana] = useState(false);
+
   // -----------------------------------------------------------------------------
-  // FUNGSI: Mengambil Data Rencana Kerja (GET)
-  // (SESUAI BE MAHAR) - Mengambil list kegiatan berdasarkan query tanggal hari ini
+  // FUNGSI: Mengambil Data Rencana Kerja (GET H hingga H+2) - SESUAI BE
   // -----------------------------------------------------------------------------
+  // =====================================================================
+  // 1. PERBAIKAN FETCH DASHBOARD (Tambahkan parameter ?tanggal= )
+  // =====================================================================
   const fetchRencanaKerja = useCallback(async () => {
     try {
       const token =
@@ -159,45 +168,40 @@ export default function DashboardMandor() {
       if (!token) return;
 
       setIsLoadingRencana(true);
-      const today = getTodayDateString();
 
-      // (SESUAI BE MAHAR) Endpoint GET dengan filter tanggal
-      const response = await fetch(
-        `${API_ENDPOINTS.FARM.PETANI.RENCANA_KERJA.GET_LIST}?tanggal=${today}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // PERBAIKAN: Selipkan getTodayDateString() agar BE tahu hari ini tanggal berapa
+      const today = getTodayDateString();
+      const url = `${API_ENDPOINTS.FARM.PETANI.RENCANA_KERJA.GET_LIST}?tanggal=${today}`;
+
+      // --- CONSOLE 1: Cek URL dan Parameter Tanggal ---
+      console.log("=== HIT API DASHBOARD ===", url);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (response.ok) {
         const data = await response.json();
+
+        // --- CONSOLE Cek data mentah dari Backend ---
+        console.log("=== RAW DATA DARI BE (DASHBOARD) ===", data);
+
         const listRencana = Array.isArray(data) ? data : data.data || [];
 
-        // Validasi manual tanggal di sisi client
-        const filteredByDate = listRencana.filter((item) => {
-          // (SESUAI BE MAHAR) Cek field 'tanggal' atau 'tanggal_kerja' dari response
-          const serverDate = item.tanggal || item.tanggal_kerja;
-          if (!serverDate) return false;
-
-          // Ambil 10 karakter pertama (YYYY-MM-DD)
-          const dateString = serverDate.toString().substring(0, 10);
-          return dateString === today;
-        });
-
-        // Urutkan: Status TERJADWAL tampil paling atas
-        const sorted = filteredByDate.sort((a, b) => {
-          if (a.status_kegiatan === b.status_kegiatan) return 0;
-          return a.status_kegiatan === "TERJADWAL" ? -1 : 1;
+        const sorted = listRencana.sort((a, b) => {
+          const dateA = new Date(
+            a.tanggal_rencana || a.tanggal || a.tanggal_kerja || 0,
+          );
+          const dateB = new Date(
+            b.tanggal_rencana || b.tanggal || b.tanggal_kerja || 0,
+          );
+          return dateB - dateA;
         });
 
         setRencanaHariIni(sorted);
       } else {
-        const errorText = await response.text();
-        console.warn("Gagal mengambil data rencana kerja:", errorText);
+        console.error("=== BE MENOLAK REQUEST DASHBOARD ===", response.status);
       }
     } catch (error) {
       console.error("Error fetching rencana kerja:", error);
@@ -205,6 +209,122 @@ export default function DashboardMandor() {
       setIsLoadingRencana(false);
     }
   }, []);
+
+  // 2. FETCH SEMUA RIWAYAT (Endpoint /all)
+  const fetchAllRencana = async () => {
+    try {
+      const token =
+        localStorage.getItem("accessToken") || localStorage.getItem("token");
+      setIsLoadingAll(true);
+
+      // Menggunakan endpoint RENCANA_KERJA_ALL yang baru Anda daftarkan
+      const url = API_ENDPOINTS.FARM.PETANI.RENCANA_KERJA.RENCANA_KERJA_ALL;
+
+      console.log("MENEMBAK ENDPOINT ALL:", url);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const listRencana = Array.isArray(data) ? data : data.data || [];
+
+        // URUTKAN: Tanggal TERBARU (Atas) -> Tanggal TERLAMA (Bawah)
+        const sorted = listRencana.sort((a, b) => {
+          const dateA = new Date(
+            a.tanggal_rencana || a.tanggal || a.tanggal_kerja || 0,
+          );
+          const dateB = new Date(
+            b.tanggal_rencana || b.tanggal || b.tanggal_kerja || 0,
+          );
+          return dateB - dateA; // dateB - dateA membuat tanggal terbaru naik ke atas
+        });
+
+        console.log("=== SEMUA RIWAYAT RENCANA KERJA ===", sorted);
+        setAllRencanaData(sorted);
+      } else {
+        console.error(
+          "Gagal mengambil semua rencana kerja, status:",
+          response.status,
+        );
+      }
+    } catch (error) {
+      console.error("Error fetchAllRencana:", error);
+    } finally {
+      setIsLoadingAll(false);
+    }
+  };
+
+  // =====================================================================
+  // 2. PERBAIKAN SUBMIT (Fix URL Endpoint & showToast)
+  // =====================================================================
+  const handleSubmitRencana = async () => {
+    if (!newRencana.judul_kegiatan || !newRencana.tanggal_kerja) {
+      showToast.error("Judul dan Tanggal wajib diisi!");
+      return;
+    }
+
+    try {
+      setIsSubmittingRencana(true);
+      const token =
+        localStorage.getItem("accessToken") || localStorage.getItem("token");
+
+      const isEditing = editingRencanaId !== null;
+
+      // PERBAIKAN: Gunakan .ADD (/rencana-kerja) untuk POST maupun PUT
+      const endpoint = isEditing
+        ? `${API_ENDPOINTS.FARM.PETANI.RENCANA_KERJA.ADD}/${editingRencanaId}`
+        : API_ENDPOINTS.FARM.PETANI.RENCANA_KERJA.ADD;
+
+      const payload = {
+        judul_kegiatan: newRencana.judul_kegiatan,
+        kegiatan_kerja: newRencana.kegiatan_kerja,
+        tanggal_kerja: newRencana.tanggal_kerja,
+      };
+
+      const response = await fetch(endpoint, {
+        method: isEditing ? "PUT" : "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        // Tangkap pesan error spesifik dari BE jika masih gagal
+        const errData = await response.json().catch(() => ({}));
+        console.error("ALASAN BE MENOLAK:", errData);
+        throw new Error("Gagal menyimpan rencana");
+      }
+
+      // PERBAIKAN: Gunakan format toast yang aman
+      showToast.success(
+        `Rencana kerja berhasil ${isEditing ? "diperbarui" : "ditambahkan"}!`,
+      );
+
+      setShowPopupRencana(false);
+      setEditingRencanaId(null);
+      setNewRencana({
+        judul_kegiatan: "",
+        tanggal_kerja: getTodayDateString(),
+        kegiatan_kerja: "",
+      });
+
+      fetchRencanaKerja();
+      if (showAllRencanaModal) fetchAllRencana();
+    } catch (error) {
+      console.error(error);
+      showToast.error("Terjadi kesalahan saat memproses rencana.");
+    } finally {
+      setIsSubmittingRencana(false);
+    }
+  };
 
   // -----------------------------------------------------------------------------
   // FUNGSI: Mengambil Data Progres ISPO (GET)
@@ -381,65 +501,6 @@ export default function DashboardMandor() {
 
     fetchGrafikHarga();
   }, [profile.kebun_id, tahunTbs]);
-
-  // -----------------------------------------------------------------------------
-  // FUNGSI: Menambah Rencana Kerja Manual (POST)
-  // (SESUAI BE MAHAR) - Mengirim payload kegiatan baru ke server
-  // -----------------------------------------------------------------------------
-  const handleSaveRencana = async () => {
-    if (!newRencana.judul_kegiatan || !newRencana.tanggal_kerja) {
-      // GANTI: Gunakan Toast Error
-      showToast.error("Judul dan Tanggal wajib diisi!");
-      return;
-    }
-
-    try {
-      // TAMBAHAN: Toast Loading
-      showToast.loading("Menyimpan rencana kerja...");
-
-      const token =
-        localStorage.getItem("accessToken") || localStorage.getItem("token");
-
-      const response = await fetch(
-        API_ENDPOINTS.FARM.PETANI.RENCANA_KERJA.ADD,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            judul_kegiatan: newRencana.judul_kegiatan,
-            kegiatan_kerja: newRencana.kegiatan_kerja,
-            tanggal_kerja: newRencana.tanggal_kerja,
-          }),
-        },
-      );
-
-      showToast.dismiss(); // Matikan loading
-
-      if (!response.ok) throw new Error("Gagal menambah rencana");
-
-      // GANTI: Gunakan Toast Sukses
-      showToast.success("Rencana kerja berhasil ditambahkan!");
-
-      setShowPopupRencana(false);
-
-      // Reset form ke default
-      setNewRencana({
-        judul_kegiatan: "",
-        tanggal_kerja: getTodayDateString(),
-        kegiatan_kerja: "",
-      });
-
-      fetchRencanaKerja();
-    } catch (error) {
-      showToast.dismiss(); // Matikan loading
-      console.error("Error saving rencana:", error);
-      // GANTI: Gunakan Toast Error
-      showToast.error("Terjadi kesalahan saat menyimpan rencana.");
-    }
-  };
 
   // -----------------------------------------------------------------------------
   // FUNGSI: Update Status Kegiatan (PATCH)
@@ -644,13 +705,48 @@ export default function DashboardMandor() {
             <h3 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
               Data Diri Anda
             </h3>
+
             <button
               onClick={() => setShowPopupDataDiri(true)}
-              className="bg-white/20 text-black/80 border border-white/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold hover:bg-white hover:text-[#EF8523] transition-all duration-300"
+              className={`rounded-full px-4 sm:px-5 py-1.5 sm:py-2 transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                isProfileIncomplete(profile)
+                  ? "bg-orange-50 text-black border border-orange-200 shadow-sm animate-pulse hover:bg-orange-100"
+                  : "bg-gray-50 text-black border border-gray-200/80 shadow-sm hover:bg-gray-100 hover:text-[#EF8523]"
+              }`}
             >
-              {isProfileIncomplete(profile)
-                ? "Lengkapi Data Diri"
-                : "Lihat Profil"}
+              {isProfileIncomplete(profile) ? (
+                <>
+                  {/* Titik Notifikasi Berdenyut (Ping Badge) tetap warna Oranye */}
+                  <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 mr-0.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF8523] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-[#EF8523]"></span>
+                  </span>
+
+                  {/* Teks Ekstra Tegas (Warna Hitam) */}
+                  <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider leading-[1.2] text-left sm:text-center">
+                    Lengkapi
+                    <br className="block sm:hidden" /> Data Diri
+                  </span>
+                  {/* Panah Pancingan Aksi */}
+                  <svg
+                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="3"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </>
+              ) : (
+                <span className="text-[9px] sm:text-[11px] font-bold text-black uppercase tracking-wider">
+                  Lihat Profil
+                </span>
+              )}
             </button>
           </div>
 
@@ -723,31 +819,56 @@ export default function DashboardMandor() {
             title="Informasi Luas Lahan"
             icon={Map}
             rightContent={
-              <div className="flex items-center gap-2 sm:gap-3">
-                {/* --- TOMBOL MANAJEMEN SENGKETA --- */}
-                {/* Dibuat mencolok dengan background putih solid, teks merah, dan efek bayangan */}
-                <button
-                  onClick={() => navigate("/petani/manajemensengketa")}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white text-red-600 border border-transparent rounded-full px-3 sm:px-5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold hover:bg-red-50 hover:text-red-700 transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                  title="Manajemen Sengketa Lahan"
-                >
-                  <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span>Sengketa</span>
-                </button>
+              <div className="flex items-center gap-1.5 sm:gap-3.5">
+                {/* --- 1. TOMBOL SENGKETA (GAYA PREMIUM GLOWING RED) --- */}
+                <div className="relative group animate-pulse">
+                  <button
+                    onClick={() => navigate("/petani/manajemensengketa")}
+                    className="relative flex items-center gap-1 sm:gap-2 bg-white text-red-700 border border-red-100 rounded-full px-3 sm:px-5 py-1.5 sm:py-2.5 text-[9px] sm:text-[11px] font-black uppercase tracking-wider hover:bg-red-50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+                    title="Manajemen Sengketa Lahan"
+                  >
+                    {/* Ikon Alert berdenyut sinkron dengan tombol */}
+                    <svg
+                      className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 text-red-600animate-pulse"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="3"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span>Lahan Sengketa</span>
+                  </button>
+                </div>
 
-                {/* --- TOMBOL TAMBAH LAHAN --- */}
-                {/* Dibuat mencolok dengan background putih solid, teks oranye, dan efek bayangan */}
-                <button
-                  onClick={() => navigate("/petani/luaslahan")}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white text-black border border-transparent rounded-full px-4 sm:px-6 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold hover:bg-orange-50 hover:text-[#d9751d] transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                  title="Daftar Lahan Baru"
-                >
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
-                  <span className="hidden sm:inline">
-                    Tambah/Perbarui Lahan
-                  </span>
-                  <span className="sm:hidden">Tambah</span>
-                </button>
+                {/* --- 2. TOMBOL TAMBAH LAHAN (GAYA PREMIUM ACTIVE GREEN) --- */}
+                <div className="relative group animate-pulse">
+                  <button
+                    onClick={() => navigate("/petani/luaslahan")}
+                    className="relative flex items-center gap-1 sm:gap-2 bg-white text-emerald-700 border border-emerald-100 rounded-full px-3 sm:px-6 py-1.5 sm:py-2.5 text-[9px] sm:text-[11px] font-black uppercase tracking-wider hover:bg-emerald-50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+                    title="Daftar Lahan Baru"
+                  >
+                    <svg
+                      className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 text-emerald-600 animate-pulse"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="3.5"
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    <span className="hidden sm:inline">Tambah Lahan Baru</span>
+                    <span className="sm:hidden">Lahan</span>
+                  </button>
+                </div>
               </div>
             }
           >
@@ -889,7 +1010,7 @@ export default function DashboardMandor() {
           icon={Award}
           footer={
             <button
-              onClick={() => navigate("/petani/pantauISPO")}
+              onClick={() => navigate("/petani/pantauISPO/prinsip1")}
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
               Lihat Rincian &rarr;
@@ -965,17 +1086,40 @@ export default function DashboardMandor() {
           </div>
         </Card>
 
-        {/* FITUR 3: Rencana Kegiatan */}
+        {/* FITUR 3: Rencana Kegiatan (3 Hari Kedepan) */}
         <Card
-          title="Daftar Kegiatan Kerja Hari Ini"
+          title="Jadwal Kerja (3 Hari Kedepan)"
           icon={ClipboardList}
           footer={
-            <button
-              onClick={() => setShowPopupRencana(true)}
-              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
-            >
-              Tambah Kegiatan &rarr;
-            </button>
+            // --- GANTI SELURUH ISI FOOTER INI ---
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setEditingRencanaId(null);
+                  setNewRencana({
+                    judul_kegiatan: "",
+                    tanggal_kerja: getTodayDateString(),
+                    kegiatan_kerja: "",
+                  });
+                  setShowPopupRencana(true);
+                }}
+                className="flex-1 bg-white hover:bg-orange-50 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+              >
+                + Tambah Baru
+              </button>
+
+              {/* INI DIA TOMBOL FISIKNYA */}
+              <button
+                onClick={() => {
+                  setShowAllRencanaModal(true);
+                  fetchAllRencana();
+                }}
+                className="flex-1 bg-white hover:bg-red-50 text-gray-600 hover:text-[#B5302D] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
+              >
+                Lihat Semua &rarr;
+              </button>
+            </div>
+            // -----------------------------------
           }
         >
           {isLoadingRencana ? (
@@ -986,7 +1130,7 @@ export default function DashboardMandor() {
             <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
               <Calendar size={32} className="opacity-20" />
               <p className="text-xs text-center">
-                Tidak ada rencana kerja untuk hari ini.
+                Tidak ada jadwal kerja untuk 3 hari ke depan.
               </p>
               <button
                 onClick={() => setShowPopupRencana(true)}
@@ -998,33 +1142,38 @@ export default function DashboardMandor() {
           ) : (
             <div className="space-y-3 pb-2">
               {rencanaHariIni.map((item) => {
-                // Ambil status dengan pengecekan ganda
                 const statusReal =
                   item.status_kegiatan || item.status || "TERJADWAL";
                 const isSelesai = statusReal.toUpperCase() === "SELESAI";
                 const displayDeskripsi =
                   item.deskripsi_singkat || item.kegiatan_kerja || "-";
                 const displayTanggal = item.tanggal || item.tanggal_kerja || "";
+                const labelHari = item.hari_label || "";
+
+                // Menentukan warna label hari
+                let labelColor = "text-blue-600"; // Default Lusa
+                if (labelHari === "Hari Ini") labelColor = "text-[#B5302D]";
+                else if (labelHari === "Besok") labelColor = "text-[#EF8523]";
 
                 return (
                   <div
                     key={item.id}
                     className={`p-3 rounded-xl border flex flex-col group transition-all duration-200 ${
                       isSelesai
-                        ? "bg-green-50 border-green-100 opacity-80"
-                        : "bg-gray-50 border-gray-100 hover:border-[#EF8523]"
+                        ? "bg-green-50/50 border-green-100 opacity-80"
+                        : "bg-white border-gray-100 hover:border-gray-300 shadow-sm"
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-1 gap-2">
-                      <div className="flex items-start gap-2 overflow-hidden">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex items-start gap-2.5 overflow-hidden">
                         <button
                           onClick={() =>
                             handleToggleStatus(item.id, statusReal)
                           }
-                          className={`mt-0.5 flex-shrink-0 transition-colors ${
+                          className={`mt-0.5 flex-shrink-0 transition-all hover:scale-110 ${
                             isSelesai
                               ? "text-green-600"
-                              : "text-gray-300 hover:text-[#EF8523]"
+                              : "text-gray-300 hover:text-green-500"
                           }`}
                         >
                           {isSelesai ? (
@@ -1037,34 +1186,94 @@ export default function DashboardMandor() {
                         <div className="flex flex-col">
                           <p
                             className={`font-bold text-[13px] text-gray-800 ${
-                              isSelesai ? "line-through text-gray-500" : ""
+                              isSelesai ? "line-through text-gray-400" : ""
                             }`}
                           >
                             {item.judul_kegiatan}
                           </p>
-                          <p className="text-[11px] text-gray-500 break-words line-clamp-2">
+                          <p className="text-[10px] sm:text-[11px] text-gray-500 break-words line-clamp-2 mt-0.5">
                             {displayDeskripsi}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${
-                            isSelesai
-                              ? "text-green-600 bg-green-100 border-green-200"
-                              : "text-[#EF8523] bg-orange-50 border-orange-100"
-                          }`}
-                        >
-                          {displayTanggal}
-                        </span>
+                      {/* Info Kanan (Tanggal, Edit & Hapus) */}
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <div className="flex flex-col items-end">
+                          <span
+                            className={`text-[9px] font-black uppercase tracking-wider ${labelColor}`}
+                          >
+                            {labelHari}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 mt-0.5 rounded border ${
+                              isSelesai
+                                ? "text-green-600 bg-green-50 border-green-200"
+                                : "text-gray-500 bg-gray-50 border-gray-200"
+                            }`}
+                          >
+                            {displayTanggal}
+                          </span>
+                        </div>
 
-                        <button
-                          onClick={() => handleDeleteRencana(item.id)}
-                          className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {/* --- AKSI: EDIT & HAPUS --- */}
+                        <div className="flex items-center gap-1 mt-1">
+                          {/* Tombol Edit (Hanya muncul jika belum selesai) */}
+                          {!isSelesai && (
+                            <button
+                              onClick={() => {
+                                // Pastikan Anda memiliki state setEditingRencanaId di atas
+                                setEditingRencanaId(
+                                  item.id || item.id_rencana_kerja,
+                                );
+                                setNewRencana({
+                                  judul_kegiatan:
+                                    item.judul_kegiatan || item.judul_rencana,
+                                  tanggal_kerja:
+                                    item.tanggal ||
+                                    item.tanggal_kerja ||
+                                    item.tanggal_rencana ||
+                                    displayTanggal,
+                                  kegiatan_kerja:
+                                    item.deskripsi_singkat ||
+                                    item.kegiatan_kerja ||
+                                    "",
+                                });
+                                setShowPopupRencana(true);
+                              }}
+                              className="text-[10px] font-bold text-gray-400 hover:text-blue-500 px-2 py-1 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
+                              Edit
+                            </button>
+                          )}
+
+                          {/* Tombol Hapus (Dikunci jika SELESAI untuk ISPO) */}
+                          {isSelesai ? (
+                            <button
+                              onClick={() =>
+                                showToast.error(
+                                  "Tugas SELESAI tidak dapat dihapus (Arsip Audit ISPO).",
+                                )
+                              }
+                              className="text-gray-200 cursor-not-allowed p-1.5"
+                              title="Terkunci (Arsip ISPO)"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleDeleteRencana(
+                                  item.id || item.id_rencana_kerja,
+                                )
+                              }
+                              className="text-gray-400 hover:text-red-500 p-1.5 bg-gray-50 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Hapus Rencana"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1080,7 +1289,9 @@ export default function DashboardMandor() {
           icon={TrendingUp}
           footer={
             <button
-              onClick={() => navigate("/petani/riwayatpenjualan")}
+              onClick={() =>
+                navigate("/petani/riwayatpenjualan/transaksiselesai")
+              }
               className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-[#EF8523] border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors shadow-sm"
             >
               Lihat Semua &rarr;
@@ -1174,93 +1385,187 @@ export default function DashboardMandor() {
           </div>
         </Card>
 
-        {/* FITUR 5: Harga TBS - SCROLLABLE VERSION */}
+        {/* FITUR 5: Harga TBS - SCROLLABLE & MOBILE OPTIMIZED VERSION */}
         <Card title="Harga TBS Sesuai Aturan Pemerintah" icon={Coins}>
-          <div className="relative h-full flex flex-col pt-2 w-full">
-            <div className="flex justify-between items-center mb-4 px-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md flex items-center gap-1 animate-pulse">
-                  <span className="text-xs">↔</span> Geser grafik
-                </span>
+          <div className="relative w-full flex flex-col">
+            {/* --- HEADER & FILTER --- */}
+            <div className="flex justify-between items-center mb-3 px-1">
+              <div className="flex items-center">
+                {/* 1. BADGE LEBIH MENCARI PERHATIAN */}
+                <div className="flex items-center gap-1.5 bg-orange-50 text-[#EF8523] border border-orange-200/80 px-3 py-1 rounded-full shadow-sm animate-pulse">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                      d="M8 7h8M8 17h8M7 12h10M10 12l-3-3m0 0l3-3m-3 3h10"
+                    />
+                  </svg>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wide uppercase">
+                    Geser Grafik
+                  </span>
+                </div>
               </div>
 
-              {/* Dropdown Filter Tahun Dinamis */}
-              <select
-                value={tahunTbs}
-                onChange={(e) => setTahunTbs(parseInt(e.target.value))}
-                className="bg-orange-50 border border-orange-200 text-[#EF8523] px-2 py-1 rounded-lg text-[10px] font-black shadow-sm outline-none cursor-pointer"
-              >
-                {[...Array(5)].map((_, i) => {
-                  const year = new Date().getFullYear() - i;
-                  return (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  );
-                })}
-              </select>
+              {/* Dropdown Filter (Touch-Friendly) */}
+              <div className="relative group">
+                <select
+                  value={tahunTbs}
+                  onChange={(e) => setTahunTbs(parseInt(e.target.value))}
+                  className="appearance-none bg-white border border-gray-200 text-gray-700 hover:border-[#EF8523] pl-3 pr-8 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold shadow-sm outline-none cursor-pointer transition-all focus:ring-1 focus:ring-[#EF8523]"
+                >
+                  {[...Array(5)].map((_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return (
+                      <option key={year} value={year}>
+                        Tahun {year}
+                      </option>
+                    );
+                  })}
+                </select>
+                <svg
+                  className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-[#EF8523] transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    d="M19 9l-7 7-7-7"
+                  ></path>
+                </svg>
+              </div>
             </div>
 
-            {/* State Handling: Loading, Empty, atau Tampilkan SVG */}
+            {/* --- KONTEN GRAFIK --- */}
             {isLoadingHargaTbs ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center">
+              <div className="w-full h-[220px] sm:h-[240px] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
               </div>
             ) : hargaTbsData.length === 0 ? (
-              <div className="flex-1 min-h-[180px] flex items-center justify-center text-gray-400 text-xs font-medium italic">
-                Belum ada riwayat harga TBS untuk tahun ini.
+              <div className="w-full h-[220px] sm:h-[240px] flex items-center justify-center">
+                <p className="text-gray-400 text-[10px] sm:text-xs font-medium bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+                  Belum ada data harga TBS untuk tahun {tahunTbs}.
+                </p>
               </div>
             ) : (
               (() => {
                 const dataBE = hargaTbsData;
+
+                const hargaTerendah = Math.min(
+                  ...dataBE.map((d) => d.harga || 0),
+                );
                 const hargaTertinggi = Math.max(
                   ...dataBE.map((d) => d.harga || 0),
                 );
-                const maxHarga = Math.max(4000, hargaTertinggi + 500);
-                const svgHeight = 140;
+
+                let minHarga = Math.max(
+                  0,
+                  Math.floor(hargaTerendah / 500) * 500 - 500,
+                );
+                let maxHarga = Math.ceil(hargaTertinggi / 500) * 500 + 500;
+
+                const diff = maxHarga - minHarga;
+                if (diff <= 2000) maxHarga = minHarga + 2000;
+                else if (diff <= 4000) maxHarga = minHarga + 4000;
 
                 const yLabels = [
-                  `${(maxHarga / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.75) / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.5) / 1000).toFixed(1)}k`,
-                  `${((maxHarga * 0.25) / 1000).toFixed(1)}k`,
-                  "0",
+                  maxHarga,
+                  minHarga + (maxHarga - minHarga) * 0.75,
+                  minHarga + (maxHarga - minHarga) * 0.5,
+                  minHarga + (maxHarga - minHarga) * 0.25,
+                  minHarga,
                 ];
 
-                const minWidthPerPoint = 70;
+                const svgHeight = 220;
+                const paddingTop = 35;
+                const paddingBottom = 25;
+                const graphHeight = svgHeight - paddingTop - paddingBottom;
+
+                const minWidthPerPoint = 75;
                 const svgWidth = Math.max(
                   dataBE.length * minWidthPerPoint,
                   500,
                 );
-                const paddingX = 40;
+                const paddingX = 35;
                 const effectiveWidth = svgWidth - paddingX * 2;
 
                 const points = dataBE.map((d, i) => {
                   const divider = dataBE.length > 1 ? dataBE.length - 1 : 1;
                   const x = paddingX + (i / divider) * effectiveWidth;
-                  const y = svgHeight - (d.harga / maxHarga) * svgHeight;
+                  const y =
+                    paddingTop +
+                    graphHeight -
+                    ((d.harga - minHarga) / (maxHarga - minHarga)) *
+                      graphHeight;
                   return { x, y, harga: d.harga, bulan: d.bulan };
                 });
 
-                const linePath = points.map((p) => `${p.x},${p.y}`).join(" ");
-                const areaPath = `M ${points[0].x},${svgHeight} ${linePath} ${points[points.length - 1].x},${svgHeight} Z`;
+                const linePath = points.map((p) => `${p.x},${p.y}`).join(" L ");
+                const areaPath = `M ${points[0].x},${paddingTop + graphHeight} L ${linePath} L ${points[points.length - 1].x},${paddingTop + graphHeight} Z`;
 
                 return (
-                  <div className="flex flex-1 w-full min-h-[180px] relative overflow-hidden">
-                    {/* SUMBU Y FIXED */}
-                    <div className="absolute left-0 top-0 bottom-8 w-10 z-10 bg-white/95 flex flex-col justify-between text-[9px] text-gray-400 font-bold border-r border-gray-100 shadow-sm">
-                      {yLabels.map((l, idx) => (
-                        <span key={idx} className="text-right pr-2">
-                          {l.replace(".0k", "k")}
+                  <div className="w-full h-[220px] sm:h-[240px] relative overflow-hidden bg-white rounded-xl border border-gray-100 shadow-[inset_0_1px_4px_rgba(0,0,0,0.03)] mt-1">
+                    {/* SUMBU Y FIXED (Efek Glassmorphism Kaca Buram) */}
+                    <div
+                      className="absolute left-0 w-9 sm:w-11 z-20 bg-white/80 backdrop-blur-md flex flex-col justify-between text-[8px] sm:text-[9px] text-gray-500 font-extrabold border-r border-white/50 shadow-[2px_0_5px_rgba(0,0,0,0.03)]"
+                      style={{
+                        top: `${paddingTop}px`,
+                        height: `${graphHeight}px`,
+                      }}
+                    >
+                      {yLabels.map((val, idx) => (
+                        <span
+                          key={idx}
+                          className="text-right pr-1.5 sm:pr-2 -translate-y-1/2"
+                        >
+                          {val === 0 ? "0" : `${(val / 1000).toFixed(1)}k`}
                         </span>
                       ))}
                     </div>
 
+                    {/* 2. EFEK BAYANGAN KANAN (MEMBERI TAHU ADA KONTEN TERSEMBUNYI) */}
+                    <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-l from-white via-white/70 to-transparent z-20 pointer-events-none flex items-center justify-end pr-1 sm:pr-2">
+                      <svg
+                        className="w-4 h-4 text-[#EF8523]/50 animate-pulse"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="3"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+
                     {/* AREA GRAFIK SCROLLABLE */}
-                    <div className="flex-1 overflow-x-auto pl-10 pb-2 scrollbar-thin">
+                    <div
+                      className="w-full h-full overflow-x-auto overflow-y-hidden pl-9 sm:pl-11"
+                      style={{
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                      }}
+                    >
+                      <style>{`
+                        div::-webkit-scrollbar { display: none; }
+                      `}</style>
+
                       <div
-                        style={{ width: `${svgWidth}px`, height: "100%" }}
-                        className="relative"
+                        style={{
+                          width: `${svgWidth}px`,
+                          height: `${svgHeight}px`,
+                        }}
+                        className="relative pr-6"
                       >
                         <svg
                           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -1269,7 +1574,7 @@ export default function DashboardMandor() {
                         >
                           <defs>
                             <linearGradient
-                              id="mandorGradient"
+                              id="chartGradient"
                               x1="0"
                               y1="0"
                               x2="0"
@@ -1278,7 +1583,7 @@ export default function DashboardMandor() {
                               <stop
                                 offset="0%"
                                 stopColor="#EF8523"
-                                stopOpacity="0.2"
+                                stopOpacity="0.25"
                               />
                               <stop
                                 offset="100%"
@@ -1286,76 +1591,122 @@ export default function DashboardMandor() {
                                 stopOpacity="0"
                               />
                             </linearGradient>
+
+                            <filter
+                              id="glow"
+                              x="-20%"
+                              y="-20%"
+                              width="140%"
+                              height="140%"
+                            >
+                              <feDropShadow
+                                dx="0"
+                                dy="4"
+                                stdDeviation="4"
+                                floodColor="#EF8523"
+                                floodOpacity="0.15"
+                              />
+                            </filter>
                           </defs>
-                          {/* Garis Grid */}
-                          {[0, 35, 70, 105, 140].map((y) => (
+
+                          {yLabels.map((_, idx) => {
+                            const yPos = paddingTop + (idx / 4) * graphHeight;
+                            return (
+                              <line
+                                key={`h-grid-${idx}`}
+                                x1="0"
+                                y1={yPos}
+                                x2={svgWidth}
+                                y2={yPos}
+                                stroke="#f1f5f9"
+                                strokeWidth="1.5"
+                                strokeDasharray="4 4"
+                              />
+                            );
+                          })}
+
+                          <path d={areaPath} fill="url(#chartGradient)" />
+
+                          {points.map((pt, i) => (
                             <line
-                              key={y}
-                              x1="0"
-                              y1={y}
-                              x2={svgWidth}
-                              y2={y}
-                              stroke="#f8f9fa"
-                              strokeWidth="1"
+                              key={`v-grid-${i}`}
+                              x1={pt.x}
+                              y1={pt.y}
+                              x2={pt.x}
+                              y2={paddingTop + graphHeight}
+                              stroke="#e2e8f0"
+                              strokeWidth="1.5"
+                              strokeDasharray="4 4"
                             />
                           ))}
-                          <path d={areaPath} fill="url(#mandorGradient)" />
-                          <polyline
+
+                          <path
+                            d={`M ${linePath}`}
                             fill="none"
                             stroke="#EF8523"
-                            strokeWidth="3"
-                            points={linePath}
+                            strokeWidth="3.5"
                             strokeLinejoin="round"
+                            strokeLinecap="round"
+                            filter="url(#glow)"
                           />
+
                           {points.map((pt, i) => (
-                            <g key={i}>
+                            <g key={`data-point-${i}`}>
                               <circle
                                 cx={pt.x}
                                 cy={pt.y}
-                                r="4"
+                                r="4.5"
                                 fill="white"
                                 stroke="#EF8523"
-                                strokeWidth="2.5"
+                                strokeWidth="3"
+                                className="transition-all duration-300"
                               />
-                              <g
-                                transform={`translate(${pt.x - 22}, ${pt.y - 28})`}
-                              >
+
+                              <g transform={`translate(${pt.x}, ${pt.y - 20})`}>
                                 <rect
-                                  width="44"
-                                  height="16"
-                                  rx="4"
-                                  fill="black"
+                                  x="-23"
+                                  y="-11"
+                                  width="46"
+                                  height="18"
+                                  rx="9"
+                                  fill="#000"
+                                  opacity="0.08"
+                                  transform="translate(0, 2)"
+                                />
+                                <rect
+                                  x="-23"
+                                  y="-11"
+                                  width="46"
+                                  height="18"
+                                  rx="9"
+                                  fill="#EF8523"
+                                />
+                                <polygon
+                                  points="-3,6 3,6 0,10"
+                                  fill="#EF8523"
                                 />
                                 <text
-                                  x="22"
-                                  y="11"
+                                  x="0"
+                                  y="1"
                                   textAnchor="middle"
-                                  className="text-[9px] font-black fill-white"
+                                  dominantBaseline="middle"
+                                  className="text-[8px] sm:text-[9px] font-bold fill-white tracking-wide"
                                 >
-                                  {pt.harga.toLocaleString()}
+                                  {pt.harga.toLocaleString("id-ID")}
                                 </text>
                               </g>
+
+                              <text
+                                x={pt.x}
+                                y={paddingTop + graphHeight + 16}
+                                textAnchor="middle"
+                                className="text-[8px] sm:text-[9px] font-bold fill-gray-500 uppercase tracking-widest"
+                              >
+                                {pt.bulan.substring(0, 3)}
+                              </text>
                             </g>
                           ))}
                         </svg>
-                        {/* Label Bulan */}
-                        <div className="absolute bottom-0 left-0 w-full h-6">
-                          {points.map((pt, i) => (
-                            <div
-                              key={i}
-                              className="absolute flex flex-col items-center"
-                              style={{
-                                left: `${pt.x}px`,
-                                transform: "translateX(-50%)",
-                              }}
-                            >
-                              <div className="w-1 h-1 bg-gray-300 rounded-full mb-1"></div>
-                              <span className="text-[9px] font-bold text-gray-500 uppercase">
-                                {pt.bulan.substring(0, 3)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1363,12 +1714,15 @@ export default function DashboardMandor() {
               })()
             )}
 
-            {/* Footer Info */}
-            <div className="mt-2 border-t border-gray-50 pt-2 flex justify-between items-center">
-              <p className="text-[8px] text-gray-400 italic font-medium">
-                * Geser untuk melihat riwayat harga
-              </p>
-            </div>
+            {/* 3. TEKS KETERANGAN DI BAWAH (FOOTER HINT) */}
+            {hargaTbsData && hargaTbsData.length > 0 && !isLoadingHargaTbs && (
+              <div className="mt-2.5 flex items-center justify-center sm:justify-start px-2">
+                <p className="text-[9px] sm:text-[10px] text-gray-400 italic font-medium tracking-wide">
+                  * Sapu layar ke kiri atau kanan untuk melihat riwayat bulan
+                  lainnya.
+                </p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -1396,11 +1750,11 @@ export default function DashboardMandor() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
               <div className="flex items-center gap-3 relative z-10">
                 <div className="bg-white/20 p-2 rounded-xl">
-                  <Calendar className="w-5 h-5 text-white" />{" "}
-                  {/* Tambahkan import Calendar jika belum ada */}
+                  {/* Gunakan Calendar icon (Pastikan import icon Edit dari lucide-react jika ingin ganti icon) */}
+                  <Calendar className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-white font-bold text-lg tracking-wide">
-                  Tambah Rencana
+                  {editingRencanaId ? "Edit Rencana" : "Buat Rencana Baru"}
                 </h3>
               </div>
               <button
@@ -1482,10 +1836,148 @@ export default function DashboardMandor() {
                 Batal
               </button>
               <button
-                onClick={handleSaveRencana}
-                className="flex-1 py-3.5 rounded-xl bg-[#B5302D] font-bold text-white hover:bg-red-800 transition-all shadow-md shadow-red-200 text-sm flex items-center justify-center gap-2"
+                onClick={handleSubmitRencana}
+                disabled={isSubmittingRencana}
+                className={`flex-1 py-3.5 rounded-xl bg-[#B5302D] font-bold text-white transition-all shadow-md shadow-red-200 text-sm flex items-center justify-center gap-2 ${isSubmittingRencana ? "opacity-70 cursor-not-allowed" : "hover:bg-red-800"}`}
               >
-                <Save className="w-4 h-4" /> Simpan Rencana
+                {isSubmittingRencana ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSubmittingRencana ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* POPUP: MODAL SEMUA RIWAYAT RENCANA KERJA (DI-DESAIN ULANG) */}
+      {/* ========================================================================= */}
+      {showAllRencanaModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="w-full max-w-2xl bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            {/* --- HEADER MODAL (Selaras dengan Lahan Mineral) --- */}
+            <div className="bg-gray-50 px-6 py-5 border-b border-gray-100 flex justify-between items-center relative">
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-100 p-2.5 rounded-xl text-[#EF8523]">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-[#EF8523] font-black text-lg">
+                    Semua Riwayat Rencana Kerja
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Daftar seluruh jadwal kegiatan Anda dari awal hingga akhir
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAllRencanaModal(false)}
+                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition shadow-sm"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* --- BODY MODAL --- */}
+            <div className="p-6 overflow-y-auto bg-white flex-1 custom-scrollbar">
+              {isLoadingAll ? (
+                <div className="flex justify-center items-center h-32">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#EF8523]" />
+                </div>
+              ) : allRencanaData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-gray-400 bg-gray-50 border border-dashed border-gray-200 rounded-2xl">
+                  <Calendar size={32} className="opacity-30 mb-3" />
+                  <p className="text-xs font-medium">
+                    Belum ada riwayat rencana kerja.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 animate-fadeIn">
+                  {allRencanaData.map((item) => {
+                    const statusReal =
+                      item.status_kegiatan ||
+                      item.status ||
+                      item.status_rencana ||
+                      "TERJADWAL";
+                    const isSelesai = statusReal.toUpperCase() === "SELESAI";
+                    const displayTanggal = (
+                      item.tanggal ||
+                      item.tanggal_rencana ||
+                      item.tanggal_kerja ||
+                      ""
+                    ).substring(0, 10);
+                    const deskripsi =
+                      item.deskripsi_singkat ||
+                      item.kegiatan_kerja ||
+                      "Tidak ada deskripsi detail.";
+
+                    return (
+                      <div
+                        key={item.id || item.id_rencana_kerja}
+                        className="cursor-default group flex flex-col p-4 bg-white border border-gray-200 rounded-2xl hover:border-[#EF8523] hover:shadow-md transition-all relative overflow-hidden"
+                      >
+                        {/* Garis Indikator Kiri */}
+                        <div
+                          className={`absolute top-0 left-0 w-1.5 h-full transition-opacity duration-300 ${
+                            isSelesai
+                              ? "bg-green-500 opacity-100"
+                              : "bg-[#EF8523] opacity-0 group-hover:opacity-100"
+                          }`}
+                        />
+
+                        <div className="flex justify-between items-start mb-2">
+                          <span
+                            className={`font-bold text-sm sm:text-base pr-4 ${isSelesai ? "text-gray-500 line-through" : "text-gray-800 group-hover:text-[#EF8523]"}`}
+                          >
+                            {item.judul_kegiatan || item.judul_rencana}
+                          </span>
+
+                          {/* Badge Status */}
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[9px] font-bold border flex items-center gap-1 shrink-0 ${
+                              isSelesai
+                                ? "bg-green-50 text-green-700 border-green-100"
+                                : "bg-orange-50 text-orange-700 border-orange-100"
+                            }`}
+                          >
+                            {isSelesai ? (
+                              <CheckCircle2 className="w-3 h-3" />
+                            ) : (
+                              <Clock className="w-3 h-3" />
+                            )}
+                            {statusReal}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-1 mt-1">
+                          {/* Info Tanggal */}
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-bold">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {displayTanggal}
+                          </div>
+
+                          {/* Deskripsi */}
+                          <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed mt-1 bg-gray-50/50 p-2 rounded-lg border border-gray-50">
+                            {deskripsi}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* --- FOOTER MODAL --- */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setShowAllRencanaModal(false)}
+                className="px-6 py-2.5 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors shadow-sm"
+              >
+                Tutup
               </button>
             </div>
           </div>
@@ -1660,9 +2152,12 @@ export default function DashboardMandor() {
 
                     {(() => {
                       // KUNCI PERBAIKAN: Gunakan key 'dokumen' sesuai Log BE Anda
-                      const batchDocs = lahanData.lahan_mineral.detail_batch[selectedMineralIndex]?.dokumen || [];
+                      const batchDocs =
+                        lahanData.lahan_mineral.detail_batch[
+                          selectedMineralIndex
+                        ]?.dokumen || [];
                       const parentDocs = lahanData.lahan_mineral.dokumen || [];
-                      
+
                       // Gabungkan dokumen dari Batch dan Induk
                       const combinedDocs = [...batchDocs, ...parentDocs];
 
@@ -1689,7 +2184,8 @@ export default function DashboardMandor() {
                                 </div>
                                 <div>
                                   <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">
-                                    {doc.tipe_dokumen?.replace(/_/g, " ") || "DOKUMEN"}
+                                    {doc.tipe_dokumen?.replace(/_/g, " ") ||
+                                      "DOKUMEN"}
                                   </p>
                                   <p className="text-[11px] font-bold text-gray-800 line-clamp-1 mt-0.5">
                                     {doc.judul_dokumen || "Lampiran Lahan"}
@@ -1924,7 +2420,9 @@ export default function DashboardMandor() {
 
                     {(() => {
                       // KUNCI PERBAIKAN: Gunakan key 'dokumen' sesuai Log BE
-                      const dokumenList = lahanData.lahan_gambut[selectedGambutIndex]?.dokumen || [];
+                      const dokumenList =
+                        lahanData.lahan_gambut[selectedGambutIndex]?.dokumen ||
+                        [];
 
                       if (dokumenList.length === 0) {
                         return (
@@ -1949,7 +2447,8 @@ export default function DashboardMandor() {
                                 </div>
                                 <div>
                                   <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">
-                                    {doc.tipe_dokumen?.replace(/_/g, " ") || "DOKUMEN"}
+                                    {doc.tipe_dokumen?.replace(/_/g, " ") ||
+                                      "DOKUMEN"}
                                   </p>
                                   <p className="text-[11px] font-bold text-gray-800 line-clamp-1 mt-0.5">
                                     {doc.judul_dokumen || "Lampiran Lahan"}

@@ -13,6 +13,7 @@ import {
   History,
   Radar,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 
 import { showToast, confirmDialog } from "../../utils/notif";
@@ -65,7 +66,7 @@ const Pengiriman = () => {
     fetchShipments();
   }, [fetchShipments]);
 
-// --- UPDATE PROGRESS (PATCH) ---
+  // --- UPDATE PROGRESS (PATCH) ---
   const handleUpdateStatus = async (id, currentProgressDB) => {
     let nextProgress = "";
     let pesanKonfirmasi = "";
@@ -85,7 +86,7 @@ const Pengiriman = () => {
       title: "Konfirmasi Update Status",
       text: pesanKonfirmasi,
       confirmText: "Ya, Update!",
-      isDanger: false
+      isDanger: false,
     });
 
     // Jika user klik "Batal/Cancel", hentikan fungsi
@@ -93,7 +94,8 @@ const Pengiriman = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const url = API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.UPDATE_PROGRESS(id);
+      const url =
+        API_ENDPOINTS.TRACEABILITY.LOGISTIK.MANAGEMENT.UPDATE_PROGRESS(id);
 
       const res = await fetch(url, {
         method: "PATCH",
@@ -106,12 +108,13 @@ const Pengiriman = () => {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || data.message || "Gagal mengupdate progress");
+        throw new Error(
+          data.detail || data.message || "Gagal mengupdate progress",
+        );
       }
 
       showToast.success("Progress armada berhasil diperbarui!");
       fetchShipments(); // Refresh data otomatis setelah sukses
-
     } catch (error) {
       showToast.error(error.message || "Terjadi kesalahan pada sistem.");
     }
@@ -182,12 +185,12 @@ const Pengiriman = () => {
         }
       >
         {isLoading ? (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            Memuat data pengiriman...
+          <div className="flex justify-center py-10">
+            <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
           </div>
         ) : shipments.length === 0 ? (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            Tidak ada riwayat pengiriman yang statusnya sudah diterima.
+          <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
+            Tidak ada riwayat pengiriman yang selesai atau masih aktif.
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">

@@ -19,13 +19,20 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-// Pastikan path konstanta Anda benar
+
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Riwayatpenjualan = () => {
-  // --- STATE TAB ---
-  // Default tab sekarang ada 3: "aktif", "bagi_hasil", "selesai"
-  const [activeTab, setActiveTab] = useState("aktif");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // --- LOGIKA TAB BERDASARKAN URL ---
+  const activeTab = location.pathname.includes("perlubagihasil")
+    ? "bagi_hasil"
+    : location.pathname.includes("selesai")
+      ? "selesai"
+      : "aktif";
 
   // --- STATE DATA ---
   const [allData, setAllData] = useState([]);
@@ -113,7 +120,7 @@ const Riwayatpenjualan = () => {
           detail_petani: initialDetails,
         });
       } else {
-        alert("Gagal mengambil data metadata dari server.");
+        alert("Gagal mengambil data metadata dari sistem.");
       }
     } catch (error) {
       console.error("Gagal load metadata bagi hasil:", error);
@@ -264,10 +271,10 @@ const Riwayatpenjualan = () => {
 
       {/* 2 & 3. TAB SWITCHER (RATA KANAN KIRI / FULL WIDTH) */}
       <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 mb-6 sm:mb-8 w-full shadow-sm">
-        {/* TAB 1 */}
+        {/* TAB 1: Tunggu Pemeriksaan */}
         <button
           onClick={() => {
-            setActiveTab("aktif");
+            navigate("/kebun/riwayattransaksi/tunggupemeriksaan");
             setExpandedId(null);
           }}
           className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-6 py-3 sm:py-3.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
@@ -278,7 +285,6 @@ const Riwayatpenjualan = () => {
           title="Tunggu Pemeriksaan"
         >
           <Truck className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-          {/* 4. SEMBUNYIKAN TEKS DI HP (hidden sm:block) */}
           <span className="hidden sm:block">Tunggu Pemeriksaan</span>
           {dataAktif.length > 0 && (
             <span className="bg-red-100 text-[#B5302D] px-2 py-0.5 rounded-full text-[9px] font-black ml-0 sm:ml-1">
@@ -287,10 +293,10 @@ const Riwayatpenjualan = () => {
           )}
         </button>
 
-        {/* TAB 2 */}
+        {/* TAB 2: Perlu Bagi Hasil */}
         <button
           onClick={() => {
-            setActiveTab("bagi_hasil");
+            navigate("/kebun/riwayattransaksi/perlubagihasil");
             setExpandedId(null);
           }}
           className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-6 py-3 sm:py-3.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
@@ -301,7 +307,6 @@ const Riwayatpenjualan = () => {
           title="Perlu Bagi Hasil"
         >
           <Wallet className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-          {/* 4. SEMBUNYIKAN TEKS DI HP (hidden sm:block) */}
           <span className="hidden sm:block">Perlu Bagi Hasil</span>
           {dataBagiHasil.length > 0 && (
             <span className="bg-orange-100 text-[#EF8523] px-2 py-0.5 rounded-full text-[9px] font-black ml-0 sm:ml-1">
@@ -310,10 +315,10 @@ const Riwayatpenjualan = () => {
           )}
         </button>
 
-        {/* TAB 3 */}
+        {/* TAB 3: Selesai */}
         <button
           onClick={() => {
-            setActiveTab("selesai");
+            navigate("/kebun/riwayattransaksi/selesai");
             setExpandedId(null);
           }}
           className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-6 py-3 sm:py-3.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
@@ -324,7 +329,6 @@ const Riwayatpenjualan = () => {
           title="Selesai"
         >
           <History className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-          {/* 4. SEMBUNYIKAN TEKS DI HP (hidden sm:block) */}
           <span className="hidden sm:block">Selesai</span>
         </button>
       </div>
@@ -333,12 +337,11 @@ const Riwayatpenjualan = () => {
       <SectionCard title={cardTitle}>
         <div className="animate-fadeIn space-y-4">
           {isLoading ? (
-            <div className="text-center py-10 text-gray-400 text-sm">
-              Memuat Data...
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
             </div>
           ) : currentDataToRender.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-sm border border-dashed border-gray-300 rounded-xl bg-gray-50/50">
-              <Info className="mx-auto mb-3 text-gray-400" size={32} />
+            <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
               Tidak ada data yang tersedia di kategori ini.
             </div>
           ) : (
@@ -700,9 +703,7 @@ const ProgressItem = ({
                   <p className="text-xs sm:text-sm font-black text-red-600">
                     {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") ||
                       0}{" "}
-                    <span className="text-[9px] font-bold text-red-400">
-                      %
-                    </span>
+                    <span className="text-[9px] font-bold text-red-400">%</span>
                   </p>
                 </div>
                 <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-green-200 ring-1 ring-green-50 shadow-sm">

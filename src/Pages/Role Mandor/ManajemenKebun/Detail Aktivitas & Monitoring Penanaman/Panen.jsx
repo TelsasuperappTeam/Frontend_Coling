@@ -1259,12 +1259,15 @@ export default function Panen() {
                                 ? gk.is_diterima_pabrik
                                 : plan.status_pabrik === "DITERIMA" ||
                                   plan.status_pabrik === "APPROVED";
+                            // ====== SEMENTARA DIKOMENTARI KARENA BE OTOMATIS TRUE ======
+                            // const logistikAcc =
+                            //   gk.is_logistik_siap !== undefined
+                            //     ? gk.is_logistik_siap
+                            //     : plan.status_logistik === "DITERIMA" ||
+                            //       plan.status_logistik === "APPROVED";
 
-                            const logistikAcc =
-                              gk.is_logistik_siap !== undefined
-                                ? gk.is_logistik_siap
-                                : plan.status_logistik === "DITERIMA" ||
-                                  plan.status_logistik === "APPROVED";
+                            // const logistikAcc = true; // DIKOMENTARI JUGA AGAR ESLINT TIDAK ERROR
+                            // ==========================================================
 
                             // 2. KUNCI UTAMA: is_bisa_selesai dari Backend
                             // Jika `is_bisa_selesai` true, maka tombol Selesai akan menyala (Bisa di-klik)
@@ -1306,7 +1309,7 @@ export default function Panen() {
                                       ) : (
                                         <Clock className="w-3 h-3" />
                                       )}
-                                      Sudah ditarik ke Grup Penjualan Kebun
+                                      TBS Berhasil Kebun Jual ke Pabrik
                                     </li>
                                     <li
                                       className={`flex items-center gap-1.5 ${pabrikAcc ? "text-green-600 font-bold" : "text-gray-400"}`}
@@ -1316,9 +1319,11 @@ export default function Panen() {
                                       ) : (
                                         <Clock className="w-3 h-3" />
                                       )}
-                                      Grup Diterima oleh Pabrik
+                                      TBS Diterima oleh Pabrik
                                     </li>
-                                    <li
+
+                                    {/* ====== SEMENTARA DIKOMENTARI ====== */}
+                                    {/* <li
                                       className={`flex items-center gap-1.5 ${logistikAcc ? "text-green-600 font-bold" : "text-gray-400"}`}
                                     >
                                       {logistikAcc ? (
@@ -1326,8 +1331,10 @@ export default function Panen() {
                                       ) : (
                                         <Clock className="w-3 h-3" />
                                       )}
-                                      Disetujui oleh Mitra Logistik
-                                    </li>
+                                      Berhasil Mendapatkan Mitra Logistik
+                                    </li> */}
+                                    {/* =================================== */}
+
                                     <li
                                       className={`flex items-center gap-1.5 ${hasCatatan ? "text-green-600 font-bold" : "text-red-500"}`}
                                     >

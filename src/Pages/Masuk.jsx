@@ -41,7 +41,7 @@ export default function Masuk() {
       }
 
       const token = data.access_token || data.token || data.data?.access_token;
-      if (!token) throw new Error("Token tidak ditemukan dalam server!");
+      if (!token) throw new Error("Token akses telah habis!");
 
       let userRole = null;
       try {

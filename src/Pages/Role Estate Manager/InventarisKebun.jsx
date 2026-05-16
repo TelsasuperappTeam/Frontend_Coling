@@ -307,7 +307,7 @@ export default function Inventaris() {
         <SectionCard title="Inventaris Alat">
           {isLoadingData ? (
             <div className="flex items-center justify-center h-full text-gray-400 text-xs">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <Loader2 className="w-5 h-5 animate-spin mr-2 font-bold" />
               Memuat data...
             </div>
           ) : (
@@ -321,7 +321,7 @@ export default function Inventaris() {
         <SectionCard title="Inventaris Barang">
           {isLoadingData ? (
             <div className="flex items-center justify-center h-full text-gray-400 text-xs">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <Loader2 className="w-5 h-5 animate-spin mr-2 font-bold" />
               Memuat data...
             </div>
           ) : (

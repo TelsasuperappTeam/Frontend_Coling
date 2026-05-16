@@ -113,7 +113,7 @@ const Operasional = () => {
               <tbody className="text-xs text-gray-700 bg-white">
                 {isLoadingTransaksi ? (
                   <tr>
-                    <td colSpan="8" className="p-4 text-center">
+                    <td colSpan="8" className="p-4 text-center font-bold">
                       Memuat data...
                     </td>
                   </tr>
@@ -182,7 +182,7 @@ const Operasional = () => {
               <tbody className="text-xs text-gray-700 bg-white">
                 {isLoadingTransaksi ? (
                   <tr>
-                    <td colSpan="7" className="p-4 text-center">
+                    <td colSpan="7" className="p-4 text-center font-bold">
                       Memuat data...
                     </td>
                   </tr>

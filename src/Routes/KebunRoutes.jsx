@@ -42,7 +42,7 @@ const KebunRoutes = () => {
         />
 
         <Route
-          path="penjualan"
+          path="penjualan/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.KEBUN]}>
               <Penjualan />
@@ -51,7 +51,7 @@ const KebunRoutes = () => {
         />
 
         <Route
-          path="distribusi&logistik"
+          path="distribusi&logistik/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.KEBUN]}>
               <DistribusiLogistik />
@@ -69,7 +69,7 @@ const KebunRoutes = () => {
         />
 
         <Route
-          path="kemitraanpetani"
+          path="kemitraanpetani/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.KEBUN]}>
               <KemitraanPetani />
@@ -78,7 +78,7 @@ const KebunRoutes = () => {
         />
 
         <Route
-          path="manajemenoperasional" 
+          path="manajemenoperasional/*" 
           element={
             <PrivateRoute allowedRoles={[ROLES.KEBUN]}>
               <Operasional />
@@ -87,7 +87,7 @@ const KebunRoutes = () => {
         />
 
         <Route
-          path="riwayattransaksi" 
+          path="riwayattransaksi/*" 
           element={
             <PrivateRoute allowedRoles={[ROLES.KEBUN]}>
               <RiwayatTransaksi />

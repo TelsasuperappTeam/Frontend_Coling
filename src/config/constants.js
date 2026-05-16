@@ -237,6 +237,9 @@ export const API_ENDPOINTS = {
 
         // Hapus kegiatan (DELETE)
         DELETE: (id) => `${API_BASE_URLS.FARM}/farm/me/rencana-kerja/${id}`,
+
+        // GET SEMUA RENCANA KERJA
+        RENCANA_KERJA_ALL: `${API_BASE_URLS.FARM}/farm/me/rencana-kerja/all`,
       },
     },
 
@@ -330,6 +333,9 @@ export const API_ENDPOINTS = {
       // SUDAH [GET] Pabrik dan Kebun melihat daftar pengajuan/tawaran masuk dari Kebun
       GET_PENGAJUAN_MASUK: `${API_BASE_URLS.FARM}/farm/marketplace/pengajuan-masuk`,
 
+      // SUDAH [GET] Pabrik dan Kebun melihat daftar pengajuan/tawaran masuk dari Kebun
+      GET_RIWAYAT_PENGAJUAN: `${API_BASE_URLS.FARM}/farm/marketplace/riwayat-pengajuan`,
+
       // SUDAH [PATCH] Pabrik menyetujui/menolak pengajuan grup penjualan (Dynamic ID)
       ACTION_PENGAJUAN: (grupId) =>
         `${API_BASE_URLS.FARM}/farm/marketplace/pengajuan-masuk/${grupId}/action`,
@@ -354,6 +360,10 @@ export const API_ENDPOINTS = {
 
       // (POST) Download dokumen rencana operasional ISPO di Halaman Pantau ISPO
       GENERATE_DOKUMEN_PENJUALAN: `${API_BASE_URLS.ISPO}/ispo/generate-dokumen/realisasi-penjualan`,
+
+      // BELUMMMMMM Menarik Riwayat Penjualan utuh untuk ISPO
+      GET_DOKUMEN_REALISASI_ISPO: (role, userId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/traceability/dokumen-realisasi-ispo/user/${role}/${userId}`,
 
       // (GET) Progres ISPO Petani di Halaman Dashboard
       GET_PROGRES_ISPO_PETANI: `${API_BASE_URLS.ISPO}/ispo/progress`,
@@ -407,7 +417,7 @@ export const API_ENDPOINTS = {
         DELETE: (kruId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/kru/${kruId}`,
       },
-      
+
       // --- DROPDOWN TERSEDIA ---
       DROPDOWN: {
         // DONE! [GET] Daftar supir status TERSEDIA
@@ -443,7 +453,7 @@ export const API_ENDPOINTS = {
 
       // DONE! [GET] Melihat daftar Mitra Logistik yang tersedia di platform (beserta resume armada)
       GET_MITRA_LOGISTIK: `${API_BASE_URLS.TRACEABILITY}/logistik/mitra-logistik`,
-      
+
       // DONE! Dropdown Grup ID yang pernah dipakai sebelumnya untuk mengajukan ke logistik
       GET_USED_GRUP_IDS: `${API_BASE_URLS.TRACEABILITY}/logistik/used-grup-ids`,
 
@@ -469,7 +479,7 @@ export const API_ENDPOINTS = {
       GET_TRACEABILITY_NODE: (pengirimanId) =>
         `${API_BASE_URLS.TRACEABILITY}/logistik/pabrik/traceability/${pengirimanId}`,
 
-      PEMERIKSAAN: { 
+      PEMERIKSAAN: {
         // DONE! POST: Digunakan saat pabrik submit form (PENTING: Gunakan FormData karena ada UploadFile nota)
         SUBMIT: (pengirimanId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/pemeriksaan-tbs`,
@@ -496,7 +506,7 @@ export const API_ENDPOINTS = {
     KODE_PRODUKSI_PUBLIK: {
       // DONE! Endpoint pelacakan pohon barcode CPO tanpa Auth
       SCAN_TRACEABILITY: (kodeResi) =>
-        `${API_BASE_URLS.TRACEABILITY}/traceability/scan/${kodeResi}`,
+        `${API_BASE_URLS.TRACEABILITY}/logistik/traceability/scan/${kodeResi}`,
     },
   },
 };

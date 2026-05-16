@@ -39,7 +39,7 @@ const EstateManagerRoutes = () => {
           }
         />
         <Route
-          path="riwayattransaksi"
+          path="riwayattransaksi/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
               <RiwayatTransaksiEM />
@@ -55,7 +55,7 @@ const EstateManagerRoutes = () => {
           }
         />
         <Route
-          path="kemitraanpetani"
+          path="kemitraanpetani/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.ESTATE_MANAGER]}>
               <KemitraanPetani />

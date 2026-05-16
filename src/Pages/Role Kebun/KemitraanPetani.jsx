@@ -12,10 +12,16 @@ import {
 } from "lucide-react";
 // Pastikan getFileUrl di-export dari constants.js
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const KemitraanPetani = () => {
-  // State manajemen tab
-  const [activeTab, setActiveTab] = useState("validasi");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Membaca URL saat ini untuk menentukan tab mana yang aktif.
+  // Jika URL mengandung kata "manajemen", maka tab manajemen aktif. Defaultnya validasi.
+  const isManajemen = location.pathname.includes("manajemen");
+  const activeTab = isManajemen ? "manajemen" : "validasi";
 
   // State data  untuk Validasi
   const [pendingPanen, setPendingPanen] = useState([]);
@@ -277,7 +283,7 @@ const KemitraanPetani = () => {
         {/* Tab Switcher */}
         <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
           <button
-            onClick={() => setActiveTab("validasi")}
+            onClick={() => navigate("/kebun/kemitraanpetani/validasi")}
             className={`w-1/2 sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
               activeTab === "validasi"
                 ? "bg-white text-[#B5302D] shadow-sm"
@@ -288,7 +294,7 @@ const KemitraanPetani = () => {
             <span className="leading-tight text-center">Validasi</span>
           </button>
           <button
-            onClick={() => setActiveTab("manajemen")}
+            onClick={() => navigate("/kebun/kemitraanpetani/manajemen")}
             className={`w-1/2 sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all ${
               activeTab === "manajemen"
                 ? "bg-white text-[#B5302D] shadow-sm"
@@ -315,11 +321,11 @@ const KemitraanPetani = () => {
               </p>
 
               {loading ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
-                  Memuat data...
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
                 </div>
               ) : pendingPanen.length === 0 ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
+                <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
                   Tidak ada rencana panen yang harus divalidasi.
                 </div>
               ) : (
@@ -415,11 +421,11 @@ const KemitraanPetani = () => {
               </p>
 
               {loading ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
-                  Memuat data...
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
                 </div>
               ) : pendingTanam.length === 0 ? (
-                <div className="text-center py-10 text-gray-400 text-xs">
+                <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
                   Tidak ada rencana tanam pending.
                 </div>
               ) : (
@@ -638,7 +644,7 @@ const KemitraanPetani = () => {
                           colSpan="7"
                           className="p-8 text-center text-gray-400"
                         >
-                          <div className="text-center py-10 text-gray-400 text-xs">
+                          <div className="text-center py-10 text-gray-400 text-xs font-bold">
                             Memuat data validasi ISPO petani...
                           </div>
                         </td>
@@ -648,7 +654,7 @@ const KemitraanPetani = () => {
                       <tr>
                         <td
                           colSpan="7"
-                          className="p-6 text-center text-gray-400"
+                          className="p-6 text-center text-gray-400 font-bold"
                         >
                           Tidak ada dokumen sertifikasi yang menunggu validasi.
                         </td>
@@ -738,11 +744,11 @@ const KemitraanPetani = () => {
 
             {/* --- TAMBAHKAN LOGIKA LOADING & KOSONG --- */}
             {loadingManajemen ? (
-              <div className="text-center py-10 text-gray-400 text-xs">
-                Memuat data petani...
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
               </div>
             ) : petaniMembers.length === 0 ? (
-              <div className="text-center py-10 text-gray-400 text-xs">
+              <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
                 Belum ada petani yang bergabung.
               </div>
             ) : (

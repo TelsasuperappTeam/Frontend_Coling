@@ -173,7 +173,7 @@ export default function BudidayaMonitoring() {
         }
       } else {
         console.error("Gagal fetch lahan, status:", response.status);
-        showToast.error("Gagal mengambil data lahan dari server.");
+        showToast.error("Gagal mengambil data lahan dari sistem.");
       }
     } catch (error) {
       console.error("Error fetching lahan:", error);
@@ -261,14 +261,18 @@ export default function BudidayaMonitoring() {
     // --- LOGIC REDIRECT JIKA LAHAN KOSONG ---
     if (name === "jenis_tanah") {
       if (value === "Gambut" && listLahanGambut.length === 0) {
-        showToast.error("Data inventaris Lahan Gambut kosong. Silakan tambah data lahan terlebih dahulu.");
+        showToast.error(
+          "Data inventaris Lahan Gambut kosong. Silakan tambah data lahan terlebih dahulu.",
+        );
         navigate("/petani/luaslahan");
-        return; 
+        return;
       }
       if (value === "Mineral" && listLahanMineral.length === 0) {
-        showToast.error("Data inventaris Lahan Mineral kosong. Silakan tambah data lahan terlebih dahulu.");
+        showToast.error(
+          "Data inventaris Lahan Mineral kosong. Silakan tambah data lahan terlebih dahulu.",
+        );
         navigate("/petani/luaslahan");
-        return; 
+        return;
       }
     }
 
@@ -283,14 +287,14 @@ export default function BudidayaMonitoring() {
           showCancelButton: true,
           confirmButtonText: "Isi Inventaris Sekarang",
           cancelButtonText: "Tutup",
-          confirmButtonColor: "#EF8523"
+          confirmButtonColor: "#EF8523",
         }).then((result) => {
           if (result.isConfirmed) {
             // Pastikan path ini sesuai dengan rute di aplikasimu
             navigate("/petani/manajemenkebun/inventaris");
           }
         });
-        
+
         return; // Hentikan eksekusi di sini agar dropdown tidak berubah dan state tetap bersih
       }
     }
@@ -434,11 +438,11 @@ export default function BudidayaMonitoring() {
       text: "Pastikan data yang Anda isi sudah benar sebelum diteruskan.",
       confirmText: "Ya, Simpan!",
       cancelText: "Periksa Lagi",
-      isDanger: false, 
+      isDanger: false,
     });
 
     if (!isSetuju) {
-      return; 
+      return;
     }
 
     // Jika user setuju, mulai proses loading
@@ -446,7 +450,7 @@ export default function BudidayaMonitoring() {
 
     // (Opsional) Memunculkan toast loading kecil di atas
     // Anda harus memanggil showToast.dismiss() di akhir agar toast ini hilang
-    showToast.loading("Sedang menyimpan data ke server...");
+    showToast.loading("Sedang menyimpan data ke sistem...");
 
     try {
       const token = localStorage.getItem("token");
@@ -585,8 +589,8 @@ export default function BudidayaMonitoring() {
         confirmButtonColor: "#10B981", // Warna hijau sukses
         customClass: {
           popup: "rounded-[24px] shadow-2xl border border-gray-100",
-          confirmButton: "rounded-xl px-6 py-2 shadow-md"
-        }
+          confirmButton: "rounded-xl px-6 py-2 shadow-md",
+        },
       });
 
       // Reset Form Total
@@ -694,10 +698,58 @@ export default function BudidayaMonitoring() {
         </button>
 
         {openSection === "rencanaTanam" && (
-          <div className="p-4 sm:p-6 space-y-6 animate-fadeIn">
+          <div className="p-3 sm:p-6 space-y-5 sm:space-y-6 animate-fadeIn">
+            {/* ===================================================================== */}
+            {/* BANNER PRASYARAT (KEDAP-KEDIP) UNTUK MENGARAHKAN USER */}
+            {/* ===================================================================== */}
+            <div className="bg-gradient-to-r from-green-50 to-[#fff8f3] border border-green-200 p-4 sm:p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-5">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-green-600"></div>
+
+              {/* Teks & Ikon */}
+              <div className="flex items-start gap-3 w-full">
+                {/* Ikon dengan efek berdenyut (Pulse) disesuaikan ukurannya untuk HP */}
+                <div className="bg-green-600 p-1.5 sm:p-2.5 rounded-full text-white shrink-0 shadow-md animate-pulse mt-0.5 sm:mt-0">
+                  <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-extrabold text-green-600 text-xs sm:text-base leading-tight">
+                    Penting: Lengkapi Data Prasyarat!
+                  </h4>
+                  <p className="text-[10px] sm:text-xs text-black mt-1 sm:mt-0.5 leading-relaxed font-medium">
+                    Pastikan Anda telah mengisi{" "}
+                    <strong className="font-black text-gray-800">
+                      Daftar Lahan
+                    </strong>{" "}
+                    dan{" "}
+                    <strong className="font-black text-gray-800">
+                      Inventaris Bibit
+                    </strong>{" "}
+                    sebelum membuat rencana tanam ini.
+                  </p>
+                </div>
+              </div>
+
+              {/* Tombol Jalan Pintas (Shortcut) - Diperbaiki untuk Mobile */}
+              <div className="flex flex-col min-[400px]:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full md:w-auto shrink-0 mt-1 md:mt-0">
+                <button
+                  onClick={() => navigate("/petani/luaslahan")}
+                  className="flex-1 w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-green-600 text-green-700 hover:bg-orange-50 rounded-xl text-[10px] sm:text-xs font-bold transition-all shadow-sm whitespace-nowrap"
+                >
+                  <Map className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> Tambah Lahan
+                </button>
+                <button
+                  onClick={() => navigate("/petani/manajemenkebun/inventaris")}
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-[10px] sm:text-xs font-bold transition-all shadow-sm"
+                >
+                  <Sprout className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> Isi
+                  Inventaris
+                </button>
+              </div>
+            </div>
+            {/* ===================================================================== */}
+
             {/* GRID LAYOUT UTAMA: 1 Kolom di Mobile, 2 Kolom di Desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-              
               <div className="w-full">
                 <label className="block font-bold text-gray-700 mb-2 text-sm">
                   1. Nama Unit
@@ -737,7 +789,9 @@ export default function BudidayaMonitoring() {
                   className="w-full bg-gray-50 hover:bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-orange-50 focus:border-[#EF8523] transition-all outline-none text-gray-800"
                   required
                 >
-                  <option value="" disabled>Pilih Jenis Bibit</option>
+                  <option value="" disabled>
+                    Pilih Jenis Bibit
+                  </option>
                   <option value="Tenera">Tenera</option>
                   <option value="Dura">Dura</option>
                   <option value="Pisifera">Pisifera</option>
@@ -747,7 +801,8 @@ export default function BudidayaMonitoring() {
                 {formData.jenis_bibit === "Tenera" && (
                   <div className="flex flex-col mt-4 p-3 bg-orange-50/50 border border-orange-100 rounded-xl">
                     <label className="text-xs font-bold text-orange-800 mb-2">
-                      Pilih Varietas Bibit (Dari Inventaris) <span className="text-red-500">*</span>
+                      Pilih Varietas Bibit (Dari Inventaris){" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="varietas_bibit_nama"
@@ -756,17 +811,25 @@ export default function BudidayaMonitoring() {
                       className="w-full bg-white border border-orange-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-orange-100 focus:border-[#EF8523] outline-none text-gray-800"
                       required
                     >
-                      <option value="" disabled>-- Pilih Varietas --</option>
-                      {Array.isArray(listInventarisBibit) && listInventarisBibit.length > 0 ? (
+                      <option value="" disabled>
+                        -- Pilih Varietas --
+                      </option>
+                      {Array.isArray(listInventarisBibit) &&
+                      listInventarisBibit.length > 0 ? (
                         listInventarisBibit
                           .filter((bibit) => bibit.jenis_bibit === "Tenera")
                           .map((bibit, index) => (
-                            <option key={bibit.id || index} value={bibit.nama_varietas}>
+                            <option
+                              key={bibit.id || index}
+                              value={bibit.nama_varietas}
+                            >
                               {bibit.nama_varietas}
                             </option>
                           ))
                       ) : (
-                        <option value="" disabled>Sedang memuat atau stok kosong...</option>
+                        <option value="" disabled>
+                          Sedang memuat atau stok kosong...
+                        </option>
                       )}
                     </select>
                   </div>
@@ -880,15 +943,22 @@ export default function BudidayaMonitoring() {
                   {/* Keranjang Lahan Gambut */}
                   <div>
                     <label className="block font-bold text-gray-700 mb-2 text-sm">
-                      Pilih Lahan Gambut & Masukkan Luas (Ha) <span className="text-red-500">*</span>
+                      Pilih Lahan Gambut & Masukkan Luas (Ha){" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <div className="space-y-3 bg-white p-4 rounded-xl border border-emerald-200 max-h-60 overflow-y-auto shadow-inner">
                       {listLahanGambut.map((lahan) => {
-                        const selectedItem = formData.keranjang_lahan_gambut.find((item) => item.id === lahan.id);
+                        const selectedItem =
+                          formData.keranjang_lahan_gambut.find(
+                            (item) => item.id === lahan.id,
+                          );
                         const isChecked = !!selectedItem;
 
                         return (
-                          <div key={lahan.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border border-gray-100 rounded-lg hover:border-emerald-200 transition-colors">
+                          <div
+                            key={lahan.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border border-gray-100 rounded-lg hover:border-emerald-200 transition-colors"
+                          >
                             <label className="flex items-center gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
@@ -897,19 +967,37 @@ export default function BudidayaMonitoring() {
                                   const checked = e.target.checked;
                                   setFormData((prev) => {
                                     if (checked) {
-                                      return { ...prev, keranjang_lahan_gambut: [...prev.keranjang_lahan_gambut, { id: lahan.id, luas_diambil: "" }] };
+                                      return {
+                                        ...prev,
+                                        keranjang_lahan_gambut: [
+                                          ...prev.keranjang_lahan_gambut,
+                                          { id: lahan.id, luas_diambil: "" },
+                                        ],
+                                      };
                                     } else {
-                                      return { ...prev, keranjang_lahan_gambut: prev.keranjang_lahan_gambut.filter((item) => item.id !== lahan.id) };
+                                      return {
+                                        ...prev,
+                                        keranjang_lahan_gambut:
+                                          prev.keranjang_lahan_gambut.filter(
+                                            (item) => item.id !== lahan.id,
+                                          ),
+                                      };
                                     }
                                   });
                                 }}
                                 className="w-5 h-5 text-emerald-600 rounded-md border-gray-300 focus:ring-emerald-500"
                               />
                               {(() => {
-                                const sisaGambut = lahan.lahan_tidak_digunakan_gambut ?? lahan.luas_total_boleh_ditanam ?? 0;
+                                const sisaGambut =
+                                  lahan.lahan_tidak_digunakan_gambut ??
+                                  lahan.luas_total_boleh_ditanam ??
+                                  0;
                                 return (
                                   <span className="text-sm font-bold text-gray-700">
-                                    {lahan.nama_lahan_gambut} <span className="text-xs font-medium text-emerald-600 ml-1">(Sisa: {sisaGambut} Ha)</span>
+                                    {lahan.nama_lahan_gambut}{" "}
+                                    <span className="text-xs font-medium text-emerald-600 ml-1">
+                                      (Sisa: {sisaGambut} Ha)
+                                    </span>
                                   </span>
                                 );
                               })()}
@@ -925,34 +1013,53 @@ export default function BudidayaMonitoring() {
                                     const val = e.target.value;
                                     setFormData((prev) => ({
                                       ...prev,
-                                      keranjang_lahan_gambut: prev.keranjang_lahan_gambut.map((item) => item.id === lahan.id ? { ...item, luas_diambil: val } : item),
+                                      keranjang_lahan_gambut:
+                                        prev.keranjang_lahan_gambut.map(
+                                          (item) =>
+                                            item.id === lahan.id
+                                              ? { ...item, luas_diambil: val }
+                                              : item,
+                                        ),
                                     }));
                                   }}
                                   className="w-24 px-3 py-1.5 text-sm font-bold text-gray-800 bg-emerald-50 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-center"
                                 />
-                                <span className="text-xs font-bold text-gray-500">Ha</span>
+                                <span className="text-xs font-bold text-gray-500">
+                                  Ha
+                                </span>
                               </div>
                             )}
                           </div>
                         );
                       })}
                       {listLahanGambut.length === 0 && (
-                        <p className="text-sm text-gray-500 italic text-center py-4">Tidak ada lahan gambut tersedia.</p>
+                        <p className="text-sm text-gray-500 italic text-center py-4">
+                          Tidak ada lahan gambut tersedia.
+                        </p>
                       )}
                     </div>
                   </div>
 
                   {/* Lapisan Mineral */}
                   <div>
-                    <label className="block font-bold text-gray-700 mb-2 text-sm">Lapisan Mineral</label>
+                    <label className="block font-bold text-gray-700 mb-2 text-sm">
+                      Lapisan Mineral
+                    </label>
                     <div className="flex flex-wrap gap-2.5">
                       {Object.keys(MAPPING_LAPISAN_MINERAL).map((opt) => (
-                        <label key={opt} className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer bg-white px-3 py-2 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm">
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer bg-white px-3 py-2 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm"
+                        >
                           <input
                             type="checkbox"
                             value={opt}
-                            checked={formData.gambut_lapisan_mineral.includes(opt)}
-                            onChange={(e) => handleCheckboxGambut(e, "gambut_lapisan_mineral")}
+                            checked={formData.gambut_lapisan_mineral.includes(
+                              opt,
+                            )}
+                            onChange={(e) =>
+                              handleCheckboxGambut(e, "gambut_lapisan_mineral")
+                            }
                             className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300"
                           />
                           {opt}
@@ -963,15 +1070,22 @@ export default function BudidayaMonitoring() {
 
                   {/* Kematangan Gambut */}
                   <div>
-                    <label className="block font-bold text-gray-700 mb-2 text-sm">Kematangan Gambut</label>
+                    <label className="block font-bold text-gray-700 mb-2 text-sm">
+                      Kematangan Gambut
+                    </label>
                     <div className="flex flex-wrap gap-2.5">
                       {Object.keys(MAPPING_KEMATANGAN_GAMBUT).map((opt) => (
-                        <label key={opt} className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer bg-white px-3 py-2 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm">
+                        <label
+                          key={opt}
+                          className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer bg-white px-3 py-2 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm"
+                        >
                           <input
                             type="checkbox"
                             value={opt}
                             checked={formData.gambut_kematangan.includes(opt)}
-                            onChange={(e) => handleCheckboxGambut(e, "gambut_kematangan")}
+                            onChange={(e) =>
+                              handleCheckboxGambut(e, "gambut_kematangan")
+                            }
                             className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300"
                           />
                           {opt}
@@ -986,16 +1100,23 @@ export default function BudidayaMonitoring() {
               {formData.jenis_tanah === "Mineral" && (
                 <div className="col-span-1 sm:col-span-2 mb-2 mt-2 bg-gray-50/80 p-5 rounded-2xl border border-gray-200">
                   <label className="block font-bold text-gray-700 mb-2 text-sm">
-                    Pilih Lahan Mineral & Masukkan Luas (Ha) <span className="text-red-500">*</span>
+                    Pilih Lahan Mineral & Masukkan Luas (Ha){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <div className="space-y-3 bg-white p-4 rounded-xl border border-gray-300 max-h-60 overflow-y-auto shadow-inner">
                     {listLahanMineral.map((lahan) => {
-                      const selectedItem = formData.keranjang_lahan_mineral.find((item) => item.id === lahan.id);
+                      const selectedItem =
+                        formData.keranjang_lahan_mineral.find(
+                          (item) => item.id === lahan.id,
+                        );
                       const isChecked = !!selectedItem;
                       const labelLuas = lahan.luas_sisa ?? 0;
 
                       return (
-                        <div key={lahan.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border border-gray-100 rounded-lg hover:border-[#EF8523]/30 transition-colors">
+                        <div
+                          key={lahan.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border border-gray-100 rounded-lg hover:border-[#EF8523]/30 transition-colors"
+                        >
                           <label className="flex items-center gap-3 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1004,16 +1125,32 @@ export default function BudidayaMonitoring() {
                                 const checked = e.target.checked;
                                 setFormData((prev) => {
                                   if (checked) {
-                                    return { ...prev, keranjang_lahan_mineral: [...prev.keranjang_lahan_mineral, { id: lahan.id, luas_diambil: "" }] };
+                                    return {
+                                      ...prev,
+                                      keranjang_lahan_mineral: [
+                                        ...prev.keranjang_lahan_mineral,
+                                        { id: lahan.id, luas_diambil: "" },
+                                      ],
+                                    };
                                   } else {
-                                    return { ...prev, keranjang_lahan_mineral: prev.keranjang_lahan_mineral.filter((item) => item.id !== lahan.id) };
+                                    return {
+                                      ...prev,
+                                      keranjang_lahan_mineral:
+                                        prev.keranjang_lahan_mineral.filter(
+                                          (item) => item.id !== lahan.id,
+                                        ),
+                                    };
                                   }
                                 });
                               }}
                               className="w-5 h-5 text-[#EF8523] rounded-md border-gray-300 focus:ring-[#EF8523]"
                             />
                             <span className="text-sm font-bold text-gray-700">
-                              {lahan.nama_lahan_mineral || `Lahan ID: ${lahan.id}`} <span className="text-xs font-medium text-blue-600 ml-1">(Sisa: {labelLuas} Ha)</span>
+                              {lahan.nama_lahan_mineral ||
+                                `Lahan ID: ${lahan.id}`}{" "}
+                              <span className="text-xs font-medium text-blue-600 ml-1">
+                                (Sisa: {labelLuas} Ha)
+                              </span>
                             </span>
                           </label>
 
@@ -1027,119 +1164,148 @@ export default function BudidayaMonitoring() {
                                   const val = e.target.value;
                                   setFormData((prev) => ({
                                     ...prev,
-                                    keranjang_lahan_mineral: prev.keranjang_lahan_mineral.map((item) => item.id === lahan.id ? { ...item, luas_diambil: val } : item),
+                                    keranjang_lahan_mineral:
+                                      prev.keranjang_lahan_mineral.map(
+                                        (item) =>
+                                          item.id === lahan.id
+                                            ? { ...item, luas_diambil: val }
+                                            : item,
+                                      ),
                                   }));
                                 }}
                                 className="w-24 px-3 py-1.5 text-sm font-bold text-gray-800 bg-orange-50 border border-orange-200 rounded-lg focus:ring-2 focus:ring-[#EF8523] outline-none text-center"
                               />
-                              <span className="text-xs font-bold text-gray-500">Ha</span>
+                              <span className="text-xs font-bold text-gray-500">
+                                Ha
+                              </span>
                             </div>
                           )}
                         </div>
                       );
                     })}
                     {listLahanMineral.length === 0 && (
-                      <p className="text-sm text-gray-500 italic text-center py-4">Tidak ada lahan mineral tersedia.</p>
+                      <p className="text-sm text-gray-500 italic text-center py-4">
+                        Tidak ada lahan mineral tersedia.
+                      </p>
                     )}
                   </div>
                 </div>
               )}
 
               {/* (BE MAHARANI) SECTION KHUSUS MINERAL (Miring/Konservasi) */}
-              {formData.jenis_tanah === "Mineral" && (formData.jenis_lahan === "Miring" || formData.jenis_lahan === "Konservasi") && (
-                <div className="col-span-1 sm:col-span-2 space-y-5 mt-2">
-                  
-                  {/* Form Terasering */}
-                  <div className="bg-yellow-50/50 p-5 rounded-2xl border border-yellow-200 shadow-sm">
-                    <p className="text-sm font-black text-yellow-800 mb-4 border-b border-yellow-200 pb-2">
-                      Data Terasering (Wajib Mineral Miring/Konservasi)
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-2 text-sm">Jenis Terasering <span className="text-red-500">*</span></label>
-                        <select
-                          name="jenis_terasering"
-                          value={formData.jenis_terasering}
-                          onChange={handleInputChange}
-                          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 outline-none"
-                        >
-                          <option value="">Pilih Jenis Terasering</option>
-                          {ENUM_TERASERING.map((item) => (
-                            <option key={item} value={item}>{item}</option>
-                          ))}
-                        </select>
-                        {formData.jenis_terasering === "Lainnya" && (
-                          <input
-                            name="jenis_terasering_lainnya"
-                            value={formData.jenis_terasering_lainnya}
-                            onChange={handleInputChange}
-                            placeholder="Sebutkan jenis terasering..."
-                            className="w-full mt-3 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 outline-none"
-                          />
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-2 text-sm">Bukti Foto/Video Terasering</label>
-                        <input
-                          type="file"
-                          onChange={(e) => handleFileChange(e, "terasering")}
-                          className="block w-full text-sm text-gray-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-yellow-100 file:text-yellow-800 hover:file:bg-yellow-200 transition-colors"
-                        />
-                        <span className="text-xs font-medium text-gray-500 block mt-2 ml-1">
-                          {fileTerasering ? fileTerasering.name : "Belum ada file terpilih"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Form Drainase (Hanya Konservasi) */}
-                  {formData.jenis_lahan === "Konservasi" && (
-                    <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-200 shadow-sm">
-                      <p className="text-sm font-black text-blue-800 mb-4 border-b border-blue-200 pb-2">
-                        Data Drainase (Wajib Mineral Konservasi)
+              {formData.jenis_tanah === "Mineral" &&
+                (formData.jenis_lahan === "Miring" ||
+                  formData.jenis_lahan === "Konservasi") && (
+                  <div className="col-span-1 sm:col-span-2 space-y-5 mt-2">
+                    {/* Form Terasering */}
+                    <div className="bg-yellow-50/50 p-5 rounded-2xl border border-yellow-200 shadow-sm">
+                      <p className="text-sm font-black text-yellow-800 mb-4 border-b border-yellow-200 pb-2">
+                        Data Terasering (Wajib Mineral Miring/Konservasi)
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                          <label className="block font-bold text-gray-700 mb-2 text-sm">Jenis Drainase <span className="text-red-500">*</span></label>
+                          <label className="block font-bold text-gray-700 mb-2 text-sm">
+                            Jenis Terasering{" "}
+                            <span className="text-red-500">*</span>
+                          </label>
                           <select
-                            name="jenis_drainase"
-                            value={formData.jenis_drainase}
+                            name="jenis_terasering"
+                            value={formData.jenis_terasering}
                             onChange={handleInputChange}
-                            className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+                            className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 outline-none"
                           >
-                            <option value="">Pilih Jenis Drainase</option>
-                            {ENUM_DRAINASE.map((item) => (
-                              <option key={item} value={item}>{item}</option>
+                            <option value="">Pilih Jenis Terasering</option>
+                            {ENUM_TERASERING.map((item) => (
+                              <option key={item} value={item}>
+                                {item}
+                              </option>
                             ))}
                           </select>
-                          {formData.jenis_drainase === "Lainnya" && (
+                          {formData.jenis_terasering === "Lainnya" && (
                             <input
-                              name="jenis_drainase_lainnya"
-                              value={formData.jenis_drainase_lainnya}
+                              name="jenis_terasering_lainnya"
+                              value={formData.jenis_terasering_lainnya}
                               onChange={handleInputChange}
-                              placeholder="Sebutkan jenis drainase..."
-                              className="w-full mt-3 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+                              placeholder="Sebutkan jenis terasering..."
+                              className="w-full mt-3 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 outline-none"
                             />
                           )}
                         </div>
 
                         <div>
-                          <label className="block font-bold text-gray-700 mb-2 text-sm">Bukti Foto/Video Drainase</label>
+                          <label className="block font-bold text-gray-700 mb-2 text-sm">
+                            Bukti Foto/Video Terasering
+                          </label>
                           <input
                             type="file"
-                            onChange={(e) => handleFileChange(e, "drainase")}
-                            className="block w-full text-sm text-gray-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-800 hover:file:bg-blue-200 transition-colors"
+                            onChange={(e) => handleFileChange(e, "terasering")}
+                            className="block w-full text-sm text-gray-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-yellow-100 file:text-yellow-800 hover:file:bg-yellow-200 transition-colors"
                           />
                           <span className="text-xs font-medium text-gray-500 block mt-2 ml-1">
-                            {fileDrainase ? fileDrainase.name : "Belum ada file terpilih"}
+                            {fileTerasering
+                              ? fileTerasering.name
+                              : "Belum ada file terpilih"}
                           </span>
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {/* Form Drainase (Hanya Konservasi) */}
+                    {formData.jenis_lahan === "Konservasi" && (
+                      <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-200 shadow-sm">
+                        <p className="text-sm font-black text-blue-800 mb-4 border-b border-blue-200 pb-2">
+                          Data Drainase (Wajib Mineral Konservasi)
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <div>
+                            <label className="block font-bold text-gray-700 mb-2 text-sm">
+                              Jenis Drainase{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              name="jenis_drainase"
+                              value={formData.jenis_drainase}
+                              onChange={handleInputChange}
+                              className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+                            >
+                              <option value="">Pilih Jenis Drainase</option>
+                              {ENUM_DRAINASE.map((item) => (
+                                <option key={item} value={item}>
+                                  {item}
+                                </option>
+                              ))}
+                            </select>
+                            {formData.jenis_drainase === "Lainnya" && (
+                              <input
+                                name="jenis_drainase_lainnya"
+                                value={formData.jenis_drainase_lainnya}
+                                onChange={handleInputChange}
+                                placeholder="Sebutkan jenis drainase..."
+                                className="w-full mt-3 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+                              />
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block font-bold text-gray-700 mb-2 text-sm">
+                              Bukti Foto/Video Drainase
+                            </label>
+                            <input
+                              type="file"
+                              onChange={(e) => handleFileChange(e, "drainase")}
+                              className="block w-full text-sm text-gray-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-800 hover:file:bg-blue-200 transition-colors"
+                            />
+                            <span className="text-xs font-medium text-gray-500 block mt-2 ml-1">
+                              {fileDrainase
+                                ? fileDrainase.name
+                                : "Belum ada file terpilih"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
             </div>
 
             {/* --- HASIL AUTO-CALCULATE LUAS UNIT --- */}
@@ -1151,7 +1317,8 @@ export default function BudidayaMonitoring() {
                     Total Luas Unit Blok (Ha)
                   </h4>
                   <p className="text-[10px] sm:text-xs text-orange-800 mt-1 max-w-md font-medium leading-relaxed">
-                    *Terhitung otomatis berdasarkan akumulasi luas area yang Anda input pada daftar lahan di atas.
+                    *Terhitung otomatis berdasarkan akumulasi luas area yang
+                    Anda input pada daftar lahan di atas.
                   </p>
                 </div>
                 <div className="w-full sm:w-1/3 relative">
@@ -1175,7 +1342,9 @@ export default function BudidayaMonitoring() {
                 onClick={handleSubmit}
                 disabled={loading}
                 className={`w-full sm:w-auto px-8 py-3.5 rounded-xl text-sm font-black text-white transition-all transform active:scale-95 shadow-md ${
-                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
+                  loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
                 }`}
               >
                 {loading ? "Menyimpan Data..." : "Simpan Rencana Tanam"}
@@ -1189,7 +1358,7 @@ export default function BudidayaMonitoring() {
               <h3 className="font-black mb-6 text-[#B5302D] text-lg flex items-center gap-2">
                 Riwayat Rencana Tanam
               </h3>
-              
+
               {!loadingRiwayat && riwayatBlok.length === 0 && (
                 <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
                   <p className="text-sm font-bold text-gray-400">
@@ -1197,7 +1366,7 @@ export default function BudidayaMonitoring() {
                   </p>
                 </div>
               )}
-              
+
               {/* PERUBAHAN: Dari flex-col menjadi GRID 2 Kolom */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {riwayatBlok.map((blok) => (
@@ -1208,19 +1377,27 @@ export default function BudidayaMonitoring() {
                     {/* Bagian Atas: Info Utama */}
                     <div className="p-4 sm:p-5">
                       <div className="flex justify-between items-start mb-3">
-                        <h4 className="font-black text-gray-800 text-base">{blok.nama_unit}</h4>
+                        <h4 className="font-black text-gray-800 text-base">
+                          {blok.nama_unit}
+                        </h4>
                         {/* Memanggil fungsi getStatusBadge bawaan Anda */}
                         <div className="shrink-0 scale-90 origin-top-right">
-                           {getStatusBadge(blok.status_approval)}
+                          {getStatusBadge(blok.status_approval)}
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col gap-1.5 mt-2">
                         <span className="text-xs font-bold text-gray-500 bg-gray-50 w-fit px-2.5 py-1 rounded-md border border-gray-100">
-                          Luas: <span className="text-gray-800">{blok.luas_unit} Hektar</span>
+                          Luas:{" "}
+                          <span className="text-gray-800">
+                            {blok.luas_unit} Hektar
+                          </span>
                         </span>
                         <span className="text-xs font-bold text-gray-500 bg-gray-50 w-fit px-2.5 py-1 rounded-md border border-gray-100">
-                          Tanggal Tanam: <span className="text-gray-800">{blok.tanggal_tanam_blok}</span>
+                          Tanggal Tanam:{" "}
+                          <span className="text-gray-800">
+                            {blok.tanggal_tanam_blok}
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -1228,7 +1405,11 @@ export default function BudidayaMonitoring() {
                     {/* Bagian Bawah: Tombol Aksi */}
                     <div className="bg-gray-50 border-t border-gray-100 px-4 py-3 flex justify-end">
                       <button
-                        onClick={() => navigate(`/petani/manajemenkebun/budidayamonitoring/detailrencanatanam/${blok.id}`)}
+                        onClick={() =>
+                          navigate(
+                            `/petani/manajemenkebun/budidayamonitoring/detailrencanatanam/${blok.id}`,
+                          )
+                        }
                         className="px-5 py-2 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-sm active:scale-95"
                       >
                         Lihat Detail

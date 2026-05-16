@@ -487,7 +487,7 @@ export default function ManajemenSengketa() {
                       // Format Tanggal
                       const tgl = doc.tanggal_kegiatan
                         ? new Date(doc.tanggal_kegiatan).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })
-                        : "Tanggal Tidak Diketahui";
+                        : "-";
 
                       return (
                         <div key={idx} className="relative">

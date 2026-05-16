@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom"; // Perbaikan: double import Link dihapus
-import { LayoutGrid, LogOut } from "lucide-react"; 
+import { LayoutGrid, LogOut } from "lucide-react";
 import { menuConfig } from "../config/menuConfig";
 import { API_ENDPOINTS } from "../config/constants";
 
@@ -52,7 +52,6 @@ export default function NavbarRole({ role }) {
       <nav className="bg-white fixed top-0 left-0 w-full z-50 shadow-sm border-b border-[#EF8523]/30">
         <div className="max-w-[85rem] mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16 md:h-20">
-            
             {/* BAGIAN KIRI: LOGO */}
             <div className="flex items-center shrink-0 min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2 truncate">
@@ -61,7 +60,7 @@ export default function NavbarRole({ role }) {
                   alt="LogoTSA"
                   className="h-6 w-auto sm:h-7 md:h-9 object-contain shrink-0"
                 />
-                <span className="text-[13px] sm:text-lg md:text-2xl font-black text-[#B5302D] tracking-tight truncate">
+                <span className="text-[15px] sm:text-lg md:text-2xl font-black text-[#B5302D] tracking-tight truncate">
                   Selamat Datang!
                 </span>
               </div>
@@ -69,7 +68,6 @@ export default function NavbarRole({ role }) {
 
             {/* BAGIAN KANAN: MENU */}
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-              
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setOpenDropdown(!openDropdown)}
@@ -94,11 +92,11 @@ export default function NavbarRole({ role }) {
                     <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       {menus.map((menu, i) => {
                         const Icon = menu.icon;
-                        
+
                         // --- KUNCI PERBAIKAN: LOGIKA ACTIVECHECK ---
                         // Jika di config ada 'activeCheck', kita pakai .includes()
                         // Jika tidak ada, kita pakai kecocokan persis (===)
-                        const isActive = menu.activeCheck 
+                        const isActive = menu.activeCheck
                           ? location.pathname.includes(menu.activeCheck)
                           : location.pathname === menu.path;
 
@@ -116,7 +114,9 @@ export default function NavbarRole({ role }) {
                             <div
                               className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${isActive ? "bg-[#B5302D] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-red-50 group-hover:text-[#B5302D]"}`}
                             >
-                              {Icon && <Icon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                              {Icon && (
+                                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                              )}
                             </div>
                             <span
                               className={`text-[10px] sm:text-sm font-bold line-clamp-2 leading-tight sm:leading-snug mt-0 sm:mt-0.5 ${isActive ? "text-[#B5302D]" : "text-gray-800"}`}

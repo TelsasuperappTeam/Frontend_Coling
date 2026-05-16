@@ -44,7 +44,7 @@ const PabrikRoutes = () => {
         />
 
         <Route
-          path="penerimaanTBS"
+          path="penerimaanTBS/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.PABRIK]}>
               <PenerimaanTBS />
@@ -53,7 +53,7 @@ const PabrikRoutes = () => {
         />
 
         <Route
-          path="transaksiTBS"
+          path="transaksiTBS/*"
           element={
             <PrivateRoute allowedRoles={[ROLES.PABRIK]}>
               <TransaksiTBS />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ClipboardList,
   ShoppingCart,
@@ -311,7 +312,13 @@ const DOKUMEN_CONFIG = [
 ];
 
 const Operasional = () => {
-  const [activeTab, setActiveTab] = useState("transaksi"); // 'transaksi' | 'organisasi'
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Membaca URL saat ini untuk menentukan tab mana yang aktif.
+  // Jika URL mengandung kata "organisasi", maka tab organisasi aktif. Defaultnya transaksi.
+  const isOrganisasi = location.pathname.includes("organisasi");
+  const activeTab = isOrganisasi ? "organisasi" : "transaksi";
 
   // -- STATE UNTUK PENGURUS (DYNAMIC) --
   const [pengurusList, setPengurusList] = useState([]);
@@ -990,7 +997,8 @@ const Operasional = () => {
         {/* Custom Tab Switcher */}
         <div className="grid grid-cols-2 bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
           <button
-            onClick={() => setActiveTab("transaksi")}
+            // --- UBAH ONCLICK MENJADI NAVIGATE ---
+            onClick={() => navigate("/kebun/manajemenoperasional/transaksi")}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === "transaksi"
                 ? "bg-white text-[#B5302D] shadow-sm"
@@ -1000,8 +1008,10 @@ const Operasional = () => {
             <ShoppingCart className="w-4 h-4" />
             <span className="sm:inline">Transaksi</span>
           </button>
+
           <button
-            onClick={() => setActiveTab("organisasi")}
+            // --- UBAH ONCLICK MENJADI NAVIGATE ---
+            onClick={() => navigate("/kebun/manajemenoperasional/organisasi")}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === "organisasi"
                 ? "bg-white text-[#B5302D] shadow-sm"
@@ -1052,7 +1062,7 @@ const Operasional = () => {
                   <tbody className="text-xs text-gray-700 bg-white">
                     {isLoadingTransaksi ? (
                       <tr>
-                        <td colSpan="7" className="p-4 text-center">
+                        <td colSpan="6" className="p-4 text-center font-bold">
                           Memuat data...
                         </td>
                       </tr>
@@ -1133,7 +1143,7 @@ const Operasional = () => {
                   <tbody className="text-xs text-gray-700 bg-white">
                     {isLoadingTransaksi ? (
                       <tr>
-                        <td colSpan="6" className="p-4 text-center">
+                        <td colSpan="6" className="p-4 text-center font-bold">
                           Memuat data...
                         </td>
                       </tr>
@@ -1225,7 +1235,7 @@ const Operasional = () => {
                   <tbody className="text-xs text-gray-700 bg-white">
                     {isLoadingPengurus ? (
                       <tr>
-                        <td colSpan="6" className="p-4 text-center">
+                        <td colSpan="6" className="p-4 text-center font-bold">
                           Memuat data...
                         </td>
                       </tr>
@@ -1851,7 +1861,8 @@ const Operasional = () => {
               {/* Pilih Barang dari Inventaris */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-600 mb-1.5 uppercase tracking-widest">
-                  Pilih Barang di Inventaris <span className="text-red-500">*</span>
+                  Pilih Barang di Inventaris{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <select
                   required

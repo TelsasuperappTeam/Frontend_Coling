@@ -19,6 +19,9 @@ import LupaKataSandi from "./Pages/LupaKataSandi";
 // --- IMPORT TOASTER GLOBAL ---
 import { Toaster } from "react-hot-toast";
 
+// --- IMPORT KOMPONEN SCROLL KE ATAS ---
+import ScrollToTop from "./components/ScrollToTop";
+
 // Import routes per role
 import AdminRoutes from "./Routes/AdminRoutes";
 import KebunRoutes from "./Routes/KebunRoutes";
@@ -31,6 +34,7 @@ import GMDistrikRoutes from "./Routes/GMDistrikRoutes";
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AppContent />
     </Router>
   );
@@ -61,7 +65,7 @@ function AppContent() {
   );
   const showFooter =
     !isOnRolePath &&
-    !["/daftar", "/masuk", "/verifikasiOTP", "/lupakatasandi"].includes(
+    !["/daftar", "/masuk", "/verifikasiOTP", "/lupaKataSandi"].includes(
       location.pathname
     );
 

@@ -621,7 +621,7 @@ const Operasional2 = () => {
                           colSpan="5"
                           className="p-8 text-center text-gray-400 font-bold"
                         >
-                          <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-[#EF8523]" />
+                          <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-[#EF8523] font-bold" />
                           Memuat data pengurus...
                         </td>
                       </tr>

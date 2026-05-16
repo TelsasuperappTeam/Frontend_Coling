@@ -121,7 +121,7 @@ export default function InventarisPetani() {
       ]);
 
       if (!resAlat.ok || !resBibit.ok || !resPupuk.ok || !resPestisida.ok) {
-        throw new Error("Gagal mengambil data inventaris dari server.");
+        throw new Error("Gagal mengambil data inventaris dari sistem.");
       }
 
       const dataAlat = await resAlat.json();

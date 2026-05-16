@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import {
@@ -6,17 +7,20 @@ import {
   ShoppingCart,
   MapPin,
   Calendar,
-  ChevronRight,
-  ArrowLeft,
   CheckCircle2,
   DollarSign,
   History,
-  FileText,
   Save,
   X,
   Navigation,
   Map as MapIcon,
   Loader2,
+  Clock,
+  AlertCircle,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  Truck,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/constants";
 
@@ -45,31 +49,16 @@ function ClickToSetMarker({ setPos }) {
   });
   return null;
 }
-
-// Data simulasi riwayat pengajuan yang pernah dilakukan user
-const MOCK_RIWAYAT = [
-  {
-    id: 101,
-    grup: "Grup Tani Makmur A",
-    pabrik: "PT. Sawit Makmur",
-    tglAjuan: "23 Sep 2025",
-    tglPanen: "25 Sep 2025",
-    estimasi: 6000, // kg
-    status: "pending", // pending, accepted, rejected
-  },
-  {
-    id: 102,
-    grup: "Grup Tani Jaya B",
-    pabrik: "PT. Pabrik Agro",
-    tglAjuan: "20 Sep 2025",
-    tglPanen: "22 Sep 2025",
-    estimasi: 4500,
-    status: "accepted",
-  },
-];
-
 const Penjualan = () => {
-  const [activeTab, setActiveTab] = useState("lowongan");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // --- LOGIKA TAB BERDASARKAN URL ---
+  // Jika URL mengandung "progrespengajuan", aktifkan tab riwayat. Jika tidak, default ke lowongan.
+  const activeTab = location.pathname.includes("progrespengajuan")
+    ? "riwayat"
+    : "lowongan";
+
   const [viewState, setViewState] = useState("list");
   const [selectedPabrik, setSelectedPabrik] = useState(null);
 
@@ -244,32 +233,52 @@ const Penjualan = () => {
     }
   };
 
-  // Fungsi Fetch Riwayat Pengajuan (GET_PENGAJUAN_MASUK)
+  // Fungsi Fetch Riwayat Pengajuan (Gabungan GET_PENGAJUAN_MASUK & GET_RIWAYAT_PENGAJUAN)
   const fetchRiwayatPengajuan = async () => {
     setIsLoadingRiwayat(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(
-        API_ENDPOINTS.FARM.MARKETPLACE.GET_PENGAJUAN_MASUK,
-        {
+
+      // 1. Jalankan 2 request API secara bersamaan (Paralel) agar loading tidak lama
+      const [resMasuk, resRiwayat] = await Promise.all([
+        fetch(API_ENDPOINTS.FARM.MARKETPLACE.GET_PENGAJUAN_MASUK, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+        }),
+        fetch(API_ENDPOINTS.FARM.MARKETPLACE.GET_RIWAYAT_PENGAJUAN, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      const data = await response.json();
-      if (response.ok) {
-        setRiwayatPengajuan(data);
-        console.log(
-          "Data Riwayat Pengajuan dari BE:",
-          JSON.stringify(data, null, 2),
-        );
+      let dataMasuk = [];
+      let dataRiwayat = [];
+
+      // 2. Parse hasil response Pengajuan Masuk (Aktif)
+      if (resMasuk.ok) {
+        dataMasuk = await resMasuk.json();
+        console.log("=== DATA PENGAJUAN MASUK (ATAS) ===", dataMasuk);
       } else {
-        console.error("Gagal load riwayat:", data);
-        setRiwayatPengajuan([]);
+        console.error("Gagal load pengajuan masuk");
       }
+
+      // 3. Parse hasil response Riwayat Pengajuan (Lama/Selesai)
+      if (resRiwayat.ok) {
+        dataRiwayat = await resRiwayat.json();
+        console.log("=== DATA RIWAYAT PENGAJUAN (BAWAH) ===", dataRiwayat);
+      } else {
+        console.error("Gagal load riwayat pengajuan");
+      }
+
+      // 4. GABUNGKAN DATA: Pengajuan Masuk ditaruh PALING ATAS, Riwayat di BAWAH
+      const combinedData = [...dataMasuk, ...dataRiwayat];
+
+      console.log("=== TOTAL DATA GABUNGAN ===", combinedData);
+
+      // Simpan ke state untuk dirender di layar
+      setRiwayatPengajuan(combinedData);
     } catch (error) {
-      console.error("Fetch error riwayat:", error);
+      console.error("Fetch error riwayat gabungan:", error);
       setRiwayatPengajuan([]);
     } finally {
       setIsLoadingRiwayat(false);
@@ -361,7 +370,9 @@ const Penjualan = () => {
         kebutuhan_pabrik_id: parseInt(selectedPabrik.id),
         nama_grup: String(formData.nama_grup),
         rencana_panen_ids: selectedPanenIds.map((id) => parseInt(id)),
-        alamat_pickup_teks: String(formData.alamat_pickup || "Alamat Tidak Tersedia"),
+        alamat_pickup_teks: String(
+          formData.alamat_pickup || "Alamat Tidak Tersedia",
+        ),
         latitude_pickup: parseFloat(formData.latitude_pickup) || 0.0,
         longitude_pickup: parseFloat(formData.longitude_pickup) || 0.0,
         catatan_kebun: formData.catatan ? String(formData.catatan) : "", // <-- TIDAK BOLEH NULL
@@ -448,12 +459,20 @@ const Penjualan = () => {
     setSelectedPabrik(null);
   };
 
-  // Helper untuk menentukan judul SectionCard secara dinamis berdasarkan viewState
+  // Helper untuk menentukan judul SectionCard
   const getSectionTitle = () => {
     if (viewState === "form") return "Form Pengajuan Penjualan";
     return activeTab === "lowongan"
       ? "Ajukan Penjualan TBS ke Pabrik"
       : "Status Pengajuan Penjualan";
+  };
+
+  // --- TAMBAHKAN FUNGSI INI ---
+  const getSectionSubtitle = () => {
+    if (viewState === "form") return "";
+    return activeTab === "lowongan"
+      ? "Berikut daftar permintaan kebutuhan pabrik yang tersedia."
+      : "Pantau status pengajuan penjualan TBS Anda di sini.";
   };
 
   return (
@@ -469,33 +488,36 @@ const Penjualan = () => {
               Penjualan TBS Ke Pabrik
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm">
-              Ajukan penjualan TBS ke pabrik dan pantau status pengajuan.
+              Ajukan penjualan TBS ke pabrik dan pantau status pengajuan Anda
+              dengan mudah.
             </p>
           </div>
         </div>
 
-        {/* Tab Switcher (Hanya muncul jika di view List) */}
+        {/* Bagian Kanan: Tab Switcher (Hanya view List) */}
         {viewState === "list" && (
-          <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto overflow-x-auto hide-scrollbar">
+          <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto overflow-x-auto hide-scrollbar shrink-0">
             <button
-              onClick={() => setActiveTab("lowongan")}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
+              onClick={() => navigate("/kebun/penjualan/kebutuhanpabrik")}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === "lowongan"
                   ? "bg-white text-[#B5302D] shadow-sm"
-                  : "text-gray-500"
+                  : "text-gray-500 hover:bg-gray-200/50"
               }`}
             >
-              <Store className="w-3.5 h-3.5" /> Kebutuhan Pabrik
+              <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="whitespace-nowrap">Kebutuhan Pabrik</span>
             </button>
             <button
-              onClick={() => setActiveTab("riwayat")}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
+              onClick={() => navigate("/kebun/penjualan/progrespengajuan")}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 activeTab === "riwayat"
                   ? "bg-white text-[#B5302D] shadow-sm"
-                  : "text-gray-500"
+                  : "text-gray-500 hover:bg-gray-200/50"
               }`}
             >
-              <History className="w-3.5 h-3.5" /> Progres Pengajuan
+              <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="whitespace-nowrap">Progres Pengajuan</span>
             </button>
           </div>
         )}
@@ -505,24 +527,58 @@ const Penjualan = () => {
       <hr className="border-gray-200 mb-8" />
 
       {/* --- CONTENT AREA (Wrapped in SectionCard) --- */}
-      <SectionCard title={getSectionTitle()}>
+      <SectionCard
+        title={getSectionTitle()}
+        subtitle={getSectionSubtitle()} // <-- Mengirimkan teks menempel ke judul
+        rightContent={
+          // LOGIKA UX: Hanya muncul di tab "Progres Pengajuan" dan jika ada data yang disetujui
+          viewState === "list" &&
+          activeTab === "riwayat" &&
+          riwayatPengajuan.some((item) =>
+            (item.status_pengajuan || item.statusAsliText || item.status || "")
+              .toLowerCase()
+              .includes("setuju"),
+          ) && (
+            // w-max membuat kotak tidak terpotong di mobile dan bisa di-scroll ke kanan
+            <div className="flex items-center gap-2 sm:gap-3 bg-white border border-[#EF8523]/30 p-1.5 sm:pr-2.5 rounded-full shadow-[0_0_15px_rgba(239,133,35,0.15)] animate-pulse hover:animate-none transition-all w-max md:w-auto">
+              <div className="bg-gradient-to-br from-[#EF8523] to-[#d9751d] p-1.5 sm:p-2 rounded-full text-white shrink-0 shadow-sm">
+                <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+
+              {/* KUNCI PERBAIKAN: "hidden sm:block" DHAPUS, diganti "whitespace-nowrap" agar teks aman di HP */}
+              <p className="text-[10px] sm:text-[11px] font-bold text-gray-700 leading-tight whitespace-nowrap">
+                Jika Pengajuan
+                <br />
+                <span className="text-[#EF8523] font-black">
+                  Disetujui Kebun!
+                </span>
+              </p>
+
+              <button
+                onClick={() =>
+                  navigate("/kebun/distribusi&logistik/mencarilogistik")
+                }
+                className="bg-[#EF8523] hover:bg-[#d9751d] active:scale-95 text-white px-4 py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 whitespace-nowrap ml-1"
+              >
+                Cari Logistik &rarr;
+              </button>
+            </div>
+          )
+        }
+      >
         {/* VIEW: LIST (Lowongan & Riwayat) */}
         {viewState === "list" && (
           <div className="animate-in fade-in slide-in-from-bottom-2">
             {activeTab === "lowongan" ? (
               <div className="space-y-6">
-                <div className="mb-2">
-                  <p className="text-xs text-gray-500">
-                    Berikut daftar permintaan kebutuhan pabrik yang tersedia.
-                  </p>
-                </div>
+                {/* --- TEKS LAMA DIHAPUS DARI SINI --- */}
                 <div className="grid grid-cols-1 gap-4">
                   {isLoadingLowongan ? (
-                    <div className="text-center py-10 text-gray-500 text-sm">
-                      Memuat daftar kebutuhan pabrik...
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
                     </div>
                   ) : lowonganPabrik.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 text-sm bg-gray-50 rounded-2xl border border-gray-200">
+                    <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
                       Saat ini belum ada pengumuman kebutuhan pabrik yang aktif.
                     </div>
                   ) : (
@@ -530,7 +586,7 @@ const Penjualan = () => {
                       <PabrikCard
                         key={item.id}
                         item={item}
-                        onAjukan={() => handleAjukanLangsung(item)} // <-- Panggil fungsi baru
+                        onAjukan={() => handleAjukanLangsung(item)}
                       />
                     ))
                   )}
@@ -538,19 +594,14 @@ const Penjualan = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="mb-2">
-                  <p className="text-xs text-gray-500">
-                    Pantau status pengajuan penjualan TBS Anda di sini.
-                  </p>
-                </div>
-                {/* Menampilkan Data dari Backend */}
+                {/* --- TEKS LAMA DIHAPUS DARI SINI --- */}
                 <div className="space-y-4">
                   {isLoadingRiwayat ? (
-                    <div className="text-center py-10 text-gray-500 text-sm">
-                      Memuat riwayat pengajuan...
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
                     </div>
                   ) : riwayatPengajuan.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 text-sm bg-gray-50 rounded-2xl border border-gray-200">
+                    <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
                       Anda belum memiliki riwayat pengajuan penjualan.
                     </div>
                   ) : (
@@ -580,16 +631,21 @@ const Penjualan = () => {
                         statusColor = "accepted"; // hijau
                       if (statusRaw.includes("tolak")) statusColor = "rejected"; // merah
 
-                      // Susun ulang objek untuk dimasukkan ke komponen RiwayatCard
+                      // Susun ulang objek dengan data BARU DARI BE
                       const mappedItem = {
                         id: item.id,
                         grup: item.nama_grup,
-                        pabrik: `ID Tujuan: ${item.kebutuhan_pabrik_id}`, // Dari schema BE, nama pabrik tidak ikut terbawa, hanya ID.
+                        pabrik_id: item.kebutuhan_pabrik_id,
                         tglAjuan: tglAjuanFormat,
                         tglPanen: tglPanenFormat,
                         estimasi: item.estimasi_total_tbs_grup_kg,
-                        status: statusColor, // untuk styling warna
-                        statusAsliText: item.status_pengajuan, // text asli dari BE (MENUNGGU/DISETUJUI/DITOLAK)
+                        status: statusColor,
+                        statusAsliText: item.status_pengajuan,
+                        alamat_pickup: item.alamat_pickup_teks,
+                        jarak: item.estimasi_jarak_km,
+                        varietas: item.jenis_varietas_gabungan,
+                        usia_pohon: item.usia_pohon_range,
+                        catatan_pabrik: item.catatan_dari_pabrik,
                       };
 
                       return (
@@ -1042,14 +1098,34 @@ const Penjualan = () => {
  * Wrapper UI standar untuk setiap bagian utama halaman.
  * Memberikan styling border, shadow, dan header dekoratif dengan gradient.
  */
-const SectionCard = ({ title, children }) => (
+/**
+ * SectionCard
+ * Wrapper UI standar untuk setiap bagian utama halaman.
+ * Memberikan styling border, shadow, dan header dekoratif dengan gradient.
+ */
+const SectionCard = ({ title, subtitle, rightContent, children }) => (
   <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
     {/* Decorative Header Line */}
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
 
-    <h3 className="text-l font-bold text-[#B5302D] mb-6 flex items-center gap-2">
-      {title}
-    </h3>
+    {/* Header Section: Flex row di desktop, Column di mobile */}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex-1">
+        <h3 className="text-lg font-bold text-[#B5302D] flex items-center gap-2">
+          {title}
+        </h3>
+        {/* Teks keterangan menempel di sini */}
+        {subtitle && <p className="text-xs text-gray-500 mt-1.5">{subtitle}</p>}
+      </div>
+
+      {/* Area Tombol Kedip: Bisa di-scroll ke kanan di Mobile */}
+      {rightContent && (
+        <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+          {rightContent}
+        </div>
+      )}
+    </div>
+
     {children}
   </div>
 );
@@ -1123,85 +1199,177 @@ const PabrikCard = ({ item, onAjukan }) => {
   );
 };
 
-// Kartu Riwayat Pengajuan (Style Table tapi Card)
-const RiwayatCard = ({ item, index }) => (
-  <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-shadow">
-    <div className="flex items-center gap-4">
-      <div className="hidden md:flex w-8 h-8 bg-gray-100 text-gray-500 rounded-full items-center justify-center text-xs font-bold">
-        {index}
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase">
-          Nama Grup
-        </p>
-        <p className="text-sm font-bold text-gray-800">{item.grup}</p>
+// =========================================================================
+// KOMPONEN: Kartu Riwayat Pengajuan (Menjiplak Style PabrikCard)
+// =========================================================================
+const RiwayatCard = ({ item, index }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-        {/* --- BAGIAN STATUS MOBILE --- */}
-        <div className="flex md:hidden gap-2 mt-2">
-          <span
-            className={`px-3 py-1.5 rounded-full text-[10px] font-bold border flex items-center justify-center gap-1.5 w-full ${
-              item.status === "pending"
-                ? "bg-yellow-50 text-yellow-700 border-yellow-100"
-                : item.status === "accepted"
+  // Tentukan warna garis kiri berdasarkan status
+  const statusBorderColor =
+    item.status === "accepted"
+      ? "bg-green-500"
+      : item.status === "rejected"
+        ? "bg-red-500"
+        : "bg-yellow-400";
+
+  return (
+    <div
+      className={`relative bg-white rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md transition-all p-5 overflow-hidden group cursor-pointer`}
+      onClick={() => setIsExpanded(!isExpanded)}
+    >
+      {/* Garis Indikator Status di Kiri (Seperti garis hover di MainCard) */}
+      <div
+        className={`absolute top-0 left-0 w-1.5 h-full ${statusBorderColor}`}
+      />
+
+      {/* --- HEADER & INFO SEPERTI PABRIKCARD --- */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 ml-1">
+        {/* Kiri: Judul dan Info */}
+        <div className="flex-1 space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <h4 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
+                <span className="text-gray-400 text-[10px] font-black px-2 py-0.5 bg-gray-100 rounded-md">
+                  #{index}
+                </span>
+                Grup: {item.grup}
+              </h4>
+              <p className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1.5 mt-1.5">
+                <Store className="w-3 h-3 text-gray-400" /> Pabrik #
+                {item.pabrik_id}
+                <span className="text-gray-300 mx-1">|</span>
+                <MapIcon className="w-3 h-3 text-gray-400" />{" "}
+                {item.jarak ? `${item.jarak} KM` : "Jarak -"}
+              </p>
+            </div>
+          </div>
+
+          {/* Barisan Badge (Persis susunan PabrikCard) */}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            {/* Badge Status */}
+            <div
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border ${
+                item.status === "accepted"
                   ? "bg-green-50 text-green-700 border-green-100"
-                  : "bg-red-50 text-red-700 border-red-100"
-            }`}
-          >
-            {item.status === "pending" && <History className="w-3 h-3" />}
-            {item.status === "accepted" && <CheckCircle2 className="w-3 h-3" />}
+                  : item.status === "rejected"
+                    ? "bg-red-50 text-red-700 border-red-100"
+                    : "bg-yellow-50 text-yellow-700 border-yellow-100"
+              }`}
+            >
+              {item.status === "accepted" && (
+                <CheckCircle2 className="w-3 h-3" />
+              )}
+              {item.status === "pending" && <Clock className="w-3 h-3" />}
+              {item.status === "rejected" && (
+                <AlertCircle className="w-3 h-3" />
+              )}
+              {item.statusAsliText || "MENUNGGU"}
+            </div>
 
-            {/* Teks Status Dinamis dari BE */}
-            {item.statusAsliText || "MENUNGGU"}
-          </span>
+            {/* Badge Tanggal */}
+            <div className="px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-gray-200">
+              <Calendar className="w-3 h-3 text-gray-500" /> Ajuan:{" "}
+              {item.tglAjuan}
+            </div>
+            <div className="px-3 py-1.5 bg-red-50 text-[#B5302D] rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-red-100">
+              <Calendar className="w-3 h-3" /> Panen: {item.tglPanen}
+            </div>
+          </div>
+        </div>
+
+        {/* Kanan: Tombol Aksi (Persis PabrikCard) */}
+        <div className="flex items-end md:items-center mt-2 md:mt-0">
+          <button className="w-full md:w-auto px-5 py-2.5 bg-white text-gray-600 rounded-xl text-xs font-bold border border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+            {isExpanded ? "Tutup Rincian" : "Lihat Rincian"}
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
         </div>
       </div>
-    </div>
 
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1 md:ml-8">
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase">Tujuan</p>
-        <p className="text-xs font-medium text-gray-700">{item.pabrik}</p>
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase">
-          Tgl Diajukan
-        </p>
-        <p className="text-xs font-medium text-gray-700">{item.tglAjuan}</p>
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase">
-          Tgl Panen
-        </p>
-        <p className="text-xs font-medium text-gray-700">{item.tglPanen}</p>
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase">
-          Est. TBS (kg)
-        </p>
-        <p className="text-xs font-bold text-[#B5302D]">{item.estimasi}</p>
-      </div>
-    </div>
+      {/* --- AREA EXPANDED (Rincian Bawah) --- */}
+      {isExpanded && (
+        <div className="mt-5 pt-4 border-t border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-2 ml-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            {/* Kolom Kiri: Alamat Pickup */}
+            <div className="flex items-start gap-2.5">
+              <div className="bg-orange-50 p-2 rounded-lg border border-orange-100 shrink-0 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 text-[#EF8523]" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
+                  Titik Jemput (Pickup)
+                </p>
+                <p className="text-xs sm:text-sm font-medium text-gray-700 leading-snug">
+                  {item.alamat_pickup}
+                </p>
+              </div>
+            </div>
 
-    {/* --- BAGIAN STATUS DESKTOP --- */}
-    <div className="hidden md:block min-w-[100px] text-right">
-      <span
-        className={`px-3 py-1.5 rounded-full text-[10px] font-bold border flex items-center justify-center gap-1.5 w-full ${
-          item.status === "pending"
-            ? "bg-yellow-50 text-yellow-700 border-yellow-100"
-            : item.status === "accepted"
-              ? "bg-green-50 text-green-700 border-green-100"
-              : "bg-red-50 text-red-700 border-red-100"
-        }`}
-      >
-        {item.status === "pending" && <History className="w-3 h-3" />}
-        {item.status === "accepted" && <CheckCircle2 className="w-3 h-3" />}
+            {/* Kolom Kanan: Spesifikasi */}
+            <div className="bg-gray-50 border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col gap-2">
+              <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase">
+                  Jenis Varietas
+                </span>
+                <span className="text-xs font-bold text-gray-800">
+                  {item.varietas || "-"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase">
+                  Usia Pohon
+                </span>
+                <span className="text-xs font-bold text-gray-800">
+                  {item.usia_pohon || "-"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-0.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase">
+                  Est. Muatan TBS
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-[#B5302D]">
+                  {item.estimasi ? `${item.estimasi} Kg` : "0 Kg"}
+                </span>
+              </div>
+            </div>
+          </div>
 
-        {/* Teks Status Dinamis dari BE */}
-        {item.statusAsliText || "MENUNGGU"}
-      </span>
+          {/* Catatan Pabrik */}
+          {item.catatan_pabrik && (
+            <div
+              className={`p-3 rounded-xl border flex items-start gap-2.5 shadow-sm ${
+                item.status === "rejected"
+                  ? "bg-red-50 border-red-100 text-red-800"
+                  : "bg-blue-50 border-blue-100 text-blue-800"
+              }`}
+            >
+              <div
+                className={`p-1.5 rounded-lg bg-white shrink-0 ${
+                  item.status === "rejected" ? "text-red-500" : "text-blue-500"
+                }`}
+              >
+                <Info className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5 opacity-80">
+                  Catatan / Pesan dari Pabrik
+                </p>
+                <p className="text-[11px] sm:text-xs font-medium leading-relaxed italic">
+                  "{item.catatan_pabrik}"
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 // Wrapper Card Utama
 const MainCard = ({ children }) => (

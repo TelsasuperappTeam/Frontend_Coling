@@ -10,24 +10,15 @@ import {
   Hash,
   XCircle,
   CheckSquare,
+  Loader2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { API_ENDPOINTS } from "../../config/constants.js";
 import { showToast, confirmDialog } from "../../utils/notif";
 
-// --- KOMPONEN SECTION CARD ---
-const SectionCard = ({ title, children }) => (
-  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden hover:shadow-md transition-all">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
-    <h3 className="text-base sm:text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
-      {title}
-    </h3>
-
-    {children}
-  </div>
-);
-
 const ManajemenPesanan = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
 
@@ -132,14 +123,39 @@ const ManajemenPesanan = () => {
         </p>
       </div>
 
-      <SectionCard title="Permintaan Jasa Logistik Dari Kebun">
-        <div className="space-y-4 sm:space-y-6">
+      <SectionCard
+        title="Permintaan Jasa Logistik Dari Kebun"
+        rightContent={
+          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-white border border-[#EF8523]/30 p-1.5 sm:pr-2.5 rounded-full shadow-[0_0_15px_rgba(239,133,35,0.15)] animate-pulse hover:animate-none transition-all w-full sm:w-max">
+            <div className="flex items-center gap-2 sm:gap-3 pl-0.5 sm:pl-0">
+              <div className="bg-gradient-to-br from-[#EF8523] to-[#d9751d] p-1.5 sm:p-2 rounded-full text-white shrink-0 shadow-sm">
+                <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+              <p className="text-[10px] sm:text-[11px] font-bold text-gray-700 leading-tight whitespace-nowrap">
+                Pastikan <br className="hidden sm:block" />
+                <span className="text-[#EF8523] font-black sm:ml-0 ml-1">
+                  Isi Armada Dulu
+                </span>
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate("/logistik/armada")}
+              className="bg-[#EF8523] hover:bg-[#d9751d] active:scale-95 text-white px-4 py-2 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 whitespace-nowrap ml-1"
+            >
+              Klik &rarr;
+            </button>
+          </div>
+        }
+      >
+        {/* === KONTEN === */}
+        <div className="space-y-4 mt-2">
           {isLoading ? (
-            <div className="text-center py-10 text-gray-400 text-xs">
-              Memuat data...
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
             </div>
           ) : pesananMasuk.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-xs">
+            <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
               Tidak ada permintaan pengiriman baru yang menunggu konfirmasi.
             </div>
           ) : (
@@ -563,6 +579,27 @@ const LogistikItem = ({
     </MainCard>
   );
 };
+
+// --- KOMPONEN SECTION CARD ---
+const SectionCard = ({ title, rightContent, children }) => (
+  <div className="bg-white rounded-[30px] sm:rounded-[36px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden hover:shadow-md transition-all">
+    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-90" />
+
+    {/* Flex wrapper agar judul di kiri, tombol di kanan */}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4 border-b border-gray-50 pb-4">
+      <h3 className="text-base sm:text-lg font-bold text-[#B5302D] flex items-center gap-2">
+        {title}
+      </h3>
+      {rightContent && (
+        <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar shrink-0">
+          {rightContent}
+        </div>
+      )}
+    </div>
+
+    {children}
+  </div>
+);
 
 /* --- KOMPONEN HELPER --- */
 const MainCard = ({ children }) => (
