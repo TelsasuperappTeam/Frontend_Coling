@@ -128,22 +128,24 @@ const Pengiriman = () => {
   };
 
   return (
-    <div className="p-4 sm:p-8 md:p-10 min-h-screen text-gray-800 font-sans">
+    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
       {/* --- HEADER --- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 mb-6">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
-            <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-7">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-red-50 rounded-2xl">
+            <MapPin className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
               Logistik Pengiriman
             </h1>
-            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+            <p className="text-gray-500 text-xs sm:text-sm">
               Pelacakan armada dan riwayat TBS
             </p>
           </div>
         </div>
+      </div>
 
         {/* --- TABS --- */}
         <div className="flex w-full sm:w-auto bg-gray-100 p-1.5 rounded-xl border border-gray-200">

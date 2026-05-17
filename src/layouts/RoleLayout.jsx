@@ -36,17 +36,23 @@ const RoleLayout = ({ role }) => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white text-[#B5302D]">
-      {/* Navbar murni hanya untuk menu navigasi atas */}
+    // Gunakan h-screen dan overflow-hidden agar body terkunci (tidak bisa geser kiri/kanan)
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-white text-[#B5302D]">
+      
+      {/* Navbar melayang di atas */}
       <NavbarRole role={storedRole} />
 
-      {/* Konten utama diatur SATU KALI di sini */}
-      <main className="flex-1 pt-20 md:pt-24 pb-10">
-        {/* INI YANG DIUBAH: Mengecilkan ukuran maksimal lebarnya */}
-        <div className="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Pindahkan scrollbar HANYA ke dalam area <main> */}
+      {/* margin-top (mt) digunakan agar area scroll BENAR-BENAR dimulai dari BAWAH navbar */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden mt-14 sm:mt-16 md:mt-20 pb-10">
+        
+        {/* Tambahkan sedikit padding top (pt-6) agar konten tidak terlalu menempel ke garis bawah navbar */}
+        <div className="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 pt-6">
           <Outlet />
         </div>
+        
       </main>
+      
     </div>
   );
 };

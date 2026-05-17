@@ -62,7 +62,7 @@ const Operasional = () => {
               Manajemen Operasional
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm">
-              Lihat riwayat penjualan barang dan peminjaman inventaris.
+              Lihat riwayat penjualan barang dan peminjaman inventaris (Read-Only).
             </p>
           </div>
         </div>

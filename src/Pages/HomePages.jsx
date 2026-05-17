@@ -528,8 +528,10 @@ const HomePages = () => {
                                 </div>
 
                                 {/* Detail Lokasi & Varietas */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg sm:rounded-xl border border-gray-100 shadow-sm text-left">
-                                  <div className="col-span-2">
+                                <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg sm:rounded-xl border border-gray-100 shadow-sm text-left">
+                                  
+                                  {/* Item 1: Lokasi */}
+                                  <div>
                                     <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">
                                       Lokasi Kebun / Titik Jemput
                                     </p>
@@ -537,6 +539,8 @@ const HomePages = () => {
                                       {meta.alamat_pickup_teks || "-"}
                                     </p>
                                   </div>
+                                  
+                                  {/* Item 2: Varietas */}
                                   <div>
                                     <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">
                                       Varietas
@@ -545,6 +549,8 @@ const HomePages = () => {
                                       {meta.jenis_varietas_gabungan || "-"}
                                     </p>
                                   </div>
+                                  
+                                  {/* Item 3: Usia Pohon */}
                                   <div>
                                     <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">
                                       Usia Pohon
@@ -553,6 +559,7 @@ const HomePages = () => {
                                       {meta.usia_pohon_range || "-"}
                                     </p>
                                   </div>
+                                  
                                 </div>
 
                                 {/* Daftar Petani */}
@@ -603,16 +610,18 @@ const HomePages = () => {
                                                       "-"}
                                                   </span>
                                                 </p>
-                                                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1">
-                                                  <span className="bg-gray-50 text-gray-600 text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md font-medium border border-gray-200 flex items-center gap-1">
-                                                    <Sprout className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600" />{" "}
+                                                <div className="flex flex-col items-start gap-1.5 sm:gap-2 mt-1.5">
+                                                  {/* Badge Jenis & Varietas (Atas) */}
+                                                  <span className="bg-gray-50 text-gray-600 text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md font-medium border border-gray-200 flex items-center gap-1 w-max">
+                                                    <Sprout className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600 shrink-0" />{" "}
                                                     {petani.jenis_sawit || "-"}{" "}
                                                     /{" "}
-                                                    {petani.nama_varietas ||
-                                                      "-"}
+                                                    {petani.nama_varietas || "-"}
                                                   </span>
-                                                  <span className="bg-green-50 text-green-700 text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md font-medium border border-green-100 flex items-center gap-1">
-                                                    <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />{" "}
+                                                  
+                                                  {/* Badge Usia (Bawah) */}
+                                                  <span className="bg-green-50 text-green-700 text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md font-medium border border-green-100 flex items-center gap-1 w-max">
+                                                    <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />{" "}
                                                     Usia:{" "}
                                                     {petani.usia_tanaman || "-"}
                                                   </span>

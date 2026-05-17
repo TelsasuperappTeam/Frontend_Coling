@@ -1,8 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
 
     <title>PalmaOne-08</title>
     <meta
@@ -10,22 +14,20 @@
       content="PalmaOne-08 - Aplikasi serbaguna untuk kebutuhan digital Anda."
     />
 
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/LogoTSA.png" />
 
-    <!-- Font Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-
-  <body
-    class="bg-white text-gray-900 overflow-x-hidden overscroll-contain min-h-screen flex flex-col"
+  </head>
+<body
+    class="bg-white text-gray-900 overflow-x-hidden min-h-screen flex flex-col w-full"
     id="home"
   >
-    <div id="root"></div>
+    <div id="root" class="flex flex-col min-h-screen w-full overflow-x-hidden"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

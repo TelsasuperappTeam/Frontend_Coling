@@ -315,16 +315,16 @@ export default function Armada() {
 
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-7">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-7">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <Truck className="w-8 h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#B5302D]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D]">
               Manajemen Armada
             </h1>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 text-xs sm:text-sm">
               Kelola aset kendaraan dan kru logistik operasional Anda
             </p>
           </div>
@@ -556,7 +556,7 @@ export default function Armada() {
 const SectionCard = ({ title, children }) => (
   <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
-    <h3 className="text-lg font-bold text-[#B5302D] mb-6 flex items-center gap-2">
+    <h3 className="text-base sm:text-lg font-bold text-[#B5302D] flex items-center gap-2">
       {title}
     </h3>
     {children}

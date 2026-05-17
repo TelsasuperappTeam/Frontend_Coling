@@ -482,19 +482,21 @@ const Operasional2 = () => {
           </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto overflow-hidden">
+        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 w-full sm:w-auto">
+          <button className="flex-1 flex justify-center items-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
+            <ShoppingCart className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">
+              Penjualan/Peminjaman
+            </span>
+          </button>
           <button
             onClick={() =>
-              navigate("/estate_manager/manajemenoperasional/transaksi")
+              navigate("/estate_manager/manajemenoperasional/organisasi")
             }
-            className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
+            className="flex-1 flex justify-center items-center gap-1.5 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all text-gray-500 hover:bg-gray-200"
           >
-            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">Penjualan/Peminjaman</span>
-          </button>
-          <button className="flex-1 flex justify-center items-center gap-1 sm:gap-2 px-1 sm:px-6 py-2.5 rounded-lg text-[8px] sm:text-xs font-bold transition-all bg-white text-[#B5302D] shadow-sm">
-            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">Organisasi</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="leading-tight text-center">Organisasi</span>
           </button>
         </div>
       </div>
@@ -595,7 +597,7 @@ const Operasional2 = () => {
         {selectedKebunId && (
           <div className="grid grid-cols-1 gap-8 bg-transparent">
             {/* --- CARD DAFTAR ANGGOTA PENGURUS --- */}
-            <SectionCard title="Daftar Anggota Pengurus (Read Only)">
+            <SectionCard title="Daftar Anggota Pengurus">
               <div className="flex justify-between items-start mb-4">
                 <p className="text-xs text-gray-500">
                   Struktur organisasi kelompok tani dari kebun yang dipilih.
@@ -662,7 +664,7 @@ const Operasional2 = () => {
             </SectionCard>
 
             {/* SEKSI 2: DOKUMEN ORGANISASI */}
-            <SectionCard title="Kelengkapan Dokumen ISPO (Read Only)">
+            <SectionCard title="Kelengkapan Dokumen ISPO">
               <div className="-mt-4 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
                 <div className="max-w-3xl">
                   <h4 className="text-gray-900 font-bold text-sm sm:text-base mb-1.5">

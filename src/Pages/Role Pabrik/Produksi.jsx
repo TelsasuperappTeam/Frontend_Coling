@@ -260,19 +260,19 @@ export default function Produksi() {
   return (
     <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
       {/* --- HEADER HALAMAN --- */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 bg-red-50 rounded-2xl shadow-sm">
-          <Factory className="w-8 h-8 text-[#B5302D]" />
+      <div className="flex items-center gap-4">
+          <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
+            <Factory className="text-[#B5302D]" size={28} />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
+              Manajemen Produksi
+            </h1>
+            <p className="text-xs md:text-sm text-gray-500">
+              Kelola siklus pengolahan TBS menjadi CPO beserta turunannya.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[#B5302D]">
-            Manajemen Produksi
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Kelola siklus pengolahan TBS menjadi CPO beserta turunannya.
-          </p>
-        </div>
-      </div>
 
       <hr className="border-gray-200 mb-8" />
 

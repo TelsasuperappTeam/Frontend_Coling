@@ -70,21 +70,20 @@ function AppContent() {
     );
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen w-full bg-white overflow-x-hidden">
+      
       {/* --- KOMPONEN TOASTER AKTIF DI SELURUH APLIKASI --- */}
       <Toaster 
         position="top-center" 
         reverseOrder={false} 
         toastOptions={{
-          // Jarak toast dari atas layar
           style: { marginTop: '10px' }
         }} 
       />
 
       {showNavbar && <Navbar />}
 
-      {/* konten utama biar fleksibel dan tidak tumpang tindih footer */}
-      <main className="flex-grow pb-24 md:pb-6">
+      <main className="flex-grow w-full flex flex-col pb-24 md:pb-6">
         <Routes>
           <Route path="/" element={<HomePages />} />
           <Route path="/masuk" element={<Masuk />} />

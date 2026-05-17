@@ -298,15 +298,15 @@ const PenerimaanTBS = () => {
     <div className="p-4 sm:p-8 md:p-10 min-h-screen text-gray-800 font-sans">
       {/* --- HEADER --- */}
       <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
-            <CheckSquare className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
+            <CheckSquare className="text-[#B5302D]" size={28} />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
+            <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
               Pemeriksaan TBS
             </h1>
-            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+            <p className="text-xs md:text-sm text-gray-500">
               Pantau kedatangan armada dan rekapitulasi timbangan TBS.
             </p>
           </div>

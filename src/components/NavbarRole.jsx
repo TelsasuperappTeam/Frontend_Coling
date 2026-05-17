@@ -21,9 +21,14 @@ export default function NavbarRole({ role }) {
         setOpenDropdown(false);
       }
     }
+    
+    // Tambahkan touchstart agar super responsif saat disentuh jari di HP
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+    
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [dropdownRef]);
 
