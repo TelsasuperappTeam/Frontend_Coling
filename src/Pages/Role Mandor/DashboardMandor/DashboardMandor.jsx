@@ -696,7 +696,7 @@ export default function DashboardMandor() {
   );
 
   return (
-    <div className="space-y-6 sm:space-y-8 p-4 sm:p-10 min-h-screen font-sans bg-white">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* SECTION 1: DATA DIRI (Custom Layout, tidak pakai Card reusable) */}
       <div className="bg-gradient-to-r from-[#EF8523] to-[#f19d4e] rounded-2xl p-5 sm:p-8 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-16 -mt-16 blur-3xl"></div>

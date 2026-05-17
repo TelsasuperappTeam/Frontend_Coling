@@ -146,7 +146,7 @@ const KemitraanPetani = () => {
   }, [activeTab, selectedKebunId, fetchValidasiData]);
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* --- HEADER --- */}
       <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-4">

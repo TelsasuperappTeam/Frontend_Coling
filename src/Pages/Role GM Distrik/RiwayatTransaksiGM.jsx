@@ -140,7 +140,7 @@ const RiwayatTransaksiGM = () => {
   };
 
   return (
-    <div className="p-4 sm:p-8 md:p-10 min-h-screen font-sans text-gray-800">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* 1. HEADER & DROPDOWN PILIH KEBUN */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
         

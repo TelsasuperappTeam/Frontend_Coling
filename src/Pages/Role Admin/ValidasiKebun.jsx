@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   AlertCircle,
   Loader2,
+  CheckSquare,
 } from "lucide-react";
 
 export default function ValidasiStakeholderKebun() {
@@ -99,23 +100,27 @@ export default function ValidasiStakeholderKebun() {
   };
 
   return (
-    <div className="p-4 md:p-8 min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 min-h-screen font-sans bg-white">
       <div className="max-w-7xl mx-auto">
-        {/* --- HEADER SECTION (Responsif) --- */}
-        <header className="flex flex-row items-center gap-3 md:gap-4 mb-6 md:mb-10">
-          <div className="bg-[#B5302D] p-2 md:p-3 rounded-lg shadow-lg shrink-0">
-            <ShieldCheck className="text-white w-6 h-6 md:w-8 md:h-8" />
+        
+        {/* --- HEADER --- */}
+        <div className="flex items-center gap-3 sm:gap-4 mb-6">
+          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
+            <CheckSquare className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
           </div>
           <div>
-            <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-[#B5302D]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
               Validasi Stakeholder Kebun
             </h1>
-            <p className="text-gray-500 text-xs md:text-sm mt-0.5">
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5 max-w-xl">
               Verifikasi pendaftaran akun kebun baru dalam sistem
             </p>
           </div>
-        </header>
+        </div>
 
+        {/* --- GARIS PEMBATAS --- */}
+        <hr className="border-gray-200 mb-6 sm:mb-8" />
+          
         {/* --- WRAPPER UTAMA --- */}
         <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
           {/* Top Bar (Jumlah Antrian) */}

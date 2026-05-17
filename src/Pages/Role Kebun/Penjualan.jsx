@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   Truck,
+  Info as InfoIcon,
+  FileText,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/constants";
 
@@ -476,7 +478,7 @@ const Penjualan = () => {
   };
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* --- HEADER --- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-8">
         <div className="flex items-center gap-4">
@@ -644,7 +646,7 @@ const Penjualan = () => {
                         alamat_pickup: item.alamat_pickup_teks,
                         jarak: item.estimasi_jarak_km,
                         varietas: item.jenis_varietas_gabungan,
-                        usia_pohon: item.usia_pohon_range,
+                        catatan_kebun: item.catatan_kebun,
                         catatan_pabrik: item.catatan_dari_pabrik,
                       };
 
@@ -1202,7 +1204,7 @@ const PabrikCard = ({ item, onAjukan }) => {
 // =========================================================================
 // KOMPONEN: Kartu Riwayat Pengajuan (Menjiplak Style PabrikCard)
 // =========================================================================
-const RiwayatCard = ({ item, index }) => {
+const RiwayatCard = ({ item }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Tentukan warna garis kiri berdasarkan status
@@ -1222,25 +1224,18 @@ const RiwayatCard = ({ item, index }) => {
       <div
         className={`absolute top-0 left-0 w-1.5 h-full ${statusBorderColor}`}
       />
-
       {/* --- HEADER & INFO SEPERTI PABRIKCARD --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 ml-1">
         {/* Kiri: Judul dan Info */}
         <div className="flex-1 space-y-3">
           <div className="flex items-start justify-between">
             <div>
-              <h4 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
-                <span className="text-gray-400 text-[10px] font-black px-2 py-0.5 bg-gray-100 rounded-md">
-                  #{index}
-                </span>
+              <h4 className="text-sm sm:text-base font-bold text-black flex items-center gap-2">
                 Grup: {item.grup}
               </h4>
-              <p className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1.5 mt-1.5">
-                <Store className="w-3 h-3 text-gray-400" /> Pabrik #
-                {item.pabrik_id}
-                <span className="text-gray-300 mx-1">|</span>
-                <MapIcon className="w-3 h-3 text-gray-400" />{" "}
-                {item.jarak ? `${item.jarak} KM` : "Jarak -"}
+              <p className="text-[11px] sm:text-xs text-gray-500 flex items-center gap-1.5 mt-1.5 font-bold">
+                <MapIcon className="w-3 h-3 text-gray-400" /> Jarak Estimasi
+                Kebun-Pabrik : {item.jarak ? `${item.jarak} KM` : "Jarak -"}
               </p>
             </div>
           </div>
@@ -1293,53 +1288,69 @@ const RiwayatCard = ({ item, index }) => {
 
       {/* --- AREA EXPANDED (Rincian Bawah) --- */}
       {isExpanded && (
-        <div className="mt-5 pt-4 border-t border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-2 ml-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            {/* Kolom Kiri: Alamat Pickup */}
-            <div className="flex items-start gap-2.5">
-              <div className="bg-orange-50 p-2 rounded-lg border border-orange-100 shrink-0 mt-0.5">
-                <MapPin className="w-3.5 h-3.5 text-[#EF8523]" />
+        <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-2 ml-1">
+          {/* --- KARTU DETAIL PENGIRIMAN --- */}
+          {/* PERBAIKAN: Menghapus mt-4, pt-4, dan border-t di sini agar tidak dobel */}
+          <div className="flex flex-col">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 items-start md:items-center">
+              {/* ================= KOLOM KIRI: ALAMAT PICKUP ================= */}
+              <div className="flex items-start gap-3">
+                <div className="bg-orange-50 p-2.5 sm:p-3 rounded-xl border border-orange-100 shrink-0">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-[#EF8523]" />
+                </div>
+                <div className="flex flex-col mt-0.5">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                    Titik Jemput (Pickup)
+                  </p>
+                  <p className="text-xs sm:text-sm font-bold text-gray-800 leading-snug">
+                    {item.alamat_pickup || "Menunggu lokasi..."}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
-                  Titik Jemput (Pickup)
-                </p>
-                <p className="text-xs sm:text-sm font-medium text-gray-700 leading-snug">
-                  {item.alamat_pickup}
-                </p>
+
+              {/* ================= KOLOM KANAN: SPESIFIKASI (Mini Cards) ================= */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Kotak 1: Varietas */}
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex flex-col justify-center">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                    Varietas
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-gray-700 truncate">
+                    {item.varietas || "-"}
+                  </span>
+                </div>
+
+                {/* Kotak 2: Muatan TBS (Highlight Merah) */}
+                <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex flex-col justify-center">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">
+                    Est. Muatan
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-[#B5302D] truncate">
+                    {item.estimasi ? `${item.estimasi} Kg` : "0 Kg"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Kolom Kanan: Spesifikasi */}
-            <div className="bg-gray-50 border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col gap-2">
-              <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
-                <span className="text-[10px] font-bold text-gray-500 uppercase">
-                  Jenis Varietas
-                </span>
-                <span className="text-xs font-bold text-gray-800">
-                  {item.varietas || "-"}
-                </span>
+            {/* ================= KOLOM BAWAH: CATATAN KEBUN ================= */}
+            {item.catatan_kebun && (
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                <div className="flex items-start gap-3 bg-yellow-50/60 p-3 rounded-xl border border-yellow-100/80">
+                  <FileText className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+                  <div className="flex flex-col">
+                    <p className="text-[9px] sm:text-[10px] font-bold text-yellow-600/80 uppercase tracking-widest mb-1">
+                      Catatan Tambahan
+                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 leading-relaxed italic">
+                      "{item.catatan_kebun}"
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
-                <span className="text-[10px] font-bold text-gray-500 uppercase">
-                  Usia Pohon
-                </span>
-                <span className="text-xs font-bold text-gray-800">
-                  {item.usia_pohon || "-"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pt-0.5">
-                <span className="text-[10px] font-bold text-gray-500 uppercase">
-                  Est. Muatan TBS
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-[#B5302D]">
-                  {item.estimasi ? `${item.estimasi} Kg` : "0 Kg"}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Catatan Pabrik */}
+          {/* ================= CATATAN PABRIK ================= */}
           {item.catatan_pabrik && (
             <div
               className={`p-3 rounded-xl border flex items-start gap-2.5 shadow-sm ${
@@ -1355,8 +1366,8 @@ const RiwayatCard = ({ item, index }) => {
               >
                 <Info className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5 opacity-80">
+              <div className="flex flex-col mt-0.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest mb-1 opacity-80">
                   Catatan / Pesan dari Pabrik
                 </p>
                 <p className="text-[11px] sm:text-xs font-medium leading-relaxed italic">

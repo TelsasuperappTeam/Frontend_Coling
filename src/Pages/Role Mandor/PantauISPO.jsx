@@ -42,7 +42,6 @@ export default function PantauISPO() {
   const [manualDocsStatus, setManualDocsStatus] = useState({});
   const [fetchingDocs, setFetchingDocs] = useState({}); // TAMBAHAN: Untuk loading per-dokumen
 
-  
   // ==========================================================================
   // DATA SUMBER (PRINSIP 1 - 5) - SESUAI INSTRUKSI 56 ITEM
   // ==========================================================================
@@ -1281,24 +1280,24 @@ export default function PantauISPO() {
   };
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen font-sans relative bg-gray-50/30">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* ======================== HEADER HALAMAN UTAMA ============================ */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
             <FileCheck className="text-[#B5302D]" size={28} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
               Pantau ISPO
             </h1>
-            <p className="text-xs md:text-sm text-gray-500">
-              Progres sertifikasi ISPO anda serta lengkapi dokumen yang
-              dibutuhkan, dan buat laporan secara otomatis.
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+              Pantau progres sertifikasi ISPO anda, lengkapi dokumen, dan buat laporan otomatis.
             </p>
           </div>
         </div>
       </div>
+
       <hr className="border-gray-200 mb-8" />
 
       {/* ======================== BAGIAN 1: BUAT DOKUMEN OTOMATIS ============================ */}

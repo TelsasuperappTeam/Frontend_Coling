@@ -6,6 +6,7 @@ import {
   History,
   Package,
   Barcode,
+  Copy,
   Calendar,
   RefreshCw,
   Loader2,
@@ -203,7 +204,7 @@ export default function Produksi() {
 
     // TAMBAHKAN CEGATAN KONFIRMASI (Final Check)
     const isSetuju = await confirmDialog({
-      title: "Generate Kode Resi ?",
+      title: "Generate Resi Produksi ?",
       text: "Pastikan angka timbangan sudah benar. Data yang disimpan akan menerbitkan Resi Produksi dan tidak dapat diubah lagi.",
       confirmText: "Ya, Generate Resi!",
       isDanger: false,
@@ -257,25 +258,37 @@ export default function Produksi() {
     }
   };
 
+  // Copy Resi Produksi ke Clipboard (Fungsi ini akan dipanggil saat klik tombol copy di resi)
+  const handleCopyResi = (resiCode) => {
+    if (!resiCode) return;
+
+    // Fungsi bawaan browser untuk menyalin teks
+    navigator.clipboard.writeText(resiCode);
+
+    // Menampilkan notifikasi (asumsi Anda menggunakan showToast)
+    showToast.success(`Resi ${resiCode} berhasil disalin!`);
+  };
+
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* --- HEADER HALAMAN --- */}
       <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
-            <Factory className="text-[#B5302D]" size={28} />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
-              Manajemen Produksi
-            </h1>
-            <p className="text-xs md:text-sm text-gray-500">
-              Kelola siklus pengolahan TBS menjadi CPO beserta turunannya.
-            </p>
-          </div>
+        <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
+          <Factory className="text-[#B5302D]" size={28} />
         </div>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-[#B5302D]">
+            Manajemen Produksi
+          </h1>
+          <p className="text-xs md:text-sm text-gray-500">
+            Kelola siklus pengolahan TBS menjadi CPO beserta turunannya.
+          </p>
+        </div>
+      </div>
 
+      {/* --- GARIS PEMBATAS --- */}
       <hr className="border-gray-200 mb-8" />
-
+      
       <div className="space-y-8">
         {/* --- SECTION 1: INPUT SIKLUS BARU --- */}
         <SectionCard
@@ -455,16 +468,34 @@ export default function Produksi() {
                     </div>
 
                     <div className="pt-2">
-                      <div className="flex items-center justify-between bg-blue-50/50 p-3 rounded-lg border border-blue-100 border-dashed group">
-                        <div className="flex items-center gap-2">
-                          <Barcode className="w-4 h-4 text-blue-400 group-hover:text-blue-600" />
-                          <span className="text-xs font-bold text-gray-500">
-                            Kode Resi:
+                      <div className="flex items-center justify-between bg-blue-50/50 p-2 sm:p-3 rounded-lg border border-blue-100 border-dashed group">
+                        {/* Bagian Kiri: Label */}
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pr-2">
+                          <Barcode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 group-hover:text-blue-600" />
+                          <span className="text-[10px] sm:text-xs font-bold text-gray-500">
+                            Resi Produksi:
                           </span>
                         </div>
-                        <span className="font-mono text-[11px] font-bold text-blue-700 bg-white px-2 py-1 border border-blue-100 rounded">
-                          {item.kode_resi_produksi || "Memproses..."}
-                        </span>
+
+                        {/* Bagian Kanan: Kode Resi & Tombol Copy */}
+                        <div className="flex items-center gap-1 sm:gap-2 overflow-hidden">
+                          <span className="font-mono text-[10px] sm:text-[11px] font-bold text-blue-700 bg-white px-1.5 sm:px-2 py-1 border border-blue-100 rounded truncate">
+                            {item.kode_resi_produksi || "Memproses..."}
+                          </span>
+
+                          {/* Tombol Copy hanya muncul jika resi sudah ada */}
+                          {item.kode_resi_produksi && (
+                            <button
+                              onClick={() =>
+                                handleCopyResi(item.kode_resi_produksi)
+                              }
+                              className="p-1.5 bg-white hover:bg-blue-100 border border-blue-100 text-blue-500 rounded-md transition-colors active:scale-95 shrink-0 shadow-sm"
+                              title="Salin Resi"
+                            >
+                              <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -474,7 +505,6 @@ export default function Produksi() {
           </div>
         </SectionCard>
       </div>
-
       {/* ================================================================= */}
       {/* MODAL FORM HASIL PRODUKSI (Ditampilkan saat klik Selesaikan) */}
       {/* ================================================================= */}
@@ -608,7 +638,7 @@ export default function Produksi() {
                 ) : (
                   <CheckCircle className="w-4 h-4" />
                 )}
-                Simpan & Generate Kode Resi
+                Simpan & Generate Resi Produksi
               </button>
             </div>
           </div>

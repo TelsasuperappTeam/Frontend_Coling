@@ -128,10 +128,9 @@ const Pengiriman = () => {
   };
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* --- HEADER --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 sm:mb-7">
+      <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl">
             <MapPin className="w-8 h-8 text-[#B5302D]" />
@@ -145,13 +144,12 @@ const Pengiriman = () => {
             </p>
           </div>
         </div>
-      </div>
 
-        {/* --- TABS --- */}
-        <div className="flex w-full sm:w-auto bg-gray-100 p-1.5 rounded-xl border border-gray-200">
+        {/* BAGIAN KANAN: TABS */}
+        <div className="flex w-full lg:w-auto bg-gray-100 p-1 rounded-2xl border border-gray-200 shrink-0">
           <button
             onClick={() => setActiveTab("pantau")}
-            className={`flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 lg:flex-none flex justify-center items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
               activeTab === "pantau"
                 ? "bg-white text-[#B5302D] shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
@@ -164,9 +162,10 @@ const Pengiriman = () => {
             />
             Status <span className="hidden sm:inline">Pengiriman</span>
           </button>
+          
           <button
             onClick={() => setActiveTab("riwayat")}
-            className={`flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 lg:flex-none flex justify-center items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
               activeTab === "riwayat"
                 ? "bg-white text-[#B5302D] shadow-sm"
                 : "text-gray-500 hover:text-gray-700"

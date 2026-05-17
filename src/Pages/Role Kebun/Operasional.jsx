@@ -971,7 +971,7 @@ const Operasional = () => {
   };
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* --- HEADER & TAB SWITCHER --- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 sm:mb-8">
         <div className="flex items-center gap-4">
@@ -1029,7 +1029,6 @@ const Operasional = () => {
 
       {/* --- MAIN CONTENT AREA --- */}
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-        {/* ================= TRANSAKSI (DYNAMIC) ================= */}
         {activeTab === "transaksi" && (
           <>
             {/* SECTION 1 PENJUALAN BARANG */}

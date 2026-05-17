@@ -16,10 +16,7 @@ import { ROLES } from "./config/constants";
 import VerifikasiOTP from "./components/VerifikasiOTP";
 import LupaKataSandi from "./Pages/LupaKataSandi";
 
-// --- IMPORT TOASTER GLOBAL ---
 import { Toaster } from "react-hot-toast";
-
-// --- IMPORT KOMPONEN SCROLL KE ATAS ---
 import ScrollToTop from "./components/ScrollToTop";
 
 // Import routes per role
@@ -70,7 +67,7 @@ function AppContent() {
     );
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-white overflow-x-hidden">
+    <div className="flex flex-col h-screen w-full bg-white overflow-hidden">
       
       {/* --- KOMPONEN TOASTER AKTIF DI SELURUH APLIKASI --- */}
       <Toaster 
@@ -83,30 +80,34 @@ function AppContent() {
 
       {showNavbar && <Navbar />}
 
-      <main className="flex-grow w-full flex flex-col pb-24 md:pb-6">
-        <Routes>
-          <Route path="/" element={<HomePages />} />
-          <Route path="/masuk" element={<Masuk />} />
-          <Route path="/daftar" element={<Daftar />} />
-          <Route path="/verifikasiOTP" element={<VerifikasiOTP />} />
-          <Route path="/lupaKataSandi" element={<LupaKataSandi />} />
-          <Route path="/faq" element={<FAQ />} />
+      <main className={`w-full flex flex-col ${isOnRolePath ? "flex-1 overflow-hidden" : "flex-1 overflow-y-auto overflow-x-hidden"}`}>
+        
 
-          {/* Role routes - Dinamis berdasarkan ROLES dari constants.js */}
-          <Route path={`/${ROLES.ADMIN}/*`} element={<AdminRoutes />} />
-          <Route path={`/${ROLES.MANDOR}/*`} element={<MandorRoutes />} />
-          <Route path={`/${ROLES.KEBUN}/*`} element={<KebunRoutes />} />
-          <Route path={`/${ROLES.ESTATE_MANAGER}/*`} element={<EstateManagerRoutes />} />
-          <Route path={`/${ROLES.GENERAL_MANAGER_DISTRIK}/*`} element={<GMDistrikRoutes />} />
-          <Route path={`/${ROLES.TRANSPORT}/*`} element={<TransportRoutes />} />
-          <Route path={`/${ROLES.PABRIK}/*`} element={<PabrikRoutes />} />
+        <div className={`flex-grow w-full flex flex-col ${isOnRolePath ? "" : "pb-24 md:pb-6"}`}>
+          <Routes>
+            <Route path="/" element={<HomePages />} />
+            <Route path="/masuk" element={<Masuk />} />
+            <Route path="/daftar" element={<Daftar />} />
+            <Route path="/verifikasiOTP" element={<VerifikasiOTP />} />
+            <Route path="/lupaKataSandi" element={<LupaKataSandi />} />
+            <Route path="/faq" element={<FAQ />} />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Role routes - Dinamis berdasarkan ROLES dari constants.js */}
+            <Route path={`/${ROLES.ADMIN}/*`} element={<AdminRoutes />} />
+            <Route path={`/${ROLES.MANDOR}/*`} element={<MandorRoutes />} />
+            <Route path={`/${ROLES.KEBUN}/*`} element={<KebunRoutes />} />
+            <Route path={`/${ROLES.ESTATE_MANAGER}/*`} element={<EstateManagerRoutes />} />
+            <Route path={`/${ROLES.GENERAL_MANAGER_DISTRIK}/*`} element={<GMDistrikRoutes />} />
+            <Route path={`/${ROLES.TRANSPORT}/*`} element={<TransportRoutes />} />
+            <Route path={`/${ROLES.PABRIK}/*`} element={<PabrikRoutes />} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+
+        {showFooter && <Footer />}
       </main>
-
-      {showFooter && <Footer />}
     </div>
   );
 }

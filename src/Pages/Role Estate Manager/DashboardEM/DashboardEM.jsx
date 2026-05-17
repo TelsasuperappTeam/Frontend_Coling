@@ -363,7 +363,7 @@ export default function DashboardEM() {
   );
 
   return (
-    <div className="space-y-6 sm:space-y-8 p-4 sm:p-10 min-h-screen font-sans bg-white">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* =========================================
           SECTION 1: DATA DIRI
          ========================================= */}

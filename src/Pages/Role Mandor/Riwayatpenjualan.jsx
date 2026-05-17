@@ -114,16 +114,16 @@ const Riwayatpenjualan = () => {
   };
 
   return (
-    <div className="p-4 sm:p-8 md:p-10 min-h-screen font-sans text-gray-800">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* HEADER HERO */}
       <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl shrink-0">
-            <History className="w-6 h-6 sm:w-8 sm:h-8 text-[#B5302D]" />
+          <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
+            <History className="text-[#B5302D]" size={28} />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
-              Riwayat Penjualan TBS Anda
+              Riwayat Penjualan TBS
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
               Pantau armada logistik yang aktif dan rekapitulasi penjualan TBS
@@ -153,7 +153,7 @@ const Riwayatpenjualan = () => {
               </span>
             )}
           </button>
-          
+
           <button
             // --- UBAH ONCLICK MENJADI NAVIGATE ---
             onClick={() => {
@@ -609,9 +609,7 @@ const ProgressItem = ({ item, isExpanded, toggleExpand }) => {
                   <p className="text-xs sm:text-sm font-black text-red-600">
                     {item.pemeriksaan.total_potongan?.toLocaleString("id-ID") ||
                       0}{" "}
-                    <span className="text-[9px] font-bold text-red-400">
-                      %
-                    </span>
+                    <span className="text-[9px] font-bold text-red-400">%</span>
                   </p>
                 </div>
                 <div className="flex justify-between items-center bg-white px-3 py-2.5 rounded-lg border border-green-200 ring-1 ring-green-50 shadow-sm">

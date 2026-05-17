@@ -446,9 +446,15 @@ const Operasional2 = () => {
 
           if (data.length > 0) {
             // --- LOGIKA BACA MEMORI BROWSER ---
-            const savedId = sessionStorage.getItem("selected_kebun_operasional");
-            const isValid = data.find(k => (k.auth_id || k.id)?.toString() === savedId?.toString());
-            const idToUse = isValid ? (isValid.auth_id || isValid.id) : (data[0].auth_id || data[0].id || "kebun-0");
+            const savedId = sessionStorage.getItem(
+              "selected_kebun_operasional",
+            );
+            const isValid = data.find(
+              (k) => (k.auth_id || k.id)?.toString() === savedId?.toString(),
+            );
+            const idToUse = isValid
+              ? isValid.auth_id || isValid.id
+              : data[0].auth_id || data[0].id || "kebun-0";
 
             setSelectedKebunId(idToUse);
             sessionStorage.setItem("selected_kebun_operasional", idToUse); // Simpan default
@@ -488,10 +494,9 @@ const Operasional2 = () => {
   }, [selectedKebunId]);
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans relative">
-{/* 1. HEADER & DROPDOWN PILIH KEBUN */}
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
+      {/* 1. HEADER & DROPDOWN PILIH KEBUN */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
-        
         {/* Judul Kiri */}
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shrink-0">
@@ -581,7 +586,10 @@ const Operasional2 = () => {
                       onClick={() => {
                         setSelectedKebunId(idKebun);
                         // --- SIMPAN PILIHAN USER KE MEMORI ---
-                        sessionStorage.setItem("selected_kebun_operasional", idKebun);
+                        sessionStorage.setItem(
+                          "selected_kebun_operasional",
+                          idKebun,
+                        );
                         setIsDropdownOpen(false);
                       }}
                       className={`px-4 py-3 text-xs sm:text-sm cursor-pointer transition-colors flex items-center justify-between ${

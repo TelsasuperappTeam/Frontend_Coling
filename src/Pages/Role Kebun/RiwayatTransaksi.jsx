@@ -247,7 +247,7 @@ const Riwayatpenjualan = () => {
   };
 
   return (
-    <div className="p-4 sm:p-8 md:p-10 min-h-screen font-sans text-gray-800">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* HEADER HERO */}
       <div className="flex flex-col lg:flex-row md:items-center justify-between gap-5 mb-6">
         <div className="flex items-center gap-3 sm:gap-4">

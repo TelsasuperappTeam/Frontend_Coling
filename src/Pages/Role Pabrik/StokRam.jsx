@@ -106,10 +106,9 @@ export default function StokRam() {
     kapasitas.total > 0 ? (kapasitas.terpakai / kapasitas.total) * 100 : 0;
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen text-gray-800 font-sans">
-{/* --- HEADER --- */}
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
+      {/* --- HEADER --- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 mb-6">
-        
         <div className="flex items-center gap-4">
           <div className="p-3 bg-red-50 rounded-2xl shadow-sm border border-red-100 shrink-0">
             <Database className="text-[#B5302D]" size={28} />
@@ -127,7 +126,6 @@ export default function StokRam() {
 
         {/* KOTAK PENGINGAT (Dioptimalkan untuk Mobile) */}
         <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4 bg-white border border-[#EF8523]/30 p-1.5 sm:pr-2.5 rounded-full shadow-[0_0_15px_rgba(239,133,35,0.15)] animate-pulse hover:animate-none transition-all w-full lg:w-auto lg:ml-auto">
-          
           {/* Grup Ikon & Teks di Kiri */}
           <div className="flex items-center gap-2 sm:gap-3 pl-0.5 sm:pl-0">
             <div className="bg-gradient-to-br from-[#EF8523] to-[#d9751d] p-1.5 sm:p-2 rounded-full text-white shrink-0 shadow-sm">
@@ -135,7 +133,9 @@ export default function StokRam() {
             </div>
             <p className="text-[10px] sm:text-[11px] font-bold text-gray-700 leading-tight whitespace-nowrap">
               Silahkan <br className="hidden sm:block" />
-              <span className="text-[#EF8523] font-black sm:ml-0 ml-1">Proses Produksi</span>
+              <span className="text-[#EF8523] font-black sm:ml-0 ml-1">
+                Proses Produksi
+              </span>
             </p>
           </div>
 
@@ -217,7 +217,6 @@ export default function StokRam() {
             isLoading={isLoading}
           />
         </div>
-
       </div>
     </div>
   );

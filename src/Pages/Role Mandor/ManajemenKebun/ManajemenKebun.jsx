@@ -44,7 +44,7 @@ export default function ManajemenKebun() {
   };
 
   return (
-    <div className="p-4 sm:p-10 min-h-screen font-sans">
+    <div className="space-y-6 p-4 md:p-8 min-h-screen font-sans">
       {/* <-- PERBAIKAN: Menambahkan div pembungkus agar seimbang dan rapi di tengah --> */}
       <div className="max-w-7xl mx-auto">
         {/* === HEADER HERO === */}

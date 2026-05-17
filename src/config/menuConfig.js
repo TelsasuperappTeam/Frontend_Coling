@@ -25,7 +25,7 @@ export const menuConfig = {
       path: "/admin/dashboard",
       icon: LayoutDashboard,
     },
-    { label: "Data Stakeholder", path: "/admin/datastakeholder", icon: Users },
+    { label: "Data Stakeholder", path: "/admin/datastakeholder", icon: Database },
     {
       label: "Validasi Kebun",
       path: "/admin/validasikebun",
