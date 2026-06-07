@@ -19,11 +19,11 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Memperbaiki UI/UX user experience telsa V2.0 FINAL 3"
+git commit -m "Revisi tampilan UI/UX karna ada yang kurang sesuai"
 git push origin main
 
-Jika menggunakan server maka "npm run dev"
-Jika menggunakan lokal maka "npm run dev:local"
+Jika menggunakan local maka "npm run dev"
+Jika menggunakan server maka "npm run dev:server"
 
 jika BE mau akses punya FE maka "FE di terminal harus" = npm run dev -- --host
 

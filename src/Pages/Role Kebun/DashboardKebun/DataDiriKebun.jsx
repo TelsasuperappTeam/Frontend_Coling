@@ -520,8 +520,7 @@ export default function DataDiriKebun({
       <div className="p-4 sm:p-6 border-t border-gray-100 bg-white/80 backdrop-blur-sm flex flex-col-reverse sm:flex-row gap-4 sm:gap-0 items-center justify-between shrink-0 z-20">
         {/* Teks Disclaimer - Mobile: Center & Kecil, Desktop: Left & Normal */}
         <p className="text-[10px] text-gray-400 font-medium italic text-center sm:text-left leading-relaxed max-w-md w-full sm:w-auto">
-          <span className="text-[#B5302D] font-bold">*</span> Data permanen
-          setelah disimpan.
+          <span className="text-[#B5302D] font-bold">*</span> Jika Terkunci Maka Data Permanen Telah Disimpan.
           <br className="hidden sm:block" />
           Kendala? Hubungi:{" "}
           <span className="text-gray-600 underline">

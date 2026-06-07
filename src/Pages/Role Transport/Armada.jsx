@@ -556,9 +556,11 @@ export default function Armada() {
 const SectionCard = ({ title, children }) => (
   <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
-    <h3 className="text-base sm:text-lg font-bold text-[#B5302D] flex items-center gap-2">
+    
+    <h3 className="text-base sm:text-lg font-bold text-[#B5302D] flex items-center gap-2 w-full mb-6">
       {title}
     </h3>
+    
     {children}
   </div>
 );

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getRoleRedirectPath } from "../utils/roleRedirect";
-import { API_ENDPOINTS, ROLES, NOTIF_MESSAGES } from "../config/constants";
+import { API_ENDPOINTS } from "../config/constants";
 import { jwtDecode } from "jwt-decode";
 import { showToast } from "../utils/notif";
 
@@ -17,14 +17,12 @@ export default function Masuk() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    // GANTI: Gunakan showToast.error bukan setErrorMessage
     if (!email || !password) {
       showToast.error("Email dan kata sandi wajib diisi!");
       return;
     }
 
     setLoading(true);
-    // GANTI: Munculkan loading toast di tengah layar
     const loadingId = showToast.loading("Sedang memverifikasi akun Anda...");
 
     try {
