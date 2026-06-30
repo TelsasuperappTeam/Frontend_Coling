@@ -89,7 +89,7 @@ export const menuConfig = {
       icon: Truck,
     },
     {
-      label: "Riwayat Transaksi",
+      label: "Transaksi Penjualan TBS",
       path: "/kebun/riwayattransaksi",
       activeCheck: "/kebun/riwayattransaksi",
       icon: History,

@@ -18,6 +18,7 @@ import {
   Hash,
   X,
   Loader2,
+  CheckSquare,
 } from "lucide-react";
 
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants";
@@ -256,7 +257,7 @@ const Riwayatpenjualan = () => {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#B5302D] leading-tight">
-              Riwayat Penjualan TBS Anda
+              Transaksi Penjualan TBS Anda
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
               Pantau armada logistik, pendapatan, dan proses bagi hasil ke
@@ -328,8 +329,8 @@ const Riwayatpenjualan = () => {
           }`}
           title="Selesai"
         >
-          <History className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-          <span className="hidden sm:block">Selesai</span>
+          <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          <span className="hidden sm:block">Transaksi Selesai</span>
         </button>
       </div>
 

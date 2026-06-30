@@ -83,14 +83,14 @@ export default function NavbarRole({ role }) {
                   }`}
                 >
                   <LayoutGrid
-                    className={`w-4 h-4 sm:w-5 sm:h-5 ${openDropdown ? "text-[#B5302D]" : "text-gray-500"}`}
+                    className={`w-4 h-4 sm:w-5 sm:h-5 ${openDropdown ? "text-[#B5302D]" : "text-black"}`}
                   />
                   <span className="text-[11px] sm:text-sm">Fitur Utama</span>
                 </button>
 
                 {openDropdown && (
                   <div className="absolute right-0 top-full mt-2 sm:mt-3 w-[280px] sm:w-[400px] md:w-[450px] bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-5 animate-slideDown z-50">
-                    <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 sm:mb-4 border-b border-gray-100 pb-1.5 sm:pb-2">
+                    <p className="text-[9px] sm:text-[10px] font-black text-[#B5302D] uppercase tracking-[0.2em] mb-2 sm:mb-4 border-b border-gray-100 pb-1.5 sm:pb-2">
                       Menu Operasional
                     </p>
 
@@ -117,7 +117,7 @@ export default function NavbarRole({ role }) {
                             }`}
                           >
                             <div
-                              className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${isActive ? "bg-[#B5302D] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-red-50 group-hover:text-[#B5302D]"}`}
+                              className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${isActive ? "bg-[#B5302D] text-white" : "bg-gray-100 text-black group-hover:bg-red-50 group-hover:text-[#B5302D]"}`}
                             >
                               {Icon && (
                                 <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -140,10 +140,10 @@ export default function NavbarRole({ role }) {
 
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2.5 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg sm:rounded-xl transition-colors duration-300 font-bold"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2.5 text-red-600 hover:bg-red-50 hover:text-red-600 rounded-lg sm:rounded-xl transition-colors duration-300 font-bold"
                 title="Keluar"
               >
-                <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 sm:text-gray-500" />
+                <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 <span className="hidden sm:block text-sm">Keluar</span>
               </button>
             </div>

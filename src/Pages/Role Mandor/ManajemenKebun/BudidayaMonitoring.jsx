@@ -8,6 +8,9 @@ import {
   Grid2X2,
   Sprout,
   Map,
+  RefreshCw,
+  History,
+  X,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DetailRencanaTanam from "./DetailRencanaTanam";
@@ -60,6 +63,41 @@ export default function BudidayaMonitoring() {
   // (BE MAHARANI) State List Lahan Gambut (Data Dinamis User)
   const [listLahanGambut, setListLahanGambut] = useState([]);
   const [listLahanMineral, setListLahanMineral] = useState([]);
+
+  // === STATE POPUP ARSIP SIKLUS ===
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyList, setHistoryList] = useState([]);
+  const [selectedBlokIdHistory, setSelectedBlokIdHistory] = useState(null);
+
+  // --- FETCH LIST ARSIP SIKLUS UNTUK POPUP ---
+  const fetchListArsipSiklus = async (blokId) => {
+    setSelectedBlokIdHistory(blokId);
+    setShowHistoryModal(true); // Buka popup langsung
+    setLoadingHistory(true);
+    setHistoryList([]); // Kosongkan data lama
+
+    try {
+      const token = localStorage.getItem("token");
+      const url =
+        API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_LIST_ARSIP_SIKLUS(blokId);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHistoryList(data);
+      }
+    } catch (error) {
+      console.error("Gagal mengambil list arsip:", error);
+      showToast.error("Gagal memuat daftar riwayat siklus.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // === STATE FORM ===
   const [formData, setFormData] = useState({
@@ -1351,9 +1389,7 @@ export default function BudidayaMonitoring() {
               </button>
             </div>
 
-            {/* ========================================================================= */}
-            {/* REVISI RIWAYAT RENCANA TANAM (DIBUAT GRID 2 KOLOM AGAR TIDAK PANJANG) */}
-            {/* ========================================================================= */}
+
             <div className="border-t-2 border-dashed border-gray-200 pt-8 mt-8">
               <h3 className="font-black mb-6 text-[#B5302D] text-lg flex items-center gap-2">
                 Riwayat Rencana Tanam
@@ -1486,7 +1522,8 @@ export default function BudidayaMonitoring() {
                   </div>
 
                   {/* --- BAGIAN KANAN: Tombol Aksi --- */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex lg:flex-row items-center gap-2.5 shrink-0">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-row items-center gap-2 sm:gap-2.5 shrink-0 w-full lg:w-auto mt-3 lg:mt-0">
+                    
                     {/* 1. Tombol Realisasi Tanam */}
                     <button
                       onClick={() =>
@@ -1494,10 +1531,10 @@ export default function BudidayaMonitoring() {
                           `/petani/manajemenkebun/budidayamonitoring/realisasitanam/${blok.id}`,
                         )
                       }
-                      className="w-full lg:w-auto flex items-center justify-center gap-2 text-blue-700 border border-blue-200 bg-blue-50 rounded-lg py-2 px-3 sm:px-4 font-bold text-[11px] sm:text-xs hover:bg-blue-100 transition whitespace-nowrap shadow-sm"
+                      className="w-full lg:w-auto flex items-center justify-center gap-1.5 sm:gap-2 text-blue-700 border border-blue-200 bg-blue-50 rounded-lg py-1.5 px-2 sm:py-2 sm:px-4 font-bold text-[10px] sm:text-[11px] lg:text-xs hover:bg-blue-100 transition whitespace-nowrap shadow-sm"
                       title="Realisasi Tanam"
                     >
-                      <ClipboardCheck className="w-4 h-4 shrink-0" />
+                      <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                       <span>Realisasi Tanam</span>
                     </button>
 
@@ -1508,10 +1545,10 @@ export default function BudidayaMonitoring() {
                           `/petani/manajemenkebun/budidayamonitoring/monitoring/${blok.id}`,
                         )
                       }
-                      className="w-full lg:w-auto flex items-center justify-center gap-2 text-green-700 border border-green-200 bg-green-50 rounded-lg py-2 px-3 sm:px-4 font-bold text-[11px] sm:text-xs hover:bg-green-100 transition whitespace-nowrap shadow-sm"
+                      className="w-full lg:w-auto flex items-center justify-center gap-1.5 sm:gap-2 text-green-700 border border-green-200 bg-green-50 rounded-lg py-1.5 px-2 sm:py-2 sm:px-4 font-bold text-[10px] sm:text-[11px] lg:text-xs hover:bg-green-100 transition whitespace-nowrap shadow-sm"
                       title="Catat Monitoring Harian"
                     >
-                      <Sprout className="w-4 h-4 shrink-0" />
+                      <Sprout className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                       <span>Monitoring</span>
                     </button>
 
@@ -1522,15 +1559,107 @@ export default function BudidayaMonitoring() {
                           `/petani/manajemenkebun/budidayamonitoring/panen/${blok.id}`,
                         )
                       }
-                      className="w-full lg:w-auto flex items-center justify-center gap-2 text-[#EF8523] border border-orange-200 bg-orange-50 rounded-lg py-2 px-3 sm:px-4 font-bold text-[11px] sm:text-xs hover:bg-orange-100 transition whitespace-nowrap shadow-sm"
+                      className="w-full lg:w-auto flex items-center justify-center gap-1.5 sm:gap-2 text-[#EF8523] border border-orange-200 bg-orange-50 rounded-lg py-1.5 px-2 sm:py-2 sm:px-4 font-bold text-[10px] sm:text-[11px] lg:text-xs hover:bg-orange-100 transition whitespace-nowrap shadow-sm"
                       title="Jadwal & Realisasi Panen"
                     >
-                      <Leaf className="w-4 h-4 shrink-0" />
+                      <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                       <span>Panen</span>
                     </button>
+
+                    {/* 4. Tombol Arsip Siklus */}
+                    <button
+                      onClick={() => fetchListArsipSiklus(blok.id)}
+                      className="w-full lg:w-auto flex items-center justify-center gap-1.5 sm:gap-2 text-purple-700 border border-purple-200 bg-purple-50 rounded-lg py-1.5 px-2 sm:py-2 sm:px-4 font-bold text-[10px] sm:text-[11px] lg:text-xs hover:bg-purple-100 transition whitespace-nowrap shadow-sm"
+                      title="Lihat Arsip Siklus"
+                    >
+                      <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                      <span>Arsip Siklus</span>
+                    </button>
+
                   </div>
                 </div>
               ))
+            )}
+
+            {/* ================= MODAL RIWAYAT SIKLUS ================= */}
+            {showHistoryModal && (
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 animate-fadeIn">
+                <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-lg flex flex-col max-h-[85vh]">
+                  <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                    <div>
+                      <h3 className="text-sm sm:text-lg font-bold text-[#B5302D]">
+                        Daftar Riwayat Siklus
+                      </h3>
+                      <p className="text-[10px] sm:text-xs text-gray-500">
+                        Pilih siklus untuk melihat detail rekam jejak
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowHistoryModal(false)}
+                      className="p-1.5 hover:bg-red-100 hover:text-red-600 rounded-full transition"
+                    >
+                      <X className="w-5 h-5 text-gray-500 hover:text-red-600" />
+                    </button>
+                  </div>
+
+                  <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
+                    {loadingHistory ? (
+                      <div className="text-center py-10">
+                        <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#EF8523]" />
+                        <p className="text-xs text-gray-500 mt-2 font-medium">
+                          Memuat daftar siklus...
+                        </p>
+                      </div>
+                    ) : historyList.length === 0 ? (
+                      <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <History className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+                        <p className="text-gray-400 font-medium text-xs sm:text-sm">
+                          Belum ada riwayat siklus yang diarsipkan untuk blok
+                          ini.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {historyList.map((item) => (
+                          <div
+                            key={item.nomor_siklus}
+                            // --- NAVIGATE SAAT DIPILIH ---
+                            onClick={() =>
+                              navigate(
+                                `/petani/manajemenkebun/budidayamonitoring/panen/${selectedBlokIdHistory}/arsip/${item.nomor_siklus}`,
+                              )
+                            }
+                            className={`border rounded-xl p-4 flex justify-between items-center transition cursor-pointer shadow-sm hover:shadow-md ${
+                              item.status === "AKTIF"
+                                ? "bg-green-50 border-green-200 hover:bg-green-100"
+                                : "bg-white border-gray-200 hover:border-[#EF8523]"
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-extrabold text-black text-sm sm:text-base">
+                                  Siklus Ke-{item.nomor_siklus}
+                                </p>
+                                {item.status === "AKTIF" && (
+                                  <span className="text-[9px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">
+                                    Berjalan
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] sm:text-xs text-gray-500 font-medium">
+                                Mulai: {item.tanggal_mulai} • Produksi:{" "}
+                                <span className="font-bold text-black">
+                                  {item.total_produksi} Kg
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}

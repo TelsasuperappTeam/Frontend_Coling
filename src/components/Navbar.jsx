@@ -29,11 +29,17 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // efek ini buat deteksi kalau pengguna lagi di halaman "/faq"
-  // jadi bagian FAQ akan otomatis dianggap aktif
+  // efek ini mendeteksi perubahan rute (path) halaman saat ini
   useEffect(() => {
-    if (location.pathname === "/faq") setActiveSection("faq");
-  }, [location]);
+    if (location.pathname === "/faq") {
+      setActiveSection("faq");
+    } else if (location.pathname === "/masuk") {
+      setActiveSection(""); // Kosongkan menu yang aktif saat di halaman login
+    } else if (location.pathname === "/") {
+      // (Opsional) Jika user menekan tombol back/kembali ke root tanpa hash
+      if (!location.hash) setActiveSection("beranda");
+    }
+  }, [location.pathname, location.hash]);
 
   // kalau navbar discroll, tambahkan efek shadow
   const scrollActive = scrolled

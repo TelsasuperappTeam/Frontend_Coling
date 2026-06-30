@@ -21,15 +21,18 @@ import {
   Users,
   NotebookPen,
   Sprout,
-  ScanEye,
-  Truck,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   X,
   User,
   MapPin,
   Calendar,
+  Info,
+  Star,
+  Search,
+  HelpCircle,
+  ScanEye,
+  Truck,
 } from "lucide-react";
 
 import { showToast } from "../utils/notif";
@@ -59,15 +62,40 @@ const SectionTitle = ({ children }) => (
   </h2>
 );
 
+// =========================== EYEBROW / LABEL KECIL BERTEMA SAWIT ===========================
+const SectionEyebrow = ({ children }) => (
+  <div className="flex items-center justify-center gap-2 mb-3 md:mb-4">
+    <span className="h-px w-6 md:w-8 bg-gradient-to-r from-transparent to-orange-400" />
+    <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-bold uppercase tracking-[0.18em] text-orange-600">
+      {children}
+    </span>
+    <span className="h-px w-6 md:w-8 bg-gradient-to-l from-transparent to-orange-400" />
+  </div>
+);
+
 // =========================== IKON PANAH UNTUK FAQ ===========================
 const ChevronIcon = ({ isOpen }) => (
   <motion.div
     animate={{ rotate: isOpen ? 180 : 0 }}
     transition={{ duration: 0.3 }}
-    className="flex items-center justify-center"
+    className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 transition-colors duration-300 ${
+      isOpen ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"
+    }`}
   >
-    <ChevronDown className="w-6 h-6 text-gray-700" />
+    <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
   </motion.div>
+);
+
+// =========================== LABEL KATEGORI BERNOMOR (MODAL TRACEABILITY) ===========================
+const CategoryLabel = ({ number, children }) => (
+  <div className="flex items-center gap-2 sm:gap-2.5 border-b border-gray-200 pb-2 mb-3 sm:mb-4">
+    <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-orange-100 text-orange-700 text-[9px] sm:text-[10px] font-black shrink-0">
+      {number}
+    </span>
+    <h5 className="text-[9px] sm:text-xs font-black text-gray-400 uppercase tracking-widest">
+      {children}
+    </h5>
+  </div>
 );
 
 // =========================== KOMPONEN UTAMA ===========================
@@ -121,32 +149,54 @@ const HomePages = () => {
       {/* ================= HERO SECTION ================= */}
       <section
         id="beranda"
-        className="bg-linear-to-br from-[#EF8523] to-[#B5302D] text-white"
+        className="relative overflow-hidden bg-linear-to-br from-[#EF8523] to-[#B5302D] text-white"
       >
-        <div className="container mx-auto px-6 md:px-25 pt-20 pb-8 md:pt-28 md:pb-20 flex flex-col md:grid md:grid-cols-2 items-center gap-6 md:gap-10">
+        {/* Dekorasi latar bertema sawit (blob + pola titik) — murni visual, tidak menutupi konten */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-72 h-72 md:w-[420px] md:h-[420px] bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-16 w-64 h-64 md:w-96 md:h-96 bg-yellow-300/10 rounded-full blur-3xl" />
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, white 1px, transparent 1px)",
+              backgroundSize: "26px 26px",
+            }}
+          />
+        </div>
+
+        <div className="relative container mx-auto px-6 md:px-25 pt-20 pb-8 md:pt-28 md:pb-24 flex flex-col md:grid md:grid-cols-2 items-center gap-6 md:gap-10">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.2 }}
             className="order-1 md:order-2 flex justify-center md:justify-end md:pl-10 lg:pl-16"
           >
-            <img
-              src={HomeImage}
-              alt="Tampilan Aplikasi PalmaOne-08"
-              fetchPriority="high"
-              width="500"
-              height="500"
-              className="rounded-xl shadow-xl w-80 max-w-[180px] sm:max-w-[220px] md:max-w-md lg:max-w-lg object-contain"
-            />
+            <div className="relative">
+              <div className="absolute inset-0 scale-90 bg-white/15 rounded-3xl blur-2xl" />
+              <img
+                src={HomeImage}
+                alt="Tampilan Aplikasi PalmaOne-08"
+                fetchPriority="high"
+                width="500"
+                height="500"
+                className="relative rounded-2xl shadow-2xl ring-1 ring-white/20 w-80 max-w-[180px] sm:max-w-[220px] md:max-w-md lg:max-w-lg object-contain"
+              />
+            </div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
-            className="order-2 md:order-1 text-center md:text-left space-y-3"
+            className="order-2 md:order-1 text-center md:text-left space-y-4"
           >
-            <h1 className="text-xl sm:text-3xl md:text-5xl lg:text-4xl font-extrabold leading-snug drop-shadow-lg mb-3">
+            <span className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 text-white/95 text-[11px] md:text-xs font-semibold uppercase tracking-wider px-3.5 py-1.5 rounded-full">
+              <Sprout className="w-3.5 h-3.5" />
+              Platform Digital Perkebunan Sawit
+            </span>
+
+            <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-4xl font-extrabold leading-[1.15] tracking-tight drop-shadow-lg">
               Selamat Datang di Platform ISPO PalmaOne-08
             </h1>
 
@@ -154,85 +204,84 @@ const HomePages = () => {
               Platform ERP Untuk Pemenuhan Sertifikasi ISPO untuk Perusahaan
             </p>
 
-            <div className="flex justify-center md:justify-start">
+            <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1">
               <Link
                 to="/daftar"
-                className="bg-white text-[#B5302D] font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1"
+                className="bg-white text-[#B5302D] font-semibold px-6 py-3 rounded-full hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
                 Daftar Sekarang
               </Link>
+              <a
+                href="#tentang-kami"
+                className="border border-white/40 text-white font-semibold px-6 py-3 rounded-full hover:bg-white/10 transition-all duration-300"
+              >
+                Pelajari Lebih Lanjut
+              </a>
             </div>
           </motion.div>
         </div>
+
+        {/* Garis pemisah halus ke section berikutnya */}
+        <div className="relative h-6 md:h-10 bg-gradient-to-b from-transparent to-white/0" />
       </section>
 
       {/* ================= TENTANG KAMI ================= */}
-      <AnimatedSection id="tentang-kami" className="py-14 md:py-28 bg-white">
-        <div className="container mx-auto px-4 md:px-28">
-          <h2 className="text-xl md:text-3xl font-extrabold text-center text-gray-900 mb-5 md:mb-15">
-            Manajemen dan Dokumentasi Perkebunan Sawit Digital
-          </h2>
+      <AnimatedSection
+        id="tentang-kami"
+        className="py-16 md:py-24 bg-slate-50/50 scroll-mt-24"
+      >
+        <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-28">
+          <div className="max-w-4xl mx-auto text-center mb-10 md:mb-16">
+            <SectionEyebrow>Tentang Platform</SectionEyebrow>
 
-          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-            <div className="flex flex-col justify-center text-left">
-              <div className="md:hidden flex items-center justify-center relative my-4">
-                <img
-                  src={FiturImage}
-                  alt="Fitur Unggulan PalmaOne-08"
-                  loading="lazy"
-                  className="relative w-full max-w-[260px] sm:max-w-sm rounded-2xl shadow-2xl object-cover"
-                />
-              </div>
+            <h2 className="text-xl md:text-3xl font-extrabold text-gray-900 mt-4 mb-5 md:mb-8 leading-tight">
+              Manajemen dan Dokumentasi Perkebunan Sawit Digital
+            </h2>
 
-              <p className="text-gray-600 mb-5 md:mb-8 text-sm md:text-lg leading-relaxed pl-3 md:pl-0">
-                <strong>Platform ISPO PalmaOne-08</strong> adalah sistem ERP
-                untuk mengelola pencatatan perkebunan, transability sawit,
-                koordinasi antar pelaku sawit, dan pemenuhan sertifikasi ISPO
-                dengan lebih mudah, cepat, dan efisien.
-              </p>
+            <p className="text-gray-600 text-sm md:text-lg leading-relaxed px-2 md:px-0 max-w-3xl mx-auto">
+              <strong>Platform ISPO PalmOne-08</strong> adalah sistem ERP
+              untuk mengelola pencatatan perkebunan, transability sawit,
+              koordinasi antar pelaku sawit, dan pemenuhan sertifikasi ISPO
+              dengan lebih mudah, cepat, dan efisien.
+            </p>
+          </div>
 
-              <ul className="space-y-3 md:space-y-4 pl-4 md:pl-0">
-                {[
-                  "<strong>Membantu dalam pemenuhan persyaratan ISPO</strong> dalam sistem PalmaOne-08.",
-                  "<strong>Otomatisasi dokumen</strong> berdasarkan aktivitas perkebunan.",
-                  "Didesain khusus untuk <strong>perusahaan</strong> dan pendamping stakeholder lainnya.",
-                ].map((text, i) => {
-                  // Mapping Icon Lucide sesuai konteks
-                  const IconComponent = [
-                    ClipboardCheck, // Untuk indikator/checklist
-                    Clock, // Untuk waktu/kecepatan
-                    Users, // Untuk petani/orang
-                  ][i];
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 max-w-6xl mx-auto">
+            {[
+              "<strong>Membantu pemenuhan persyaratan ISPO</strong> sesuai dengan Permentan No. 33 Tahun 2025.",
+              "<strong>Otomatisasi dokumen</strong> berdasarkan aktivitas perkebunan harian Anda.",
+              "Didesain khusus untuk <strong>Perusahaan</strong> dan pendamping stakeholder.",
+            ].map((text, i) => {
+              const IconComponent = [ClipboardCheck, Clock, Users][i];
 
-                  return (
-                    <li key={i} className="flex items-start justify-start">
-                      <div className="shrink-0 w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full mt-1">
-                        <IconComponent className="w-4 h-4 md:w-5 md:h-5" />
-                      </div>
-                      <p
-                        className="ml-3 md:ml-4 text-gray-700 text-sm md:text-lg leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: text }}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+              return (
+                <div
+                  key={i}
+                  className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-sm hover:shadow-xl hover:-translate-y-2 hover:border-orange-200 transition-all duration-300 flex flex-row md:flex-col items-center text-left md:text-center group"
+                >
+                  <div className="shrink-0 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600 rounded-xl md:rounded-2xl mr-4 md:mr-0 md:mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <IconComponent className="w-6 h-6 md:w-8 md:h-8" />
+                  </div>
 
-            <div className="hidden md:flex justify-center md:justify-end">
-              <img
-                src={FiturImage}
-                alt="Fitur Unggulan Platform ISPO PalmaOne-08"
-                className="w-full max-w-md rounded-2xl shadow-2xl object-cover"
-              />
-            </div>
+                  <p
+                    className="text-gray-700 text-sm md:text-base leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: text }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </AnimatedSection>
 
-      {/* ================= FITUR (REVISED) ================= */}
-      <AnimatedSection id="fitur-kami" className="py-14 md:py-20 bg-white">
+      
+      {/* ================= FITUR ================= */}
+      <AnimatedSection
+        id="fitur-kami"
+        className="py-14 md:py-20 bg-gradient-to-b from-white via-orange-50/30 to-white scroll-mt-24"
+      >
         <div className="container mx-auto px-4 md:px-6">
+          <SectionEyebrow>Apa yang Kami Tawarkan</SectionEyebrow>
           <h2 className="text-xl md:text-3xl font-extrabold text-center mb-10 text-gray-900">
             Fitur Utama Platform Kami
           </h2>
@@ -267,7 +316,7 @@ const HomePages = () => {
                 key={i}
                 whileHover={{ y: -8 }}
                 transition={{ duration: 0.3 }}
-                className="rounded-2xl shadow-md hover:shadow-xl border border-gray-100 bg-white overflow-hidden flex flex-col h-full"
+                className="group rounded-2xl md:rounded-3xl shadow-sm hover:shadow-2xl border border-gray-100 hover:border-orange-200 bg-white overflow-hidden flex flex-col h-full transition-all duration-300"
               >
                 <div className="h-32 md:h-48 w-full relative overflow-hidden">
                   <img
@@ -276,24 +325,21 @@ const HomePages = () => {
                     loading="lazy"
                     width="300"
                     height="200"
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                </div>
-
-                <div className="p-3 md:p-5 flex flex-col grow text-left">
-                  {/* Badge Ikon */}
-                  <div className="mb-2 md:mb-3 inline-block">
-                    <span className="bg-orange-100 text-orange-600 text-[10px] md:text-xs font-semibold px-2 py-0.5 rounded flex items-center w-fit gap-1">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-transparent" />
+                  <div className="absolute bottom-2 left-2 md:bottom-3 md:left-3">
+                    <span className="bg-white/95 backdrop-blur-sm text-orange-600 text-[10px] md:text-xs font-bold px-2 py-1 rounded-lg flex items-center w-fit gap-1 shadow-sm">
                       <f.icon className="w-3 h-3 md:w-4 md:h-4" /> Fitur
                     </span>
                   </div>
+                </div>
 
-                  {/* Ukuran font judul disesuaikan untuk mobile */}
+                <div className="p-3 md:p-5 flex flex-col grow text-left">
                   <h3 className="text-sm md:text-lg font-bold mb-1 md:mb-2 text-gray-900 leading-tight">
                     {f.title}
                   </h3>
 
-                  {/* Ukuran font deskripsi disesuaikan untuk mobile */}
                   <p className="text-gray-600 text-xs md:text-sm leading-relaxed mb-2 md:mb-6 grow">
                     {f.desc}
                   </p>
@@ -307,9 +353,20 @@ const HomePages = () => {
       {/* ================= CEK KODE PRODUKSI ================= */}
       <AnimatedSection
         id="cek-produksi"
-        className="scroll-mt-24 md:scroll-mt-28 py-14 md:py-20 bg-gray-50 flex justify-center"
+        className="relative scroll-mt-24 md:scroll-mt-28 py-14 md:py-20 bg-gray-50 flex justify-center overflow-hidden"
       >
-        <div className="w-full max-w-4xl mx-auto px-4 md:px-6 text-center flex flex-col items-center">
+        {/* Dekorasi titik bertema rantai pasok */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.4]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, #e5e7eb 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+
+        <div className="relative w-full max-w-4xl mx-auto px-4 md:px-6 text-center flex flex-col items-center">
+          <SectionEyebrow>Traceability Sawit</SectionEyebrow>
           <h2 className="text-xl md:text-4xl font-bold text-gray-900 mb-3 md:mb-6">
             Lacak & Verifikasi Kode Produksi
           </h2>
@@ -321,17 +378,19 @@ const HomePages = () => {
 
           {/* FORM INPUT DINAMIS */}
           <form
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 w-full max-w-2xl mx-auto"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 w-full max-w-2xl mx-auto bg-white p-2.5 md:p-3 rounded-[28px] shadow-lg border border-gray-100"
             onSubmit={handleCheckCodeSubmit}
           >
-            <input
-              type="text"
-              value={productionCode}
-              onChange={(e) => setProductionCode(e.target.value)}
-              placeholder="Masukkan Kode Produksi CPO..."
-              className="w-full sm:flex-1 px-5 py-3 md:px-6 md:py-4 rounded-full border border-gray-300 focus:ring-2 focus:ring-orange-500 shadow-sm text-sm md:text-lg outline-none"
-              required
-            />
+            <div className="relative w-full sm:flex-1">
+              <input
+                type="text"
+                value={productionCode}
+                onChange={(e) => setProductionCode(e.target.value)}
+                placeholder="Masukkan Kode Produksi CPO..."
+                className="w-full sm:pl-11 px-5 py-3 md:px-6 md:py-4 rounded-full border border-gray-200 sm:border-transparent focus:border-transparent focus:ring-2 focus:ring-orange-500 text-sm md:text-lg outline-none transition-shadow"
+                required
+              />
+            </div>
             <button
               type="submit"
               disabled={isLoadingTrack || !productionCode.trim()}
@@ -350,20 +409,21 @@ const HomePages = () => {
           {/* --- MODAL POP-UP HASIL PELACAKAN (VERSI MOBILE FRIENDLY & RATA KIRI) --- */}
           {/* ================================================================= */}
           {traceResult && (
-            <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
+            <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
               {/* CONTAINER UTAMA MODAL (Tinggi di-set max 75vh di mobile agar tidak penuhi layar) */}
-              <div className="relative w-full max-w-3xl bg-white shadow-2xl rounded-[20px] sm:rounded-[30px] flex flex-col max-h-[75vh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 text-left">
+              <div className="relative w-full max-w-3xl bg-white shadow-2xl ring-1 ring-black/5 rounded-[22px] sm:rounded-[32px] flex flex-col max-h-[75vh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 text-left">
                 {/* 1. STICKY HEADER */}
-                <div className="sticky top-0 z-[70] bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 py-3.5 sm:px-8 sm:py-5 flex justify-between items-center shrink-0 shadow-sm text-left">
+                <div className="sticky top-0 z-[70] bg-gradient-to-r from-white via-green-50/40 to-white backdrop-blur-md border-b border-gray-100 px-4 py-3.5 sm:px-8 sm:py-5 flex justify-between items-center shrink-0 shadow-sm text-left">
                   <div className="flex items-center gap-2.5 sm:gap-4">
-                    <div className="p-1.5 sm:p-3 bg-green-50 rounded-full border border-green-100 shrink-0">
+                    <div className="p-1.5 sm:p-3 bg-green-100 rounded-full border border-green-200 shrink-0">
                       <CheckCircle2 className="w-5 h-5 sm:w-7 sm:h-7 text-green-600" />
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-xl font-bold text-gray-900 tracking-tight leading-none">
                         Produk Terverifikasi Valid
                       </h4>
-                      <p className="text-[9px] sm:text-xs text-green-700 font-medium mt-1">
+                      <p className="text-[9px] sm:text-xs text-green-700 font-semibold mt-1 flex items-center gap-1">
+                        <Sprout className="w-3 h-3" />
                         Traceability Blockchain • ISPO PalmaOne-08
                       </p>
                     </div>
@@ -384,9 +444,9 @@ const HomePages = () => {
                   <div className="space-y-6 sm:space-y-10">
                     {/* KATEGORI 1: INFORMASI PRODUKSI */}
                     <section>
-                      <h5 className="text-[9px] sm:text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3 sm:mb-4">
-                        01. Ringkasan Produksi Pabrik
-                      </h5>
+                      <CategoryLabel number="01">
+                        Ringkasan Produksi Pabrik
+                      </CategoryLabel>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
                         <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm col-span-2 sm:col-span-1">
                           <p className="text-gray-400 text-[8px] sm:text-[10px] uppercase font-bold mb-1.5 sm:mb-2 tracking-wider">
@@ -431,9 +491,9 @@ const HomePages = () => {
 
                     {/* KATEGORI 2: HASIL OLAHAN PRODUKSI */}
                     <section>
-                      <h5 className="text-[9px] sm:text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3 sm:mb-4">
-                        02. Komposisi Hasil Olahan (Output)
-                      </h5>
+                      <CategoryLabel number="02">
+                        Komposisi Hasil Olahan (Output)
+                      </CategoryLabel>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                         {[
                           {
@@ -479,9 +539,9 @@ const HomePages = () => {
 
                     {/* KATEGORI 3: ASAL USUL RANTAI PASOK (HULU) */}
                     <section>
-                      <h5 className="text-[9px] sm:text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3 sm:mb-4">
-                        03. Asal Usul Rantai Pasok (Hulu)
-                      </h5>
+                      <CategoryLabel number="03">
+                        Asal Usul Rantai Pasok (Hulu)
+                      </CategoryLabel>
 
                       <div className="space-y-4 sm:space-y-5">
                         {traceResult.rantai_pasok_hulu &&
@@ -529,7 +589,6 @@ const HomePages = () => {
 
                                 {/* Detail Lokasi & Varietas */}
                                 <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg sm:rounded-xl border border-gray-100 shadow-sm text-left">
-                                  
                                   {/* Item 1: Lokasi */}
                                   <div>
                                     <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">
@@ -539,7 +598,7 @@ const HomePages = () => {
                                       {meta.alamat_pickup_teks || "-"}
                                     </p>
                                   </div>
-                                  
+
                                   {/* Item 2: Varietas */}
                                   <div>
                                     <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">
@@ -549,7 +608,7 @@ const HomePages = () => {
                                       {meta.jenis_varietas_gabungan || "-"}
                                     </p>
                                   </div>
-                                  
+
                                   {/* Item 3: Usia Pohon */}
                                   <div>
                                     <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">
@@ -559,7 +618,6 @@ const HomePages = () => {
                                       {meta.usia_pohon_range || "-"}
                                     </p>
                                   </div>
-                                  
                                 </div>
 
                                 {/* Daftar Petani */}
@@ -616,9 +674,10 @@ const HomePages = () => {
                                                     <Sprout className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600 shrink-0" />{" "}
                                                     {petani.jenis_sawit || "-"}{" "}
                                                     /{" "}
-                                                    {petani.nama_varietas || "-"}
+                                                    {petani.nama_varietas ||
+                                                      "-"}
                                                   </span>
-                                                  
+
                                                   {/* Badge Usia (Bawah) */}
                                                   <span className="bg-green-50 text-green-700 text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md font-medium border border-green-100 flex items-center gap-1 w-max">
                                                     <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />{" "}
@@ -684,11 +743,14 @@ const HomePages = () => {
       {/* ================= FAQ ================= */}
       <AnimatedSection
         id="faq"
-        className="scroll-mt-24 md:scroll-mt-28 py-14 md:py-20 bg-white"
+        className="scroll-mt-24 md:scroll-mt-28 py-14 md:py-20 bg-gradient-to-b from-white to-orange-50/40"
       >
         <div className="container mx-auto px-4 md:px-28 grid md:grid-cols-2 gap-10 md:gap-12 items-start">
           {/* Kolom kiri */}
           <div className="md:sticky md:top-28 text-center md:text-left">
+            <div className="md:flex md:justify-start flex justify-center">
+              <SectionEyebrow>Bantuan</SectionEyebrow>
+            </div>
             <h2 className="text-xl md:text-4xl font-bold text-gray-900 mb-3 md:mb-4">
               Punya Pertanyaan?
             </h2>
@@ -737,14 +799,18 @@ const HomePages = () => {
               return (
                 <div
                   key={i}
-                  className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm"
+                  className={`border rounded-2xl overflow-hidden bg-white transition-all duration-300 ${
+                    isOpen
+                      ? "border-orange-200 shadow-md"
+                      : "border-gray-200 shadow-sm hover:border-orange-100 hover:shadow-md"
+                  }`}
                 >
                   <button
                     onClick={() => setOpenFaqIndex(isOpen ? null : i)}
-                    className="w-full text-left px-4 md:px-5 py-3 md:py-4 flex justify-between items-center gap-3 md:gap-4"
+                    className="w-full text-left px-4 md:px-5 py-3.5 md:py-4 flex justify-between items-center gap-3 md:gap-4"
                   >
                     <span
-                      className={`flex-1 text-sm md:text-lg font-medium ${
+                      className={`flex-1 text-sm md:text-lg font-medium transition-colors ${
                         isOpen ? "text-orange-600" : "text-gray-800"
                       }`}
                     >
@@ -762,7 +828,7 @@ const HomePages = () => {
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                         className="overflow-hidden"
                       >
-                        <div className="px-4 md:px-5 pb-3 md:pb-4 pt-0 text-gray-600 text-sm md:text-base leading-relaxed">
+                        <div className="px-4 md:px-5 pb-4 md:pb-5 pt-0 text-gray-600 text-sm md:text-base leading-relaxed bg-orange-50/40 border-t border-orange-100/70">
                           {faq.a}
                         </div>
                       </motion.div>

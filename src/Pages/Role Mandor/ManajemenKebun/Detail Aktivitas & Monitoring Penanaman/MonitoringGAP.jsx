@@ -104,6 +104,7 @@ const ENUM_OPTIONS = {
 // (SESUAI BE MAHAR)
 
 const MONITORING_CONFIG = {
+  // MONITORING SANITASI / KEBERSIHAN
   sanitasi: {
     title: "Kegiatan Kebersihan & Rawat Kebun",
     columns: [
@@ -198,6 +199,8 @@ const MONITORING_CONFIG = {
       { key: "f", label: "Upload Foto", type: "file" },
     ],
   },
+
+  // MONITORING COVER CROP
   coverCrop: {
     title: "Kegiatan Tanaman Penutup Tanah (Kacangan)",
     columns: [
@@ -289,6 +292,8 @@ const MONITORING_CONFIG = {
       { key: "f", label: "Upload Foto", type: "file" },
     ],
   },
+
+  // MONITORING KONDISI PIRINGAN
   piringan_kondisi: {
     title: "Kegiatan Kondisi Pemeliharaan Piringan",
     columns: [
@@ -382,6 +387,8 @@ const MONITORING_CONFIG = {
       },
     ],
   },
+
+  // MONITORING AKTIVITAS PIRINGAN (DITAMBAHKAN SESUAI PERMINTAAN BE MAHAR)
   piringan_aktivitas: {
     title: "Catat Aktivitas Pemeliharaan Piringan",
     columns: [
@@ -441,6 +448,8 @@ const MONITORING_CONFIG = {
       { key: "f", label: "Upload Foto", type: "file" },
     ],
   },
+
+  // MONITORING PEMUPUKAN
   pupuk: {
     title: "Kegiatan Penggunaan Pupuk",
     columns: [
@@ -517,6 +526,8 @@ const MONITORING_CONFIG = {
       { key: "f", label: "Foto Bukti", type: "file" },
     ],
   },
+
+  // MOTITORING PESTISIDA / OPT (Organisme Pengganggu Tanaman)
   opt: {
     title: "Kegiatan Penggunaan Racun / Obat Hama (Pestisida)",
     columns: [
@@ -607,6 +618,52 @@ const MONITORING_CONFIG = {
       },
       { key: "jumlah_petugas", label: " Jumlah Petugas", type: "number" },
       { key: "f", label: "Foto Bukti", type: "file" },
+    ],
+  },
+
+  // Monitoring Drainase (Muka Air Tanah) - DITAMBAHKAN SESUAI PERMINTAAN BE MAHAR
+  drainase: {
+    title: "Kegiatan Pemantauan Drainase (Muka Air Tanah)",
+    columns: [
+      {
+        header: "Tanggal Pengukuran",
+        key: "tanggal_pengukuran",
+        width: "150px",
+        type: "date",
+        align: "left",
+      },
+      {
+        header: "Kedalaman Air (cm)",
+        key: "kedalaman_muka_air_cm",
+        width: "150px",
+        align: "left",
+        type: "number",
+      },
+      {
+        header: "Jumlah Petugas",
+        key: "jumlah_petugas",
+        width: "120px",
+        align: "left",
+        type: "number",
+      },
+      {
+        header: "Foto Bukti",
+        key: "foto_pengukuran_url",
+        width: "120px",
+        type: "link",
+        align: "left",
+      },
+    ],
+    fields: [
+      { key: "tanggal_pengukuran", label: "Tanggal Pengukuran", type: "date" },
+      {
+        key: "kedalaman_muka_air_cm",
+        label: "Kedalaman Muka Air (cm)",
+        type: "number",
+        placeholder: "Contoh: 45.5",
+      },
+      { key: "jumlah_petugas", label: "Jumlah Petugas", type: "number" },
+      { key: "f", label: "Foto Bukti Pengukuran", type: "file" },
     ],
   },
 };
@@ -717,7 +774,6 @@ export default function MonitoringGAP() {
   const { id: paramId } = useParams(); // Ambil ID dari URL
   const navigate = useNavigate();
 
-  // KARENA INI SEKARANG HALAMAN PENUH, KITA BUTUH STATE SENDIRI UNTUK DATA
   const [monitoringData, setMonitoringData] = useState({
     sanitasi: [],
     coverCrop: [],
@@ -725,10 +781,11 @@ export default function MonitoringGAP() {
     piringan_kondisi: [],
     pupuk: [],
     opt: [],
+    drainase: [],
   });
 
   const [openSection, setOpenSection] = useState("sanitasi");
-  const [unitData, setUnitData] = useState(null); // Menyimpan info Blok Header
+  const [unitData, setUnitData] = useState(null);
 
   const blokId = paramId;
 
@@ -825,6 +882,10 @@ export default function MonitoringGAP() {
         else if (sectionKey === "opt")
           url =
             API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_PESTISIDA(blokId);
+        else if (sectionKey === "drainase") { // <--- Tambah kurung kurawal buka
+          url =
+            API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_DRAINASE(blokId);
+        }
         else if (
           sectionKey === "piringan_kondisi" ||
           sectionKey === "piringan_aktivitas"
@@ -893,7 +954,7 @@ export default function MonitoringGAP() {
 
     if (!isSetuju) return;
 
-    setShowPopup(false); 
+    setShowPopup(false);
 
     setIsSaving(true);
     showToast.loading("Menyimpan data monitoring...");
@@ -916,6 +977,10 @@ export default function MonitoringGAP() {
       else if (popupType === "opt")
         url =
           API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_PESTISIDA(blokId);
+      else if (popupType === "drainase")
+        // <--- TAMBAHAN BARU URL
+        url =
+          API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_DRAINASE(blokId);
       else if (popupType === "piringan_kondisi")
         url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_PIRINGAN_KONDISI(blokId);
       else if (popupType === "piringan_aktivitas")
@@ -948,8 +1013,11 @@ export default function MonitoringGAP() {
 
           if (value === undefined || value === null || value === "") return;
 
+          // <--- tanggal_pengukuran dikonversi ke format T00:00:00 (datetime)
           if (
-            (key === "tanggal_pemupukan" || key === "tanggal_pemakaian") &&
+            (key === "tanggal_pemupukan" ||
+              key === "tanggal_pemakaian" ||
+              key === "tanggal_pengukuran") &&
             value
           ) {
             value = `${value}T00:00:00`;
@@ -970,6 +1038,7 @@ export default function MonitoringGAP() {
               "jumlah_total_pupuk_digunakan_kg",
               "jumlah_pohon_dipupuk",
               "jumlah_petugas",
+              "kedalaman_muka_air_cm",
             ].includes(key)
           ) {
             value = parseFloat(value);
@@ -1003,7 +1072,6 @@ export default function MonitoringGAP() {
         }
         throw new Error(errorMsg);
       }
-
 
       // BARU MUNCULKAN TOAST SUKSESNYA
       showToast.success("Data monitoring berhasil disimpan!");
@@ -1167,10 +1235,10 @@ export default function MonitoringGAP() {
           <div className="p-4 sm:p-6 overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar">
             {config.fields.map((field, idx) => {
               if (
-                field.key === "jenis_tanaman_penutup_lainnya" && 
+                field.key === "jenis_tanaman_penutup_lainnya" &&
                 formData.jenis_tanaman_penutup !== "Lainnya"
               ) {
-                return null; 
+                return null;
               }
 
               return (
@@ -1187,7 +1255,10 @@ export default function MonitoringGAP() {
                             ...formData,
                             [field.key]: e.target.value,
                             // (Opsional) Reset field lainnya jika user mengganti pilihan dari "Lainnya" ke yang lain
-                            ...(field.key === "jenis_tanaman_penutup" && e.target.value !== "Lainnya" ? { jenis_tanaman_penutup_lainnya: "" } : {})
+                            ...(field.key === "jenis_tanaman_penutup" &&
+                            e.target.value !== "Lainnya"
+                              ? { jenis_tanaman_penutup_lainnya: "" }
+                              : {}),
                           })
                         }
                         value={formData[field.key] || ""}
@@ -1242,7 +1313,10 @@ export default function MonitoringGAP() {
                       value={formData[field.key] || ""}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#EF8523] outline-none transition shadow-sm"
                       onChange={(e) =>
-                        setFormData({ ...formData, [field.key]: e.target.value })
+                        setFormData({
+                          ...formData,
+                          [field.key]: e.target.value,
+                        })
                       }
                     />
                   )}
@@ -1593,6 +1667,10 @@ export default function MonitoringGAP() {
 
           <AccordionItem id="opt" title={MONITORING_CONFIG.opt.title}>
             {renderTable("opt")}
+          </AccordionItem>
+
+          <AccordionItem id="drainase" title={MONITORING_CONFIG.drainase.title}>
+            {renderTable("drainase")}
           </AccordionItem>
 
           {renderPopup()}

@@ -17,8 +17,12 @@ import {
   ChevronUp,
   Wallet,
   Loader2,
+  Info,
+  XCircle,
 } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/constants.js";
+
+import { showToast, confirmDialog } from "../../utils/notif";
 
 const DistribusiLogistik = () => {
   const navigate = useNavigate();
@@ -36,6 +40,9 @@ const DistribusiLogistik = () => {
   // State BE tetap dipertahankan
   const [mitraLogistik, setMitraLogistik] = useState([]);
   const [isLoadingMitra, setIsLoadingMitra] = useState(false);
+
+  // --- STATE BARU UNTUK OPEN MARKET (PENAWARAN MASUK) ---
+  const [penawaranMasuk, setPenawaranMasuk] = useState([]);
 
   // --- STATE UNTUK TAB PROGRES PENGAJUAN ---
   const [progresPengiriman, setProgresPengiriman] = useState([]);
@@ -73,7 +80,7 @@ const DistribusiLogistik = () => {
       // 1. Gabungkan semua data mentah[cite: 14]
       let combinedData = [...dataAktif, ...dataHistori];
 
-      // 2. LOGIKA FILTERING BARU
+      // 2. LOGIKA FILTERING
       // - HANYA tampilkan yang pemeriksaannya kosong (belum selesai di pabrik)
       // - DAN HANYA tampilkan yang status_permintaannya BUKAN "ditolak"
       combinedData = combinedData.filter(
@@ -97,34 +104,62 @@ const DistribusiLogistik = () => {
     }
   };
 
-  // Fetch data list logistik saat komponen dimuat
-  React.useEffect(() => {
-    const fetchMitra = async () => {
-      setIsLoadingMitra(true);
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(
-          API_ENDPOINTS.TRACEABILITY.KEBUN.GET_MITRA_LOGISTIK,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+  const fetchDataPencarian = async () => {
+    setIsLoadingMitra(true);
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // 1. Ambil Mitra Logistik (Close Market) - Tetap sama
+      const resMitra = await fetch(
+        API_ENDPOINTS.TRACEABILITY.KEBUN.GET_MITRA_LOGISTIK,
+        { headers },
+      );
+      if (resMitra.ok) {
+        const dataMitra = await resMitra.json();
+
+        console.log(
+          "=== DEBUG: Respon GET Mitra Logistik (CLOSE MARKET) ===",
+          dataMitra,
         );
 
-        if (res.ok) {
-          const data = await res.json();
-          console.log("=== CEK DATA DARI BE (GET_MITRA_LOGISTIK) ===", data);
-
-          setMitraLogistik(data);
-        } else {
-          console.log("=== BE MENGEMBALIKAN ERROR STATUS ===", res.status);
-        }
-      } catch (error) {
-        console.error("Gagal fetch mitra logistik:", error);
-      } finally {
-        setIsLoadingMitra(false);
+        setMitraLogistik(dataMitra);
       }
-    };
-    fetchMitra();
+
+      // 2. AMBIL PENAWARAN (OPEN MARKET)
+      const resGrup = await fetch(
+        API_ENDPOINTS.FARM.MARKETPLACE.GET_DROPDOWN_SIAP_KIRIM,
+        { headers },
+      );
+
+      if (resGrup.ok) {
+        const daftarGrup = await resGrup.json();
+
+        // Panggil endpoint pelamar untuk SETIAP grup
+        const promises = daftarGrup.map((grup) =>
+          fetch(
+            API_ENDPOINTS.TRACEABILITY.KEBUN.GET_PELAMAR_OPEN_MARKET(grup.id),
+            { headers },
+          ).then((res) => res.json()),
+        );
+
+        const hasilPenawaran = await Promise.all(promises);
+
+        // Gabungkan semua hasil pelamar dari semua grup
+        const semuaPelamar = hasilPenawaran.flat();
+
+        console.log("=== DATA PENAWARAN OPEN MARKET ===", semuaPelamar);
+        setPenawaranMasuk(semuaPelamar);
+      }
+    } catch (error) {
+      console.error("Gagal fetch data:", error);
+    } finally {
+      setIsLoadingMitra(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchDataPencarian();
   }, []);
 
   // Memilih logistik spesifik dan lanjut ke formulir
@@ -241,95 +276,184 @@ const DistribusiLogistik = () => {
           <div className="animate-in fade-in slide-in-from-bottom-2">
             {/* TAB 1 MENCARI PENGIRIMAN */}
             {activeTab === "pencarian" && (
-              <div className="space-y-4">
-                {/* Badge Jumlah Mitra Tersedia (Teks keterangan lamanya SUDAH DIHAPUS) */}
-                <div className="flex justify-end mb-2">
-                  <span className="bg-red-100 text-[#B5302D] px-3 py-1.5 rounded-full text-[10px] font-black shadow-sm">
-                    {mitraLogistik.length} Mitra Tersedia
-                  </span>
+              <div className="space-y-8">
+                {/* --- BANNER INFORMASI --- */}
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 sm:p-5 flex gap-3 sm:gap-4 items-start shadow-sm">
+                  <div className="bg-white p-1.5 rounded-full shadow-sm shrink-0">
+                    <Info className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-blue-900 mb-1">
+                      2 Pilihan Cari Jasa Logistik
+                    </h4>
+                    <ul className="text-xs sm:text-sm text-blue-800/80 leading-relaxed list-disc pl-4 space-y-2">
+                      <li>
+                        <strong>Ajukan Langsung (Close Market):</strong> Anda
+                        memilih sendiri mitra logistik dari daftar di bawah
+                        untuk langsung mengajukan pesanan.
+                      </li>
+                      <li>
+                        <strong>Terima Tawaran Masuk (Open Market):</strong>{" "}
+                        Anda menyiarkan info panen, lalu tinggal memeriksa dan
+                        memilih penawaran harga terbaik dari berbagai logistik.
+                      </li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {isLoadingMitra ? (
-                    <div className="flex justify-center py-10">
-                      <Loader2 className="w-8 h-8 text-[#B5302D] animate-spin" />
-                    </div>
-                  ) : mitraLogistik.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
-                      Belum ada mitra logistik yang tersedia saat ini.
-                    </div>
-                  ) : (
-                    mitraLogistik.map((mitra) => (
-                      <div
-                        key={mitra.logistik_user_id}
-                        className="relative bg-white rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md hover:border-[#B5302D] transition-all p-5 overflow-hidden group flex flex-col justify-between"
-                      >
-                        <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* --- BAGIAN 1: CLOSE MARKET --- */}
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-gray-800 text-base sm:text-lg">
+                      Ajukan Langsung Penawaran (Close Market)
+                    </h3>
+                    <span className="bg-red-100 text-[#B5302D] px-3 py-1.5 rounded-full text-[10px] font-black shadow-sm">
+                      {mitraLogistik.length} Mitra Tersedia
+                    </span>
+                  </div>
 
-                        <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-bold text-gray-900 line-clamp-1">
-                              {mitra.nama_logistik}
-                            </h4>
-                            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-md font-bold shrink-0">
-                              {mitra.total_armada_ready} Armada Ready
-                            </span>
-                          </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {isLoadingMitra ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-[24px] p-8 flex flex-col items-center justify-center min-h-[200px] animate-pulse">
+                        <div className="p-3 bg-white rounded-full shadow-sm mb-3">
+                          <Loader2 className="w-6 h-6 text-[#B5302D] animate-spin" />
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Memuat Daftar Mitra Logistik...
+                        </p>
+                      </div>
+                    ) : mitraLogistik.length === 0 ? (
+                      <div className="text-center py-10 text-gray-400 text-sm font-medium bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
+                        Belum ada mitra logistik yang tersedia saat ini.
+                      </div>
+                    ) : (
+                      mitraLogistik.map((mitra) => (
+                        <div
+                          key={mitra.logistik_user_id}
+                          className="relative bg-white rounded-[24px] border border-gray-200 shadow-sm hover:shadow-md hover:border-[#B5302D] transition-all p-4 overflow-hidden group"
+                        >
+                          <div className="absolute top-0 left-0 w-1.5 h-full bg-[#B5302D] opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                          <div className="space-y-1.5 mb-4">
-                            <p className="text-[11px] text-gray-500 flex items-start gap-2">
-                              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <span className="line-clamp-2">
-                                {mitra.alamat_logistik || "-"}
-                              </span>
-                            </p>
-                            <p className="text-[11px] text-gray-500 flex items-start gap-2">
-                              <Phone className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <span>
-                                {mitra.no_hp_logistik || "Belum ada nomor HP"}
-                              </span>
-                            </p>
-                          </div>
+                          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            {/* --- BAGIAN KIRI: INFO MITRA --- */}
+                            <div className="flex items-start gap-3 w-full md:w-1/2">
+                              {/* Avatar Initial */}
+                              <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-[#B5302D] group-hover:text-white text-gray-500 flex items-center justify-center font-bold shrink-0 mt-1 transition-colors">
+                                {mitra.nama_logistik
+                                  ? mitra.nama_logistik
+                                      .substring(0, 2)
+                                      .toUpperCase()
+                                  : "LG"}
+                              </div>
 
-                          <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">
-                              Estimasi Harga & Kapasitas
-                            </p>
-                            {mitra.list_akomodasi &&
-                            mitra.list_akomodasi.length > 0 ? (
-                              mitra.list_akomodasi
-                                .slice(0, 2)
-                                .map((akomodasi, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="flex justify-between items-center text-[11px]"
-                                  >
-                                    <span className="font-medium text-gray-700">
-                                      {akomodasi.jenis_kendaraan} (
-                                      {akomodasi.kapasitas_range} Kg)
-                                    </span>
-                                    <span className="font-bold text-[#B5302D]">
-                                      {akomodasi.harga_range}
-                                    </span>
-                                  </div>
-                                ))
-                            ) : (
-                              <p className="text-[11px] text-gray-400 italic">
-                                Data harga belum diatur mitra.
-                              </p>
-                            )}
+                              <div className="space-y-1 w-full">
+                                <div className="flex items-center justify-between md:justify-start gap-2">
+                                  <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-1.5 py-0.5 rounded">
+                                    {mitra.total_armada_ready || 0} Armada Ready
+                                  </span>
+                                </div>
+
+                                <h4 className="text-sm font-bold text-gray-900 line-clamp-1">
+                                  {mitra.nama_logistik}
+                                </h4>
+
+                                <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                                  <Phone className="w-3 h-3 text-gray-400 shrink-0" />
+                                  {mitra.no_hp_logistik || "Belum ada nomor HP"}
+                                </p>
+
+                                <p className="text-[10px] text-gray-500 flex items-center gap-1.5 line-clamp-1">
+                                  <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                                  {mitra.alamat_logistik ||
+                                    "Tidak ada detail alamat"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* --- BAGIAN KANAN: ESTIMASI HARGA & TOMBOL --- */}
+                            <div className="w-full md:w-1/2 flex flex-col gap-2.5 border-t md:border-t-0 md:border-l border-gray-100 pt-3 md:pt-0 md:pl-4">
+                              {/* List Akomodasi Compact */}
+                              <div className="space-y-1.5 w-full">
+                                {mitra.list_akomodasi &&
+                                mitra.list_akomodasi.length > 0 ? (
+                                  mitra.list_akomodasi
+                                    .slice(0, 2)
+                                    .map((akomodasi, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="flex justify-between items-center bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 text-[10px]"
+                                      >
+                                        <span className="font-medium text-gray-700 flex items-center gap-1.5">
+                                          <Truck className="w-3 h-3 text-gray-400" />
+                                          <span>
+                                            {akomodasi.jenis_kendaraan}{" "}
+                                            <span className="text-gray-400 font-normal">
+                                              (Kapasitas:{" "}
+                                              {akomodasi.kapasitas_range} Kg)
+                                            </span>
+                                          </span>
+                                        </span>
+                                        <span className="font-bold text-[#B5302D]">
+                                          {akomodasi.harga_range}
+                                        </span>
+                                      </div>
+                                    ))
+                                ) : (
+                                  <p className="text-[10px] text-gray-400 italic bg-gray-50 p-2 rounded-lg text-center border border-gray-100">
+                                    Data harga belum diatur mitra.
+                                  </p>
+                                )}
+                              </div>
+
+                              <button
+                                onClick={() => handleSelectLogistik(mitra)}
+                                className="mt-1 w-full px-4 py-1.5 rounded-lg bg-gray-100 text-gray-700 group-hover:bg-[#B5302D] group-hover:text-white text-[10px] font-bold transition-all flex justify-center items-center gap-1.5"
+                              >
+                                Pilih Mitra Ini{" "}
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    )}
+                  </div>
+                </div>
 
-                        <button
-                          onClick={() => handleSelectLogistik(mitra)}
-                          className="mt-5 w-full px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 group-hover:bg-[#B5302D] group-hover:text-white text-xs font-bold transition-all flex justify-center items-center gap-2"
-                        >
-                          Pilih Mitra Ini <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
+                {/* --- BAGIAN 2: OPEN MARKET (VALIDASI PENAWARAN) --- */}
+                <div className="pt-6 border-t border-gray-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-[#EF8523] text-base sm:text-lg flex items-center gap-2">
+                      <Truck className="w-5 h-5" /> Terima Tawaran Masuk (Open
+                      Market)
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {isLoadingMitra ? (
+                      <div className="bg-orange-50/50 border border-orange-100 rounded-[24px] p-8 flex flex-col items-center justify-center min-h-[200px] animate-pulse">
+                        <div className="p-3 bg-white rounded-full shadow-sm mb-3">
+                          <Loader2 className="w-6 h-6 text-[#EF8523] animate-spin" />
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Mengecek Penawaran Masuk...
+                        </p>
                       </div>
-                    ))
-                  )}
+                    ) : penawaranMasuk.length === 0 ? (
+                      <div className="text-center py-10 text-gray-400 text-sm font-medium bg-orange-50 border-2 border-dashed border-orange-200 rounded-xl">
+                        Belum ada jasa logistik yang melamar/mengirim penawaran
+                        kepada Anda.
+                      </div>
+                    ) : (
+                      penawaranMasuk.map((item) => (
+                        <IncomingOfferCard
+                          key={item.logistik_user_id}
+                          item={item}
+                          onRefresh={fetchDataPencarian} // dipisah bagian bawah bagian data yang di tampilkan
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -401,7 +525,7 @@ const DistribusiLogistik = () => {
  * Dilengkapi dengan dekorasi gradient di bagian atas dan judul dinamis.
  */
 const SectionCard = ({ title, subtitle, rightContent, children }) => (
-  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden group hover:shadow-md transition-all">
+  <div className="bg-white rounded-[30px] border border-gray-200 shadow-sm p-5 sm:p-8 relative overflow-hidden hover:shadow-md transition-all">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#B5302D] to-orange-500 opacity-80" />
 
     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -428,40 +552,310 @@ const SectionCard = ({ title, subtitle, rightContent, children }) => (
   </div>
 );
 
-// Kartu Tawaran Masuk (Incoming Offer)
-const IncomingOfferCard = ({ offer }) => (
-  <MainCard>
-    <div className="flex flex-col sm:flex-row gap-4 justify-between">
-      <div className="space-y-3 flex-1">
-        <div>
-          <h4 className="text-sm font-bold text-gray-900">
-            {offer.logistikName}
-          </h4>
-          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-            <Truck className="w-3 h-3" /> {offer.armada} ({offer.kapasitas})
-          </p>
-        </div>
-      </div>
+// Kartu Tawaran Masuk (Incoming Offer / Open Market)
+const IncomingOfferCard = ({ item, onRefresh }) => {
+  const [isLoading, setIsLoading] = useState(false);
 
-      <div className="flex flex-col justify-between items-end border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-4 min-w-[140px]">
-        <div className="text-right mb-4 sm:mb-0">
-          <p className="text-[10px] text-gray-400 font-bold uppercase">
-            Harga Tawaran
-          </p>
-          <p className="text-lg font-extrabold text-[#B5302D]">
-            Rp {offer.harga.toLocaleString()}
-          </p>
-          <p className="text-[9px] text-gray-400">per ton/km</p>
+  // State untuk mengontrol Pop-up Modal Penolakan
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [catatanTolak, setCatatanTolak] = useState("");
+
+  // State BARU untuk mengontrol Pop-up Modal Penerimaan (Date Picker)
+  const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
+  const [tanggalSampai, setTanggalSampai] = useState("");
+
+  const handleRespon = async (isDiterima) => {
+    let urlParams = `?is_diterima=${isDiterima}`;
+
+    // 1. Logika Penolakan via Pop-up
+    if (!isDiterima) {
+      if (catatanTolak.trim() === "") {
+        return showToast.error("Alasan penolakan wajib diisi!");
+      }
+
+      // ---> TAMBAHAN: Konfirmasi sebelum benar-benar menolak
+      const isSetuju = await confirmDialog({
+        title: "Tolak Penawaran?",
+        text: "Anda yakin ingin menolak penawaran dari logistik ini?",
+        confirmText: "Ya, Tolak!",
+        isDanger: true, 
+      });
+      if (!isSetuju) return;
+      // <---
+
+      urlParams += `&catatan=${encodeURIComponent(catatanTolak)}`;
+    }
+    // 2. Logika Penerimaan via Pop-up Tanggal (Sesuai instruksi BE)
+    else {
+      if (!tanggalSampai) {
+        return showToast.error("Tanggal armada tiba di pabrik wajib diisi!");
+      }
+
+      // ---> TAMBAHAN: Konfirmasi sebelum benar-benar menerima
+      const isSetuju = await confirmDialog({
+        title: "Terima Penawaran?",
+        text: "Anda akan menyetujui armada dan tarif dari logistik ini. Lanjutkan?",
+        confirmText: "Ya, Terima!",
+      });
+      if (!isSetuju) return;
+      // <---
+
+      urlParams += `&tanggal_permintaan_sampai=${tanggalSampai}`;
+    }
+
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+
+      // Gabungkan URL dasar dengan parameter yang sudah disiapkan
+      let url = `${API_ENDPOINTS.TRACEABILITY.KEBUN.RESPON_PENAWARAN_OPEN_MARKET(item.pengiriman_id)}${urlParams}`;
+
+      console.log("=== DEBUG: URL Request ===", url);
+
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      console.log("=== DEBUG: Respon Backend ===", {
+        status: res.status,
+        data,
+      });
+
+      if (!res.ok)
+        throw new Error(
+          data.detail || data.message || "Gagal merespon penawaran.",
+        );
+
+      // Menggunakan showToast custom milik Anda
+      showToast.success(
+        isDiterima ? "Penawaran berhasil DITERIMA!" : "Penawaran DITOLAK.",
+      );
+
+      // Tutup semua modal dan bersihkan input setelah berhasil
+      setIsRejectModalOpen(false);
+      setIsAcceptModalOpen(false);
+      setCatatanTolak("");
+      setTanggalSampai("");
+      onRefresh();
+    } catch (error) {
+      // Menggunakan showToast custom milik Anda
+      showToast.error(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <>
+      {/* KARTU UTAMA */}
+      <MainCard>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-1">
+          {/* --- BAGIAN 1 (KIRI): INFO LOGISTIK --- */}
+          <div className="flex items-start gap-3 w-full md:w-1/2">
+            <div className="w-10 h-10 rounded-full bg-orange-100 text-[#EF8523] flex items-center justify-center font-bold shrink-0 mt-1">
+              {item.nama_logistik
+                ? item.nama_logistik.substring(0, 2).toUpperCase()
+                : "LG"}
+            </div>
+
+            <div className="space-y-1 w-full">
+              <div className="flex items-center justify-between md:justify-start gap-2">
+                <span className="text-[9px] bg-orange-100 text-[#EF8523] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                  Penawaran
+                </span>
+                <span className="text-[10px] text-gray-500 font-bold">
+                  {item.total_armada_ready || 0} Armada Ready
+                </span>
+              </div>
+
+              <h4 className="text-sm font-bold text-gray-900 line-clamp-1">
+                {item.nama_logistik || "Nama Logistik Tidak Diketahui"}
+              </h4>
+
+              <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                <Phone className="w-3 h-3 text-gray-400 shrink-0" />
+                {item.no_hp_logistik || "-"}
+              </p>
+
+              <p className="text-[10px] text-gray-500 flex items-center gap-1.5 line-clamp-1">
+                <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                {item.alamat_logistik || "Tidak ada detail alamat"}
+              </p>
+            </div>
+          </div>
+
+          {/* --- BAGIAN 2 (KANAN): DETAIL AKOMODASI & AKSI --- */}
+          <div className="w-full md:w-1/2 flex flex-col gap-2.5 border-t md:border-t-0 md:border-l border-gray-100 pt-3 md:pt-0 md:pl-4">
+            {/* List Akomodasi Compact */}
+            <div className="space-y-1.5 w-full">
+              {item.list_akomodasi && item.list_akomodasi.length > 0 ? (
+                item.list_akomodasi.map((akomodasi, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 text-[10px]"
+                  >
+                    <span className="font-medium text-gray-700 flex items-center gap-1.5">
+                      <Truck className="w-3 h-3 text-gray-400" />
+                      <span>
+                        {akomodasi.jenis_kendaraan}{" "}
+                        <span className="text-gray-400 font-normal">
+                          (Kapasitas: {akomodasi.kapasitas_range} Kg)
+                        </span>
+                      </span>
+                    </span>
+                    <span className="font-bold text-[#B5302D]">
+                      {akomodasi.harga_range}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[10px] text-gray-400 italic bg-gray-50 p-2 rounded-lg text-center border border-gray-100">
+                  Detail armada & harga belum tersedia.
+                </p>
+              )}
+            </div>
+
+            {/* Tombol Aksi */}
+            <div className="flex gap-2 justify-end w-full mt-1">
+              <button
+                onClick={() => setIsRejectModalOpen(true)}
+                disabled={isLoading}
+                className="px-4 py-1.5 rounded-lg bg-red-50 text-[#B5302D] hover:bg-red-100 border border-red-100 text-[10px] font-bold transition-all disabled:opacity-50"
+              >
+                Tolak
+              </button>
+              <button
+                onClick={() => setIsAcceptModalOpen(true)}
+                disabled={isLoading}
+                className="px-5 py-1.5 rounded-lg bg-[#EF8523] text-white hover:bg-[#d9751d] shadow-sm shadow-orange-100 text-[10px] font-bold transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" /> Terima
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button className="flex-[2] px-4 py-2 rounded-xl bg-green-600 text-white shadow-lg shadow-green-100 hover:bg-green-700 text-[10px] font-bold transition-all">
-            Terima
-          </button>
+      </MainCard>
+
+      {/* ================================================================= */}
+      {/* 1. MODAL POP-UP TERIMA PENAWARAN (BARU)                           */}
+      {/* ================================================================= */}
+      {isAcceptModalOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50">
+              <h3 className="font-bold text-[#EF8523] flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5" /> Terima Penawaran
+              </h3>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl">
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  Tentukan kapan armada ini harus tiba di Pabrik. <br />
+                  <span className="text-[10px] text-blue-600 mt-1 block">
+                    *Sesuai panduan agronomi, atur pada hari yang sama dengan
+                    panen atau H+1 panen.
+                  </span>
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700">
+                  Tanggal Armada Tiba
+                </label>
+                <input
+                  type="date"
+                  value={tanggalSampai}
+                  onChange={(e) => setTanggalSampai(e.target.value)}
+                  className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-[#EF8523]"
+                />
+              </div>
+            </div>
+
+            <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setIsAcceptModalOpen(false);
+                  setTanggalSampai("");
+                }}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleRespon(true)}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-lg bg-[#EF8523] text-white hover:bg-[#d9751d] text-xs font-bold shadow-md transition-colors disabled:opacity-50"
+              >
+                {isLoading ? "Memproses..." : "Konfirmasi & Terima"}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </MainCard>
-);
+      )}
+
+      {/* ================================================================= */}
+      {/* 2. MODAL POP-UP TOLAK PENAWARAN                                   */}
+      {/* ================================================================= */}
+      {isRejectModalOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header Modal */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-red-50">
+              <h3 className="font-bold text-[#B5302D] flex items-center gap-2">
+                <XCircle className="w-5 h-5" /> Tolak Penawaran
+              </h3>
+            </div>
+
+            {/* Body Modal */}
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-gray-600">
+                Silakan tulis alasan mengapa Anda menolak penawaran dari{" "}
+                <span className="font-bold text-gray-900">
+                  {item.nama_logistik}
+                </span>
+                .
+              </p>
+              <textarea
+                value={catatanTolak}
+                onChange={(e) => setCatatanTolak(e.target.value)}
+                placeholder="Misal: Harga terlalu mahal, kapasitas kurang..."
+                className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#B5302D] min-h-[100px] resize-none"
+                autoFocus
+              />
+            </div>
+
+            {/* Footer Modal */}
+            <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setIsRejectModalOpen(false);
+                  setCatatanTolak("");
+                }}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleRespon(false)}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-lg bg-[#B5302D] text-white hover:bg-[#962624] text-xs font-bold shadow-md transition-colors disabled:opacity-50"
+              >
+                {isLoading ? "Mengirim..." : "Kirim Penolakan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 // Item Progres Pengiriman
 const ProgressItem = ({ item }) => {

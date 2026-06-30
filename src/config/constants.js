@@ -159,31 +159,39 @@ export const API_ENDPOINTS = {
         GET_BLOK_DETAIL: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}`,
 
-        // CREATE (POST)
+        // Ringkasan HAsil panen terakhir untuk dashboard
+        GET_ANALITIK_PENEN: (blokId) =>
+          `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/analitik`,
+
+        // ENDPOINT MONITORING GAP DAN METODE NYA (POST) dan GET
         // 1. Sanitasi / Kebersihan
         ADD_MONITORING_SANITASI: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/monitoring/${blokId}/kebersihan`,
 
-        // 2. Cover Crop
+        // 2. Cover Crop dan GET
         ADD_MONITORING_COVER_CROP: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/monitoring/${blokId}/cover-crop`,
 
-        // 3. Piringan
+        // 3. Piringan POST dan GET
         ADD_PIRINGAN_KONDISI: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/monitoring/${blokId}/piringan-kondisi`,
 
         ADD_PIRINGAN_AKTIVITAS: () =>
           `${API_BASE_URLS.FARM}/farm/me/monitoring/piringan-aktivitas`,
 
-        // 4. Pemupukan
+        // 4. Pemupukan POST dan GET
         ADD_MONITORING_PUPUK: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/monitoring/${blokId}/pupuk`,
 
-        // 5. Pestisida
+        // 5. Pestisida POST dan GET
         ADD_MONITORING_PESTISIDA: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/monitoring/${blokId}/pestisida`,
 
-        // 6. Panen
+        // 6. Drainase POST dan GET
+        ADD_MONITORING_DRAINASE: (blokId) =>
+          `${API_BASE_URLS.FARM}/farm/me/monitoring/${blokId}/drainase`,
+
+        // 7. Panen
         // GET List Rencana Panen (Kartu Jadwal)
         // Opsional query: ?siklus_id={id}
         GET_RENCANA_PANEN_LIST: (blokId, siklusId = null) => {
@@ -209,13 +217,13 @@ export const API_ENDPOINTS = {
           `${API_BASE_URLS.FARM}/farm/me/rencana-panen/hasil?rencana_id=${rencanaId}`,
 
         // 7. Arsip & Siklus (History)
-        // GET List Arsip (Dropdown Siklus)
-        GET_ARSIP_SIKLUS_LIST: (blokId) =>
+        // GET List Pilihan Siklus (Siklus 1, 2, dst)
+        GET_LIST_ARSIP_SIKLUS: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/list-arsip`,
 
-        // GET Detail Arsip per Siklus
-        GET_ARSIP_SIKLUS_DETAIL: (blokId) =>
-          `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/arsip/{nomor_siklus}`,
+        // GET Detail Arsip JSON Raksasa per Siklus
+        GET_ARSIP_SIKLUS_DETAIL: (blokId, nomorSiklus) =>
+          `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/arsip/${nomorSiklus}`,
 
         CEK_STATUS_SIKLUS: (blokId) =>
           `${API_BASE_URLS.FARM}/farm/me/blok/${blokId}/status-ganti-siklus`,
@@ -340,8 +348,15 @@ export const API_ENDPOINTS = {
       ACTION_PENGAJUAN: (grupId) =>
         `${API_BASE_URLS.FARM}/farm/marketplace/pengajuan-masuk/${grupId}/action`,
 
-      // [BARU] [GET] Menampilkan daftar Grup Penjualan yang siap dikirim (Untuk Dropdown Kebun)
+      // SUDAH [GET] Menampilkan daftar Grup Penjualan yang siap dikirim (Untuk Dropdown Kebun)
       GET_DROPDOWN_SIAP_KIRIM: `${API_BASE_URLS.FARM}/farm/marketplace/grup-penjualan/dropdown/siap-kirim`,
+
+      // OPEN MARKET - Menampilkan daftar Grup Penjualan kebun, yang nantinya akan diajukan logistik (akan muncul ketikan PABRIK ACC permintaan kebun)
+      GET_LIST_SIAP_KIRIM: `${API_BASE_URLS.FARM}/farm/marketplace/open-market/etalase`,
+
+      // NEW
+      // OPEN MARKET - Menampilkan list grup penjualan yang sudah di acc kebun, dan logistik harus menugaskan armada untuk pengiriman
+      GET_DAFTAR_TUGASKAN_ARMADA: `${API_BASE_URLS.TRACEABILITY}/logistik/open-market/accepted`,
     },
   },
 
@@ -384,6 +399,12 @@ export const API_ENDPOINTS = {
 
       // Review Dokumen ISPO TERIMA ATAU TOLAK ISPO PETANI
       REVIEW_DOKUMEN_ISPO: `${API_BASE_URLS.ISPO}/ispo/submission/{id}/review`,
+
+      // KEBUN MEMBUAT DOKUMEN OTOMATIS UNTUK REALISASI PENJUALAN GABUNGAN (DOKUMEN INI YANG AKAN DIUPLOAD PETANI)
+      DOKUMEN_REALISASI_PENJUALAN_GABUNGAN: `${API_BASE_URLS.ISPO}/ispo/kebun/generate-kolektif/realisasi-penjualan`,
+
+      // Upload untuk bukti cap dokumen realisasi penjualan dan dokumen lainnya
+      UPLOAD_CAP_DOKUMEN: `${API_BASE_URLS.ISPO}/ispo/kebun/upload-cap`,
     },
   },
 
@@ -442,6 +463,10 @@ export const API_ENDPOINTS = {
         // DONE! [PATCH] Update progress pengiriman (Mengirim -> Menuju Pabrik -> Terima)
         UPDATE_PROGRESS: (pengirimanId) =>
           `${API_BASE_URLS.TRACEABILITY}/logistik/${pengirimanId}/progress`,
+
+        // [BARU] [POST] Logistik mengajukan penawaran jasa pada Open Market
+        AJUKAN_PENAWARAN_OPEN_MARKET: (grupPenjualanId) =>
+          `${API_BASE_URLS.TRACEABILITY}/logistik/open-market/ajukan/${grupPenjualanId}`,
       },
     },
 
@@ -451,8 +476,12 @@ export const API_ENDPOINTS = {
       AJUKAN_PENGIRIMAN: (logistikUserId) =>
         `${API_BASE_URLS.TRACEABILITY}/logistik/pengiriman/ajukan/${logistikUserId}`,
 
-      // DONE! [GET] Melihat daftar Mitra Logistik yang tersedia di platform (beserta resume armada)
+      // DONE! CLOSE MARKET [GET] Melihat daftar Mitra Logistik yang tersedia di platform (beserta resume armada)
       GET_MITRA_LOGISTIK: `${API_BASE_URLS.TRACEABILITY}/logistik/mitra-logistik`,
+
+      // OPEN MARKET [GET] Melihat daftar penawaran terbuka dari Logistik untuk Grup Penjualan tertentu
+      GET_PELAMAR_OPEN_MARKET: (grupId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/open-market/${grupId}/pelamar`,
 
       // DONE! Dropdown Grup ID yang pernah dipakai sebelumnya untuk mengajukan ke logistik
       GET_USED_GRUP_IDS: `${API_BASE_URLS.TRACEABILITY}/logistik/used-grup-ids`,
@@ -464,6 +493,10 @@ export const API_ENDPOINTS = {
       // [POST] Menyimpan struk gaji/bagi hasil petani
       SUBMIT_BAGI_HASIL: (pengirimanId) =>
         `${API_BASE_URLS.TRACEABILITY}/logistik/pengiriman/${pengirimanId}/bagi-hasil`,
+
+      //OPEN MARKET [PATCH] Kebun menjawab penawaran dari Logistik (Terima / Tolak)
+      RESPON_PENAWARAN_OPEN_MARKET: (pengirimanId) =>
+        `${API_BASE_URLS.TRACEABILITY}/logistik/open-market/${pengirimanId}/respon`,
     },
 
     // --- PABRIK POV ---

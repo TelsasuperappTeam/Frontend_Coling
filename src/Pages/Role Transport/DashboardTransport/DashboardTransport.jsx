@@ -166,8 +166,6 @@ export default function DashboardLogistik() {
             ? mgmtData
             : mgmtData.data || [];
 
-          console.log("=== RAW DATA DARI BE (MANAGEMENT) ===", dataArray);
-
           // PISAHKAN UNTUK CARD 1: Permintaan Masuk
           // Syarat: HANYA Menunggu Konfirmasi DAN tanggal belum lewat
           const today = new Date();

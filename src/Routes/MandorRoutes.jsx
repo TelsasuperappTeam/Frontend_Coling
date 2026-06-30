@@ -15,6 +15,7 @@ import CatatAktivitas from "../Pages/Role Mandor/ManajemenKebun/Detail Aktivitas
 import MonitoringGAP from "../Pages/Role Mandor/ManajemenKebun/Detail Aktivitas & Monitoring Penanaman/MonitoringGAP";
 import Panen from "../Pages/Role Mandor/ManajemenKebun/Detail Aktivitas & Monitoring Penanaman/Panen";
 import DetailRencanaTanam from "../Pages/Role Mandor/ManajemenKebun/DetailRencanaTanam";
+import ArsipSiklus from "../Pages/Role Mandor/ManajemenKebun/Detail Aktivitas & Monitoring Penanaman/ArsipSiklus";
 
 const MandorRoutes = () => {
   return (
@@ -110,6 +111,14 @@ const MandorRoutes = () => {
           element={
             <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
               <Panen />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="manajemenkebun/budidayamonitoring/panen/:id/arsip/:siklusId"
+          element={
+            <PrivateRoute allowedRoles={[ROLES.MANDOR]}>
+              <ArsipSiklus />
             </PrivateRoute>
           }
         />

@@ -29,12 +29,16 @@ export default function Panen() {
 
   const ACTIVE_BLOK_ID = id ? parseInt(id) : 1;
 
-  // ================= STATE MANAGEMENT PANEN LAMA =================
+  // ================= STATE MANAGEMENT PANEN =================
   const [blokData, setBlokData] = useState(null);
   const [loadingBlok, setLoadingBlok] = useState(true);
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [harvestLogs, setHarvestLogs] = useState([]);
+
+  // ================= STATE UNTUK ANALITIK =================
+  const [analitikData, setAnalitikData] = useState(null);
+  const [loadingAnalitik, setLoadingAnalitik] = useState(true);
 
   const [activeModal, setActiveModal] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,18 +73,18 @@ export default function Panen() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyList, setHistoryList] = useState([]);
-  const [selectedCycleDetail, setSelectedCycleDetail] = useState(null);
   const [currentCycleInfo, setCurrentCycleInfo] = useState({
     nomorSiklus: 0,
     isFinished: false,
     sisaLuas: 0,
+    pesanSiklus: "",
   });
-
   // ================= FETCH DATA (API INTEGRATION) =================
 
-  // 1. Fetch Detail Blok & Cek Status Siklus
+  // 1. Fetch Detail Blok, Cek Status Siklus, dan Analitik
   const fetchBlokDetail = useCallback(async () => {
     setLoadingBlok(true);
+    setLoadingAnalitik(true);
     try {
       const token = localStorage.getItem("token");
       const headers = {
@@ -97,6 +101,7 @@ export default function Panen() {
 
       // --- LOGIKA CEK STATUS SIKLUS ---
       let isSiklusSelesai = false;
+      let pesanDariBackend = "";
       try {
         const statusRes = await fetch(
           API_ENDPOINTS.FARM.PETANI.ACTIVITY.CEK_STATUS_SIKLUS(ACTIVE_BLOK_ID),
@@ -104,26 +109,42 @@ export default function Panen() {
         );
         if (statusRes.ok) {
           const statusData = await statusRes.json();
-          // BE mengembalikan {"bisa_ganti": true/false}
           isSiklusSelesai = statusData.bisa_ganti;
+          pesanDariBackend = statusData.pesan;
         }
       } catch (err) {
         console.error("Gagal cek status ganti siklus", err);
       }
 
-      setBlokData({
-        ...data,
-        isCycleFinished: data.is_siklus_finished,
-      });
+      // --- FETCH DATA ANALITIK ---
+      try {
+        const urlAnalitik =
+          API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ANALITIK_PENEN(ACTIVE_BLOK_ID);
+        const analitikRes = await fetch(urlAnalitik, { headers });
+        if (analitikRes.ok) {
+          const analitikDataResp = await analitikRes.json();
+          // Console log untuk melihat isi data yang dikirim dari Backend
+          console.log("[DEBUG DATA ANALITIK DARI BE]:", analitikDataResp);
+
+          setAnalitikData(analitikDataResp);
+        }
+      } catch (err) {
+        console.error("Gagal fetch analitik", err);
+      }
+
+      setBlokData(data);
 
       setCurrentCycleInfo((prev) => ({
         ...prev,
+        nomorSiklus: data.nomor_siklus_saat_ini,
         isFinished: isSiklusSelesai,
+        pesanSiklus: pesanDariBackend,
       }));
     } catch (error) {
       console.error("Error fetching blok detail:", error);
     } finally {
       setLoadingBlok(false);
+      setLoadingAnalitik(false); // <--- Akhiri loading analitik
     }
   }, [ACTIVE_BLOK_ID]);
 
@@ -133,9 +154,11 @@ export default function Panen() {
     try {
       const token = localStorage.getItem("token");
       const endpoint =
-        API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ARSIP_SIKLUS_LIST(
+        API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_LIST_ARSIP_SIKLUS(
           ACTIVE_BLOK_ID,
         );
+
+      console.log("[DEBUG GET] URL List Arsip Siklus:", endpoint);
 
       const response = await fetch(endpoint, {
         method: "GET",
@@ -148,28 +171,6 @@ export default function Panen() {
       if (response.ok) {
         const data = await response.json();
         setHistoryList(data);
-
-        // Cari siklus aktif
-        let activeCycleNum = 1;
-        if (data.length > 0) {
-          const isAnyActive = data.find(
-            (item) =>
-              item.status &&
-              !item.status.toUpperCase().includes("ARSIP") &&
-              !item.status.toUpperCase().includes("SELESAI"),
-          );
-
-          if (isAnyActive) {
-            activeCycleNum = isAnyActive.nomor_siklus;
-          } else {
-            activeCycleNum = Math.max(...data.map((d) => d.nomor_siklus)) + 1;
-          }
-        }
-
-        setCurrentCycleInfo((prev) => ({
-          ...prev,
-          nomorSiklus: activeCycleNum,
-        }));
       }
     } catch (error) {
       console.error("Error fetching history list:", error);
@@ -178,34 +179,7 @@ export default function Panen() {
     }
   }, [ACTIVE_BLOK_ID]);
 
-  // 3. Fetch Detail Satu Siklus (PINDAHAN)
-  const fetchCycleDetail = async (nomorSiklus) => {
-    setLoadingHistory(true);
-    try {
-      const token = localStorage.getItem("token");
-      const endpoint = `${API_BASE_URLS.FARM}/farm/me/blok/${ACTIVE_BLOK_ID}/arsip/${nomorSiklus}`;
-
-      const response = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedCycleDetail(data);
-      }
-    } catch (error) {
-      console.error("Error fetching cycle detail:", error);
-      alert("Gagal mengambil detail siklus.");
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
-
-  // 4. Fetch Rencana Panen
+  // 3. Fetch Rencana Panen
   const fetchRencanaPanen = useCallback(async () => {
     setLoadingPlans(true);
     try {
@@ -215,65 +189,25 @@ export default function Panen() {
         Authorization: `Bearer ${token}`,
       };
 
-      // Cari siklus aktif untuk filter
-      let activeCycleNum = 1;
-      try {
-        const arsipUrl =
-          API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_ARSIP_SIKLUS_LIST(
-            ACTIVE_BLOK_ID,
-          );
-        const arsipRes = await fetch(arsipUrl, { method: "GET", headers });
-        if (arsipRes.ok) {
-          const arsipData = await arsipRes.json();
-          if (arsipData.length > 0) {
-            const isAnyActive = arsipData.find(
-              (item) =>
-                item.status &&
-                !item.status.toUpperCase().includes("ARSIP") &&
-                !item.status.toUpperCase().includes("SELESAI"),
-            );
-            if (isAnyActive) activeCycleNum = isAnyActive.nomor_siklus;
-            else
-              activeCycleNum =
-                Math.max(...arsipData.map((d) => d.nomor_siklus)) + 1;
-          }
-        }
-      } catch (e) {
-        console.error("Gagal get arsip", e);
-      }
-
       const url =
         API_ENDPOINTS.FARM.PETANI.ACTIVITY.GET_RENCANA_PANEN_LIST(
           ACTIVE_BLOK_ID,
         );
 
+      // BE sudah otomatis memberikan data Siklus Aktif saja
       const response = await fetch(url, { method: "GET", headers });
       if (!response.ok) throw new Error("Gagal mengambil data rencana panen");
 
       const data = await response.json();
-
-      // DEBUG 2: Cek respon mentah dari Backend
-      console.log("[DEBUG] Data Rencana Panen Mentah (Dari BE):", data);
-
-      const activeCycleData = data.filter(
-        (item) => item.nomor_siklus === activeCycleNum,
-      );
-
-      // DEBUG 3: Cek data setelah difilter berdasarkan siklus aktif
-      console.log(
-        `[DEBUG] Data Rencana Panen Siklus Aktif (Siklus Ke-${activeCycleNum}):`,
-        activeCycleData,
-      );
+      console.log("=== DATA RESPONS BE RENCANA PANEN ===", data);
 
       // --- MAPPING ASYNCHRONOUS DENGAN FETCH GATEKEEPER ---
       const mappedPlans = await Promise.all(
-        activeCycleData.map(async (item) => {
+        data.map(async (item) => {
           let gatekeeperData = null;
 
-          // Cek gatekeeper HANYA untuk rencana yang sudah disetujui & belum di-finalisasi
           if (item.status === "DISETUJUI" && !item.hasil_panen) {
             try {
-              // Endpoint menembak ke Gatekeeper BE
               const gkUrl = `${API_BASE_URLS.FARM}/farm/me/rencana-panen/${item.id}/gatekeeper`;
               const gkRes = await fetch(gkUrl, { method: "GET", headers });
               if (gkRes.ok) {
@@ -297,12 +231,9 @@ export default function Panen() {
               "Tidak ada catatan.",
             catatan_pemanenan: item.catatan_pemanenan || [],
             hasil_panen: item.hasil_panen || null,
-
             grup_id: item.grup_penjualan_id || null,
-            status_pabrik: item.status_pabrik || null, // "DITERIMA" / "PENDING"
-            status_logistik: item.status_logistik || null, // "DITERIMA" / "PENDING"
-
-            // SIMPAN DATA GATEKEEPER DARI BE KE DALAM STATE LOKAL
+            status_pabrik: item.status_pabrik || null,
+            status_logistik: item.status_logistik || null,
             gatekeeper: gatekeeperData,
           };
         }),
@@ -320,6 +251,7 @@ export default function Panen() {
           jamMulai: log.jam_mulai,
           jamSelesai: log.jam_selesai,
           jumlahTandan: log.jumlah_tandan_dipanen,
+          jumlahPokok: log.jumlah_pokok_dipanen,
           kondisiKebun: log.kondisi_kebun,
         })),
       );
@@ -420,7 +352,12 @@ export default function Panen() {
     if (
       !formLog.selectedPlanId ||
       !formLog.namaPetani ||
-      !formLog.jumlahTandan
+      !formLog.tanggal ||
+      !formLog.jamMulai ||
+      !formLog.jamSelesai ||
+      !formLog.jumlahTandan ||
+      formLog.jumlah_pokok_dipanen === "" ||
+      formLog.jumlah_pokok_dipanen === undefined
     ) {
       showToast.error(
         "Masih ada kolom yang belum diisi. Silakan pilih Rencana, Nama Pemanen, dan Jumlah Tandan terlebih dahulu.",
@@ -443,8 +380,10 @@ export default function Panen() {
         jam_mulai: formLog.jamMulai,
         jam_selesai: formLog.jamSelesai,
         jumlah_tandan_dipanen: parseFloat(formLog.jumlahTandan),
-        kondisi_kebun: formLog.kondisiKebun || "",
+        jumlah_pokok_dipanen: parseInt(formLog.jumlah_pokok_dipanen),
+        kondisi_kebun: formLog.kondisiKebun || null,
       };
+
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -465,6 +404,7 @@ export default function Panen() {
           jamMulai: "",
           jamSelesai: "",
           jumlahTandan: "",
+          jumlah_pokok_dipanen: "",
           kondisiKebun: "",
         });
         fetchRencanaPanen();
@@ -617,54 +557,28 @@ export default function Panen() {
     return "bg-gray-100 text-gray-600";
   };
 
-  // ================= MODAL RIWAYAT SIKLUS (PINDAHAN) =================
+  // ================= MODAL RIWAYAT SIKLUS (VERSI RINGKAS) =================
   const renderHistoryPopup = () => {
     if (!showHistoryModal) return null;
 
-    const meta = selectedCycleDetail?.meta;
-    const tanam = selectedCycleDetail?.data_tanam;
-    const panen = selectedCycleDetail?.data_panen || [];
-    const monitoring = selectedCycleDetail?.data_monitoring;
-
-    const totalTbsSiklusIni = panen.reduce((total, p) => {
-      return total + (p.hasil_panen?.jumlah_total_tbs_terkumpul || 0);
-    }, 0);
-
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-3xl flex flex-col max-h-[85vh]">
+        <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-lg flex flex-col max-h-[85vh]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
             <div>
               <h3 className="text-sm sm:text-lg font-bold text-[#B5302D]">
-                {selectedCycleDetail
-                  ? `Detail Arsip Siklus Ke-${meta?.siklus_yang_ditampilkan || "-"}`
-                  : "Daftar Riwayat Siklus"}
+                Daftar Riwayat Siklus
               </h3>
               <p className="text-[10px] sm:text-xs text-gray-500">
-                {selectedCycleDetail
-                  ? `Unit: ${meta?.blok_nama}`
-                  : "Pilih siklus untuk melihat detail arsip"}
+                Pilih siklus untuk melihat detail arsip
               </p>
             </div>
-            <div className="flex gap-2">
-              {selectedCycleDetail && (
-                <button
-                  onClick={() => setSelectedCycleDetail(null)}
-                  className="px-3 py-1.5 text-xs font-bold bg-gray-200 hover:bg-gray-300 rounded-lg text-black transition"
-                >
-                  Kembali
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setShowHistoryModal(false);
-                  setSelectedCycleDetail(null);
-                }}
-                className="p-1.5 hover:bg-red-100 hover:text-red-600 rounded-full transition"
-              >
-                <X className="w-5 h-5 text-gray-500 hover:text-red-600" />
-              </button>
-            </div>
+            <button
+              onClick={() => setShowHistoryModal(false)}
+              className="p-1.5 hover:bg-red-100 hover:text-red-600 rounded-full transition"
+            >
+              <X className="w-5 h-5 text-gray-500 hover:text-red-600" />
+            </button>
           </div>
 
           <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
@@ -672,123 +586,8 @@ export default function Panen() {
               <div className="text-center py-10">
                 <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#EF8523]" />
                 <p className="text-xs text-gray-500 mt-2 font-medium">
-                  Membongkar Arsip...
+                  Memuat daftar...
                 </p>
-              </div>
-            ) : selectedCycleDetail ? (
-              <div className="space-y-5 animate-fadeIn">
-                {/* 1. INFORMASI TANAM & STATUS */}
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                  <h4 className="font-bold text-blue-900 text-sm mb-3 border-b border-blue-200 pb-2">
-                    Informasi Penanaman
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                    <div>
-                      <p className="text-gray-500 mb-0.5">Status Siklus</p>
-                      <p className="font-bold text-black bg-white px-2 py-1 rounded inline-block border border-gray-200">
-                        {tanam?.status || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 mb-0.5">Tanggal Tanam</p>
-                      <p className="font-bold text-black">
-                        {tanam?.tanggal_tanam || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 mb-0.5">Bibit Digunakan</p>
-                      <p className="font-bold text-black">
-                        {tanam?.jenis_bibit} ({tanam?.varietas})
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 mb-0.5">Jumlah Pohon Awal</p>
-                      <p className="font-bold text-black">
-                        {tanam?.jumlah_pohon_awal || 0} Pokok
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. RANGKUMAN PANEN */}
-                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                  <div className="flex justify-between items-center mb-3 border-b border-green-200 pb-2">
-                    <h4 className="font-bold text-green-900 text-sm">
-                      Hasil Produksi Panen
-                    </h4>
-                    <span className="font-extrabold text-green-700 bg-white px-3 py-1 rounded-full text-xs shadow-sm">
-                      Total: {totalTbsSiklusIni} Kg
-                    </span>
-                  </div>
-                  {panen.length === 0 ? (
-                    <p className="text-xs text-gray-500 italic">
-                      Belum ada riwayat panen di siklus ini.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {panen.map((p, idx) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between items-center bg-white p-2 rounded-lg text-xs border border-green-100"
-                        >
-                          <div>
-                            <span className="font-bold text-gray-700">
-                              {p.tanggal_rencana_panen}
-                            </span>
-                            <span className="text-gray-500 ml-2">
-                              ({p.status})
-                            </span>
-                          </div>
-                          <span className="font-bold text-green-600">
-                            + {p.hasil_panen?.jumlah_total_tbs_terkumpul || 0}{" "}
-                            Kg
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. REKAP MONITORING */}
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                  <h4 className="font-bold text-orange-900 text-sm mb-3 border-b border-orange-200 pb-2">
-                    Rekapitulasi Perawatan
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
-                      <p className="text-2xl font-black text-[#EF8523]">
-                        {monitoring?.pupuk?.length || 0}
-                      </p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
-                        Kali Pemupukan
-                      </p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
-                      <p className="text-2xl font-black text-[#EF8523]">
-                        {monitoring?.pestisida?.length || 0}
-                      </p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
-                        Kali Semprot Hama
-                      </p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
-                      <p className="text-2xl font-black text-[#EF8523]">
-                        {monitoring?.sanitasi?.length || 0}
-                      </p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
-                        Kegiatan Sanitasi
-                      </p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-center shadow-sm">
-                      <p className="text-2xl font-black text-[#EF8523]">
-                        {monitoring?.piringan?.length || 0}
-                      </p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">
-                        Cek Piringan
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             ) : historyList.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
@@ -802,7 +601,8 @@ export default function Panen() {
                 {historyList.map((item) => (
                   <div
                     key={item.nomor_siklus}
-                    onClick={() => fetchCycleDetail(item.nomor_siklus)}
+                    // Cukup tambahkan arsip/nomor_siklus untuk menyambung URL saat ini
+                    onClick={() => navigate(`arsip/${item.nomor_siklus}`)}
                     className={`border rounded-xl p-4 flex justify-between items-center transition cursor-pointer shadow-sm hover:shadow-md ${
                       item.status === "AKTIF"
                         ? "bg-green-50 border-green-200 hover:bg-green-100"
@@ -848,7 +648,7 @@ export default function Panen() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-[#EF8523] animate-spin" />
           <p className="text-xs sm:text-sm font-medium text-gray-500">
-            Memuat Data Panen & Siklus...
+            Memuat Halaman...
           </p>
         </div>
       </div>
@@ -879,7 +679,7 @@ export default function Panen() {
           </button>
         </div>
 
-        {/* === HEADER HERO (TITLE PAGE) === */}
+        {/* === HEADER HERO === */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6 sm:mb-8">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-green-50 rounded-2xl shadow-sm border border-green-100 shrink-0">
@@ -889,30 +689,139 @@ export default function Panen() {
               <h1 className="text-xl md:text-2xl font-bold text-green-700">
                 Pemanenan & Siklus
               </h1>
-              {/* SUBTITLE SIKLUS (PINDAHAN) */}
               <p className="text-xs md:text-sm text-gray-500 mt-1">
-                Siklus Saat Ini:{" "}
-                <span className="font-bold text-black">
-                  #{currentCycleInfo.nomorSiklus}
-                </span>{" "}
-                • Status:{" "}
-                {currentCycleInfo.isFinished ? (
-                  <span className="text-green-600 font-bold">
-                    Selesai (Panen Final)
-                  </span>
-                ) : (
-                  <span className="text-blue-600 font-bold">Berjalan</span>
-                )}
+                Menu panenan untuk mencatat aktivitas panen, melihat analitik,
+                dan mengelola siklus panen di blok Anda.
               </p>
             </div>
           </div>
 
-          <span className="self-start lg:self-auto bg-white border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-[10px] sm:text-sm shadow-sm font-medium tracking-wide">
-            Unit: {blokData?.nama_unit || "..."}
-          </span>
+          {/* BAGIAN BADGE INFORMASI (UNIT & STATUS SENGKETA) */}
+          <div className="flex flex-wrap gap-2 self-start lg:self-auto">
+            {/* Badge Unit */}
+            <span className="bg-white border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-[10px] sm:text-sm shadow-sm font-medium tracking-wide">
+              Unit: {blokData?.nama_unit || "..."}
+            </span>
+
+            {/* Badge Status Sengketa */}
+            {blokData?.ada_sengketa ? (
+              <span className="bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-[10px] sm:text-sm shadow-sm font-semibold tracking-wide flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                Sengketa Aktif
+              </span>
+            ) : (
+              <span className="bg-green-50 border border-green-200 text-green-700 px-3 py-1 rounded-full text-[10px] sm:text-sm shadow-sm font-semibold tracking-wide flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                Bebas Sengketa
+              </span>
+            )}
+          </div>
         </div>
 
         <hr className="border-gray-200 mb-6 sm:mb-8" />
+
+        {/* DASHBOARD RINGKASAN ANALITIK */}
+        {!loadingAnalitik && analitikData && (
+          <div className="bg-gradient-to-br from-[#EF8523]/10 to-orange-50 rounded-xl p-3 sm:p-4 border border-orange-200 shadow-sm mb-6 sm:mb-8 animate-fadeIn">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-3">
+              <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 text-[#EF8523]" />
+              <h3 className="font-bold text-gray-800 text-sm sm:text-base">
+                Ringkasan Analitik Operasional Panen
+              </h3>
+            </div>
+
+            {/* Grid dirapatkan: 2 kolom (HP), 3 kolom (Tablet), 6 kolom sejajar (Desktop) */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
+              {/* Card 1: Luas Total */}
+              <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-orange-100 shadow-sm flex flex-col justify-between">
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium mb-1.5 leading-tight">
+                  Total Luas Area
+                </p>
+                <div className="flex items-end gap-1">
+                  <span className="text-lg sm:text-2xl font-black text-gray-800 leading-none">
+                    {analitikData.luas_total_ha}
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-[#EF8523] mb-0.5">
+                    Hektar
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 2: ATP */}
+              <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-orange-100 shadow-sm flex flex-col justify-between">
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium mb-1.5 leading-tight">
+                  Sisa Area Siap Panen (ATP)
+                </p>
+                <div className="flex items-end gap-1">
+                  <span className="text-lg sm:text-2xl font-black text-gray-800 leading-none">
+                    {analitikData.atp_sisa_area_ha}
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-[#EF8523] mb-0.5">
+                    Hektar
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 3: TPH */}
+              <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-orange-100 shadow-sm flex flex-col justify-between">
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium mb-1.5 leading-tight">
+                  Produktivitas TBS Ton Per Hektar (TPH)
+                </p>
+                <div className="flex items-end gap-1">
+                  <span className="text-lg sm:text-2xl font-black text-gray-800 leading-none">
+                    {analitikData.tph_ton_per_ha}
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-[#EF8523] mb-0.5">
+                    Ton / Ha
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 4: Harga CPO */}
+              <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-orange-100 shadow-sm flex flex-col justify-between overflow-hidden">
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium mb-1.5 leading-tight">
+                  Harga Acuan CPO
+                </p>
+                <div className="flex items-end gap-1 truncate">
+                  <span className="text-lg sm:text-2xl font-black text-gray-800 leading-none truncate">
+                    Rp{" "}
+                    {analitikData.harga_cpo_acuan_rp?.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 5: OER */}
+              <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-orange-100 shadow-sm flex flex-col justify-between">
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium mb-1.5 leading-tight">
+                  Nilai Rendemen (OER)
+                </p>
+                <div className="flex items-end gap-1">
+                  <span className="text-lg sm:text-2xl font-black text-gray-800 leading-none">
+                    {analitikData.oer_persentase}
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-[#EF8523] mb-0.5">
+                    %
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 6: AKP */}
+              <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-orange-100 shadow-sm flex flex-col justify-between overflow-hidden">
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium mb-1.5 leading-tight">
+                  Estimasi Nilai Produksi (AKP)
+                </p>
+                <div className="flex items-end gap-1 truncate">
+                  <span className="text-lg sm:text-2xl font-black text-green-600 leading-none truncate">
+                    Rp{" "}
+                    {analitikData.akp_estimasi_nilai_rp?.toLocaleString(
+                      "id-ID",
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ================= SECTION 1 RENCANA PANEN ================= */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6 sm:mb-8">
@@ -943,9 +852,9 @@ export default function Panen() {
 
             <button
               type="button"
-              disabled={blokData?.isCycleFinished}
+              disabled={currentCycleInfo?.isFinished}
               onClick={(e) => {
-                if (blokData?.isCycleFinished) {
+                if (currentCycleInfo?.isFinished) {
                   alert(
                     "Siklus saat ini sudah selesai. Silakan mulai siklus baru di bawah halaman.",
                   );
@@ -956,7 +865,7 @@ export default function Panen() {
               }}
               className={`flex items-center justify-center gap-2 w-full md:w-auto px-5 py-2.5 rounded-lg border text-sm font-semibold shadow-sm
                 ${
-                  blokData?.isCycleFinished
+                  currentCycleInfo?.isFinished
                     ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
                     : "bg-[#B5302D] border-[#B5302D] text-white hover:bg-[#962624] hover:border-[#962624]"
                 }`}
@@ -966,7 +875,7 @@ export default function Panen() {
             </button>
           </div>
 
-          {/* Rencana Panen Map */}
+          {/* Rencana Panen Map - TAMPILAN TABEL */}
           {openSection.rencana && (
             <div className="p-4 sm:p-6 bg-gray-50/30 animate-fadeIn">
               {loadingPlans ? (
@@ -976,116 +885,120 @@ export default function Panen() {
               ) : plans.length === 0 ? (
                 <EmptyState text="Belum ada rencana panen yang dibuat pada siklus ini." />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
-                  {plans.map((plan) => (
-                    <div
-                      key={plan.id}
-                      className={`
-                        border rounded-xl p-4 sm:p-5 hover:shadow-lg transition-all duration-300 bg-white relative overflow-hidden group flex flex-col justify-between
-                        ${plan.status === "DITOLAK" ? "border-red-200 bg-red-50/20" : "border-gray-200"}
-                        ${plan.status === "SELESAI" ? "opacity-80" : ""}
-                      `}
-                    >
-                      <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-                        <span
-                          className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border shadow-sm ${getStatusColor(plan.status)}`}
-                        >
-                          {plan.status || "PENDING"}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 sm:space-y-3">
-                        <div className="flex items-center gap-2 text-gray-700 font-bold text-base sm:text-lg">
-                          <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                          {plan.unit}
-                        </div>
-
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-                          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          {new Date(plan.tanggal).toLocaleDateString("id-ID", {
-                            weekday: "long",
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-2 sm:pt-3 border-t border-gray-100 mt-2">
-                          <div>
-                            <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
-                              Estimasi
-                            </p>
-                            <p className="text-xs sm:text-sm font-semibold text-gray-800">
-                              {plan.estimasi} Kg
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
-                              Luas
-                            </p>
-                            <p className="text-xs sm:text-sm font-semibold text-gray-800">
-                              {plan.luas} Ha
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* --- UI SKENARIO 1: TOMBOL EDIT BILA DITOLAK ATAU PENDING --- */}
-                        {plan.status === "DITOLAK" && (
-                          <div className="mt-2 bg-red-50 border border-red-200 p-2.5 sm:p-3 rounded-lg animate-fadeIn">
-                            <p className="text-[9px] sm:text-[10px] font-bold text-red-800 uppercase mb-0.5 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> Catatan
-                              Penolakan:
-                            </p>
-                            <p className="text-[10px] sm:text-xs text-red-700 leading-relaxed italic mb-2">
-                              "{plan.alasan}"
-                            </p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingPlanId(plan.id);
-                                setFormPlan({
-                                  tanggal: plan.tanggal,
-                                  estimasi: plan.estimasi,
-                                  luas: plan.luas,
-                                });
-                                setActiveModal("plan");
-                              }}
-                              className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1.5 rounded-md text-[10px] font-bold transition-colors"
-                            >
-                              Edit & Ajukan Ulang
-                            </button>
-                          </div>
-                        )}
-
-                        {plan.status === "PENDING" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingPlanId(plan.id);
-                              setFormPlan({
-                                tanggal: plan.tanggal,
-                                estimasi: plan.estimasi,
-                                luas: plan.luas,
-                              });
-                              setActiveModal("plan");
-                            }}
-                            className="w-full mt-2 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 px-2 py-1.5 rounded-md text-[10px] font-bold transition-colors"
+                <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
+                  <table className="min-w-full text-left border-collapse">
+                    <thead className="bg-[#B5302D] text-white text-[10px] sm:text-xs uppercase font-bold">
+                      <tr>
+                        <th className="px-4 py-3 border-r border-red-800/30 whitespace-nowrap">
+                          Tanggal Panen
+                        </th>
+                        <th className="px-4 py-3 border-r border-red-800/30 text-center">
+                          Estimasi (Kg)
+                        </th>
+                        <th className="px-4 py-3 border-r border-red-800/30 text-center">
+                          Luas (Ha)
+                        </th>
+                        <th className="px-4 py-3 border-r border-red-800/30 text-center">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-xs sm:text-sm text-gray-800">
+                      {plans.map((plan) => (
+                        <React.Fragment key={plan.id}>
+                          <tr
+                            className={`hover:bg-red-50/20 transition-colors ${plan.status === "SELESAI" ? "opacity-80 bg-gray-50" : ""} ${plan.status === "DITOLAK" ? "bg-red-50/30" : ""}`}
                           >
-                            Edit Pengajuan
-                          </button>
-                        )}
-                      </div>
+                            <td className="px-4 py-3 border-r border-gray-100 align-middle whitespace-nowrap">
+                              <div className="flex items-center gap-1.5 font-medium">
+                                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                {plan.tanggal}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 border-r border-gray-100 text-center font-bold text-gray-700 align-middle">
+                              {plan.estimasi}
+                            </td>
+                            <td className="px-4 py-3 border-r border-gray-100 text-center font-bold text-gray-700 align-middle">
+                              {plan.luas}
+                            </td>
+                            <td className="px-4 py-3 border-r border-gray-100 text-center align-middle">
+                              <span
+                                className={`text-[10px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${getStatusColor(plan.status)}`}
+                              >
+                                {plan.status || "PENDING"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center align-middle">
+                              {plan.status === "SELESAI" ? (
+                                <div className="flex items-center justify-center gap-1 text-green-600">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span className="text-[10px] font-bold">
+                                    Selesai
+                                  </span>
+                                </div>
+                              ) : plan.status === "PENDING" ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingPlanId(plan.id);
+                                    setFormPlan({
+                                      tanggal: plan.tanggal,
+                                      estimasi: plan.estimasi,
+                                      luas: plan.luas,
+                                    });
+                                    setActiveModal("plan");
+                                  }}
+                                  className="bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 px-3 py-1.5 rounded-md text-[10px] font-bold transition-colors whitespace-nowrap"
+                                >
+                                  Edit Pengajuan
+                                </button>
+                              ) : plan.status === "DITOLAK" ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingPlanId(plan.id);
+                                    setFormPlan({
+                                      tanggal: plan.tanggal,
+                                      estimasi: plan.estimasi,
+                                      luas: plan.luas,
+                                    });
+                                    setActiveModal("plan");
+                                  }}
+                                  className="bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-md text-[10px] font-bold transition-colors whitespace-nowrap"
+                                >
+                                  Edit & Ajukan
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-gray-400 italic">
+                                  -
+                                </span>
+                              )}
+                            </td>
+                          </tr>
 
-                      {plan.status === "SELESAI" && (
-                        <div className="mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-gray-100 flex items-center gap-2 text-green-600">
-                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          <span className="text-[10px] sm:text-xs font-bold">
-                            Panen Selesai
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                          {/* BARIS KHUSUS UNTUK PESAN DITOLAK (Muncul menempel di bawah baris data jika status DITOLAK) */}
+                          {plan.status === "DITOLAK" && (
+                            <tr className="bg-red-50/50 border-b border-gray-200">
+                              <td colSpan="6" className="px-4 py-2">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="text-[10px] font-bold text-red-800 uppercase">
+                                      Catatan Penolakan:
+                                    </p>
+                                    <p className="text-xs text-red-700 italic">
+                                      "{plan.alasan}"
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -1117,86 +1030,111 @@ export default function Panen() {
           </div>
 
           {openSection.realisasi && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 min-h-[400px] sm:min-h-[500px] animate-fadeIn">
-              {/* --- CATATAN PEMANENAN --- */}
-              <div className="flex flex-col h-full">
-                <div className="p-4 sm:p-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+            <div className="flex flex-col gap-6 sm:gap-8 p-4 sm:p-6 animate-fadeIn">
+              {/* ================= BAGIAN ATAS: CATATAN PEMANENAN ================= */}
+              <div className="flex flex-col w-full">
+                <div className="flex justify-between items-center mb-4 sm:mb-5">
                   <div>
-                    <h3 className="font-bold text-gray-800 text-xs sm:text-sm uppercase tracking-wide">
+                    <h3 className="font-bold text-gray-800 text-sm sm:text-base uppercase tracking-wide">
                       Catatan Aktivitas
                     </h3>
-                    <p className="text-[10px] sm:text-xs text-gray-500">
-                      Log harian per pemanen
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Log harian per pemanen (dikelompokkan per tanggal panen)
                     </p>
                   </div>
                   <button
                     onClick={() => setActiveModal("log")}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-white border border-[#EF8523] text-[#EF8523] px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold hover:bg-orange-50 transition shadow-sm"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-white border border-[#EF8523] text-[#EF8523] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-orange-50 transition shadow-sm"
                   >
-                    <Plus className="w-3 h-3" /> Tambah Catatan
+                    <Plus className="w-4 h-4" /> Tambah Catatan
                   </button>
                 </div>
 
-                <div className="p-4 sm:p-6 bg-gray-50/30 flex-1 overflow-y-auto max-h-[500px] sm:max-h-[600px]">
+                <div className="w-full">
                   {harvestLogs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-40 sm:h-48 text-center opacity-60">
-                      <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-gray-300 mb-2" />
-                      <p className="text-xs sm:text-sm text-gray-500">
+                    <div className="flex flex-col items-center justify-center py-12 text-center opacity-60 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                      <FileText className="w-10 h-10 text-gray-300 mb-2" />
+                      <p className="text-sm text-gray-500">
                         Belum ada catatan aktivitas panen.
                       </p>
                     </div>
                   ) : (
-                    <div className="relative border-l-2 border-gray-200 ml-2 sm:ml-3 space-y-4 sm:space-y-6 pb-4">
-                      {harvestLogs.map((log, idx) => (
+                    <div className="space-y-6">
+                      {/* LOGIKA GROUPING BERDASARKAN TANGGAL */}
+                      {Object.entries(
+                        harvestLogs.reduce((acc, log) => {
+                          if (!acc[log.tanggal]) acc[log.tanggal] = [];
+                          acc[log.tanggal].push(log);
+                          return acc;
+                        }, {}),
+                      ).map(([tanggal, logs]) => (
                         <div
-                          key={`${log.id}-${idx}`}
-                          className="relative pl-5 sm:pl-6 animate-fadeIn"
+                          key={tanggal}
+                          className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm"
                         >
-                          <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-[#EF8523]"></div>
-                          <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-[#EF8523] transition-all group">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-[10px] sm:text-xs font-bold text-[#EF8523] bg-orange-50 px-2 py-0.5 rounded border border-orange-100">
-                                {log.tanggal}
+                          {/* Header Tabel (Tanggal) */}
+                          <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                            <p className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+                              Tanggal Panen:{" "}
+                              <span className="font-black text-[#B5302D]">
+                                {tanggal}
                               </span>
-                              <span className="text-[9px] sm:text-[10px] text-gray-400 font-mono">
-                                PLAN ID: {log.planId}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-bold text-gray-600">
-                                {log.namaPetani.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-gray-800 text-xs sm:text-sm leading-tight">
-                                  {log.namaPetani}
-                                </h4>
-                                <p className="text-[10px] text-gray-500">
-                                  Pemanen
-                                </p>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-xs text-gray-600 bg-gray-50 p-2 rounded-md">
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-gray-400" />
-                                <span>
-                                  {log.jamMulai} - {log.jamSelesai}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 font-bold text-gray-800">
-                                <Leaf className="w-3 h-3 text-green-500" />
-                                <span>{log.jumlahTandan} Tandan</span>
-                              </div>
-                            </div>
-                            {log.kondisiKebun && (
-                              <div className="mt-2 pt-2 border-t border-gray-100">
-                                <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
-                                  Kondisi Kebun
-                                </p>
-                                <p className="text-[10px] sm:text-xs text-gray-700 italic">
-                                  "{log.kondisiKebun}"
-                                </p>
-                              </div>
-                            )}
+                            </p>
+                            <span className="text-xs font-bold text-gray-500 bg-white px-2 py-1 border border-gray-200 rounded">
+                              {logs.length} Log Pekerja
+                            </span>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full text-left border-collapse">
+                              <thead className="bg-[#EF8523] text-white text-[10px] sm:text-xs uppercase font-bold">
+                                <tr>
+                                  <th className="px-4 py-3 border-r border-orange-400/50">
+                                    Nama Pemanen
+                                  </th>
+                                  <th className="px-4 py-3 text-center border-r border-orange-400/50 whitespace-nowrap">
+                                    Jam Kerja
+                                    <span className="block text-[9px] font-normal opacity-80 mt-0.5">
+                                      (Mulai - Selesai)
+                                    </span>
+                                  </th>
+                                  <th className="px-4 py-3 text-center border-r border-orange-400/50">
+                                    Jumlah Pokok
+                                    <br className="hidden sm:block" /> Dipanen
+                                  </th>
+                                  <th className="px-4 py-3 text-center border-r border-orange-400/50">
+                                    Jumlah Tandan
+                                  </th>
+                                  <th className="px-4 py-3 text-center">
+                                    Kondisi Kebun
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 text-xs sm:text-sm text-gray-800">
+                                {logs.map((log, idx) => (
+                                  <tr
+                                    key={idx}
+                                    className="hover:bg-orange-50/30 transition-colors"
+                                  >
+                                    <td className="px-4 py-3 border-r border-gray-100 font-medium text-gray-700">
+                                      {log.namaPetani}
+                                    </td>
+                                    <td className="px-4 py-3 border-r border-gray-100 text-center whitespace-nowrap">
+                                      {log.jamMulai} - {log.jamSelesai}
+                                    </td>
+                                    <td className="px-4 py-3 border-r border-gray-100 text-center font-bold text-blue-700">
+                                      {log.jumlahPokok || 0}
+                                    </td>
+                                    <td className="px-4 py-3 border-r border-gray-100 text-center font-bold text-green-700">
+                                      {log.jumlahTandan}
+                                    </td>
+                                    <td className="px-4 py-3 text-center italic text-gray-500">
+                                      {log.kondisiKebun || "-"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       ))}
@@ -1205,143 +1143,116 @@ export default function Panen() {
                 </div>
               </div>
 
-              {/* --- FINALISASI / HASIL PANEN --- */}
-              <div className="flex flex-col h-full bg-white">
-                <div className="p-4 sm:p-5 border-b border-gray-100 sticky top-0 z-10 bg-white">
-                  <h3 className="font-bold text-gray-800 text-xs sm:text-sm uppercase tracking-wide">
+              <hr className="border-gray-200" />
+
+              {/* ================= BAGIAN BAWAH: FINALISASI / HASIL PANEN ================= */}
+              <div className="flex flex-col w-full">
+                <div className="mb-4 sm:mb-6">
+                  <h3 className="font-bold text-gray-800 text-sm sm:text-base uppercase tracking-wide">
                     Finalisasi Hasil Panen
                   </h3>
-                  <p className="text-[10px] sm:text-xs text-gray-500">
-                    Selesaikan rencana panen yang sudah dieksekusi
+                  <p className="text-xs text-gray-500">
+                    Selesaikan rencana panen yang sudah dieksekusi (Target &
+                    Realisasi)
                   </p>
                 </div>
 
-                <div className="p-4 sm:p-6 flex-1 overflow-y-auto max-h-[500px] sm:max-h-[600px] space-y-4 sm:space-y-6">
-                  {/* PENDING FINALISASI */}
-                  <div>
-                    <h4 className="text-[10px] sm:text-xs font-bold text-gray-500 mb-2 sm:mb-3 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500"></span>{" "}
+                {/* --- UBAH LAYOUT JADI ATAS-BAWAH (FLEX-COL) AGAR TABEL LEGA --- */}
+                <div className="flex flex-col gap-8 sm:gap-10">
+                  {/* 1. PENDING FINALISASI (ATAS) */}
+                  <div className="w-full">
+                    <h4 className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-2 border-b border-gray-100 pb-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>{" "}
                       MENUNGGU FINALISASI
                     </h4>
 
                     {plans.filter(
                       (p) => p.status === "DISETUJUI" && !p.hasil_panen,
                     ).length === 0 ? (
-                      <div className="text-center py-4 sm:py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                        <p className="text-[10px] sm:text-xs text-gray-400">
+                      <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <p className="text-xs text-gray-400">
                           Tidak ada rencana aktif yang perlu diselesaikan.
                         </p>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-3 sm:gap-4">
+                      // Jadikan grid 2 atau 3 kolom agar rapi menyamping
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {plans
                           .filter(
                             (p) => p.status === "DISETUJUI" && !p.hasil_panen,
                           )
                           .map((plan) => {
-                            // --- LOGIKA SKENARIO 2: MENGGUNAKAN GATEKEEPER DARI API ---
                             const gk = plan.gatekeeper || {};
-
-                            // 1. Membaca 4 indikator dari JSON Backend sesuai respon asli
                             const hasCatatan =
                               gk.is_catatan_pekerja_terisi !== undefined
                                 ? gk.is_catatan_pekerja_terisi
                                 : plan.catatan_pemanenan &&
                                   plan.catatan_pemanenan.length > 0;
-
                             const inGroup =
                               gk.is_masuk_grup !== undefined
                                 ? gk.is_masuk_grup
                                 : !!plan.grup_id;
-
                             const pabrikAcc =
                               gk.is_diterima_pabrik !== undefined
                                 ? gk.is_diterima_pabrik
                                 : plan.status_pabrik === "DITERIMA" ||
                                   plan.status_pabrik === "APPROVED";
-                            // ====== SEMENTARA DIKOMENTARI KARENA BE OTOMATIS TRUE ======
-                            // const logistikAcc =
-                            //   gk.is_logistik_siap !== undefined
-                            //     ? gk.is_logistik_siap
-                            //     : plan.status_logistik === "DITERIMA" ||
-                            //       plan.status_logistik === "APPROVED";
-
-                            // const logistikAcc = true; // DIKOMENTARI JUGA AGAR ESLINT TIDAK ERROR
-                            // ==========================================================
-
-                            // 2. KUNCI UTAMA: is_bisa_selesai dari Backend
-                            // Jika `is_bisa_selesai` true, maka tombol Selesai akan menyala (Bisa di-klik)
                             const canFinalize = gk.is_bisa_selesai === true;
 
                             return (
                               <div
                                 key={plan.id}
-                                className={`flex flex-col p-3 sm:p-4 bg-white border rounded-lg shadow-sm transition-all gap-3
+                                className={`flex flex-col p-4 bg-white border rounded-lg shadow-sm transition-all gap-3
                                   ${canFinalize ? "border-blue-400 shadow-md" : "border-gray-200"}`}
                               >
                                 <div className="flex justify-between items-start">
                                   <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-xs sm:text-sm font-bold text-gray-800">
+                                      <span className="text-sm font-bold text-gray-800">
                                         {plan.tanggal}
                                       </span>
-                                      <span className="text-[9px] sm:text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">
+                                      <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
                                         Aktif
                                       </span>
                                     </div>
-                                    <p className="text-[10px] sm:text-xs text-gray-500">
+                                    <p className="text-xs text-gray-500">
                                       Target: {plan.estimasi} Kg
                                     </p>
                                   </div>
                                 </div>
 
-                                {/* --- CHECKLIST GATEKEEPER UI --- */}
-                                <div className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-100">
-                                  <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex-1">
+                                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
                                     Syarat Bisa Klik Selesai:
                                   </p>
-                                  <ul className="text-[10px] sm:text-xs space-y-1">
+                                  <ul className="text-xs space-y-1.5">
                                     <li
-                                      className={`flex items-center gap-1.5 ${inGroup ? "text-green-600 font-bold" : "text-gray-400"}`}
+                                      className={`flex items-center gap-2 ${inGroup ? "text-green-600 font-bold" : "text-gray-400"}`}
                                     >
                                       {inGroup ? (
-                                        <CheckCircle className="w-3 h-3" />
+                                        <CheckCircle className="w-3.5 h-3.5" />
                                       ) : (
-                                        <Clock className="w-3 h-3" />
+                                        <Clock className="w-3.5 h-3.5" />
                                       )}
                                       TBS Berhasil Kebun Jual ke Pabrik
                                     </li>
                                     <li
-                                      className={`flex items-center gap-1.5 ${pabrikAcc ? "text-green-600 font-bold" : "text-gray-400"}`}
+                                      className={`flex items-center gap-2 ${pabrikAcc ? "text-green-600 font-bold" : "text-gray-400"}`}
                                     >
                                       {pabrikAcc ? (
-                                        <CheckCircle className="w-3 h-3" />
+                                        <CheckCircle className="w-3.5 h-3.5" />
                                       ) : (
-                                        <Clock className="w-3 h-3" />
+                                        <Clock className="w-3.5 h-3.5" />
                                       )}
                                       TBS Diterima oleh Pabrik
                                     </li>
-
-                                    {/* ====== SEMENTARA DIKOMENTARI ====== */}
-                                    {/* <li
-                                      className={`flex items-center gap-1.5 ${logistikAcc ? "text-green-600 font-bold" : "text-gray-400"}`}
-                                    >
-                                      {logistikAcc ? (
-                                        <CheckCircle className="w-3 h-3" />
-                                      ) : (
-                                        <Clock className="w-3 h-3" />
-                                      )}
-                                      Berhasil Mendapatkan Mitra Logistik
-                                    </li> */}
-                                    {/* =================================== */}
-
                                     <li
-                                      className={`flex items-center gap-1.5 ${hasCatatan ? "text-green-600 font-bold" : "text-red-500"}`}
+                                      className={`flex items-center gap-2 ${hasCatatan ? "text-green-600 font-bold" : "text-red-500"}`}
                                     >
                                       {hasCatatan ? (
-                                        <CheckCircle className="w-3 h-3" />
+                                        <CheckCircle className="w-3.5 h-3.5" />
                                       ) : (
-                                        <AlertCircle className="w-3 h-3" />
+                                        <AlertCircle className="w-3.5 h-3.5" />
                                       )}
                                       Catatan Aktivitas Pekerja Terisi
                                     </li>
@@ -1351,12 +1262,8 @@ export default function Panen() {
                                 <button
                                   onClick={() => openResultModal(plan.id)}
                                   disabled={!canFinalize}
-                                  className={`w-full text-xs sm:text-sm py-2 rounded-lg font-bold transition shadow-sm
-                                    ${
-                                      !canFinalize
-                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                        : "bg-blue-600 hover:bg-blue-700 text-white"
-                                    }`}
+                                  className={`w-full text-sm py-2.5 rounded-lg font-bold transition shadow-sm mt-auto
+                                    ${!canFinalize ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                                 >
                                   {canFinalize
                                     ? "✓ Selesaikan Panen"
@@ -1369,77 +1276,85 @@ export default function Panen() {
                     )}
                   </div>
 
-                  {/* RIWAYAT SELESAI */}
-                  <div>
-                    <h4 className="text-[10px] sm:text-xs font-bold text-gray-500 mb-2 sm:mb-3 flex items-center gap-2 pt-4 border-t border-gray-100">
-                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500"></span>{" "}
+                  {/* 2. RIWAYAT SELESAI (BAWAH) -> UBAH JADI TABEL */}
+                  <div className="w-full">
+                    <h4 className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-2 border-b border-gray-100 pb-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>{" "}
                       RIWAYAT SELESAI
                     </h4>
 
                     {plans.filter((p) => p.hasil_panen).length === 0 ? (
-                      <p className="text-[10px] sm:text-xs text-gray-400 italic ml-2 sm:ml-4">
-                        Belum ada riwayat panen selesai.
-                      </p>
+                      <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <p className="text-xs text-gray-400 italic">
+                          Belum ada riwayat panen selesai.
+                        </p>
+                      </div>
                     ) : (
-                      <div className="flex flex-col gap-3 sm:gap-4">
-                        {plans
-                          .filter((p) => p.hasil_panen)
-                          .map((plan) => (
-                            <div
-                              key={plan.id}
-                              className="p-3 sm:p-4 bg-green-50/50 border border-green-100 rounded-lg hover:border-green-300 transition-colors"
-                            >
-                              <div className="flex justify-between items-start mb-2 sm:mb-3">
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                                  <div>
-                                    <p className="text-xs sm:text-sm font-bold text-green-800">
-                                      Panen Selesai
-                                    </p>
-                                    <p className="text-[10px] text-gray-500">
-                                      {plan.tanggal}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-white p-2.5 sm:p-3 rounded border border-green-100">
-                                <div>
-                                  <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
-                                    Total TBS
-                                  </p>
-                                  <p className="text-xs sm:text-sm font-bold text-gray-800">
+                      <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm bg-white">
+                        <table className="min-w-full text-left border-collapse">
+                          <thead className="bg-green-600 text-white text-[10px] sm:text-xs uppercase font-bold">
+                            <tr>
+                              <th className="px-4 py-3 text-center border-r border-green-500/50 w-[50px]">
+                                No
+                              </th>
+                              <th className="px-4 py-3 border-r border-green-500/50 whitespace-nowrap">
+                                Tanggal Panen
+                              </th>
+                              <th className="px-4 py-3 border-r border-green-500/50 text-center">
+                                Total TBS
+                              </th>
+                              <th className="px-4 py-3 border-r border-green-500/50 text-center">
+                                Brondolan
+                              </th>
+                              <th className="px-4 py-3 border-r border-green-500/50 text-center">
+                                Kualitas TBS
+                              </th>
+                              <th className="px-4 py-3 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-xs sm:text-sm text-gray-800">
+                            {plans
+                              .filter((p) => p.hasil_panen)
+                              .map((plan, idx) => (
+                                <tr
+                                  key={plan.id}
+                                  className="hover:bg-green-50/30 transition-colors"
+                                >
+                                  <td className="px-4 py-3.5 text-center border-r border-gray-100 font-medium text-gray-500">
+                                    {idx + 1}
+                                  </td>
+                                  <td className="px-4 py-3.5 border-r border-gray-100 font-bold text-gray-800">
+                                    {plan.tanggal}
+                                  </td>
+                                  <td className="px-4 py-3.5 border-r border-gray-100 text-center font-bold text-green-700">
                                     {
                                       plan.hasil_panen
                                         .jumlah_total_tbs_terkumpul
                                     }{" "}
                                     Kg
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
-                                    Brondolan
-                                  </p>
-                                  <p className="text-xs sm:text-sm font-bold text-gray-800">
+                                  </td>
+                                  <td className="px-4 py-3.5 border-r border-gray-100 text-center font-bold text-orange-600">
                                     {
                                       plan.hasil_panen
                                         .banyak_berondolan_dikumpulkan
                                     }{" "}
                                     Kg
-                                  </p>
-                                </div>
-                                <div className="col-span-2 mt-2 pt-2 border-t border-dashed border-gray-100">
-                                  <p className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold">
-                                    Kualitas TBS
-                                  </p>
-                                  <p className="text-xs sm:text-sm font-bold text-gray-800 italic">
+                                  </td>
+                                  <td className="px-4 py-3.5 border-r border-gray-100 text-center italic text-gray-600">
                                     {plan.hasil_panen.kualitas_tbs
                                       ? `"${plan.hasil_panen.kualitas_tbs}"`
                                       : "-"}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-center">
+                                    <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded text-[10px] sm:text-xs font-bold border border-green-200 flex items-center justify-center gap-1.5 w-fit mx-auto">
+                                      <CheckCircle className="w-3.5 h-3.5" />{" "}
+                                      Selesai
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>
@@ -1450,30 +1365,40 @@ export default function Panen() {
         </div>
 
         {/* ================= SECTION 3 AKSI SIKLUS (PINDAHAN) ================= */}
-        <div className="mt-8 pt-4 border-t border-gray-200">
-          <h3 className="text-xs sm:text-sm font-bold text-black mb-3 uppercase tracking-wide">
-            Aksi Manajemen Siklus
-          </h3>
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex flex-col gap-2">
+            
+            {/* TOMBOL UTAMA */}
             <button
               onClick={handleNewCycle}
               disabled={!currentCycleInfo.isFinished}
-              className={`flex-1 flex items-center justify-center gap-3 px-4 py-3 sm:py-3 rounded-lg shadow-sm transition-all active:scale-[0.98] ${
+              className={`w-full flex items-center justify-center gap-2.5 px-4 py-3 sm:py-3.5 rounded-xl border transition-all active:scale-[0.98] ${
                 currentCycleInfo.isFinished
-                  ? "bg-green-50 border border-green-200 text-green-800 hover:bg-green-100 cursor-pointer"
-                  : "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed"
+                  ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:shadow-sm cursor-pointer"
+                  : "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
               }`}
             >
-              <RefreshCw className="w-5 h-5" />
-              <div className="flex flex-col items-start leading-none">
-                <span className="text-sm font-bold">Mulai Siklus Baru</span>
-                <span className="text-[10px] font-normal opacity-70 mt-0.5">
-                  {currentCycleInfo.isFinished
-                    ? "Siklus saat ini selesai"
-                    : "Tunggu Panen Selesai"}
-                </span>
-              </div>
+              {/* Icon seukuran dengan teks (w-4 / w-5) */}
+              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+              <span className="text-sm sm:text-base font-bold">
+                Mulai Siklus Baru
+              </span>
             </button>
+            
+            {/* KETERANGAN PESAN (DI BAWAH TOMBOL SENDIRI) */}
+            <div className="px-1 text-center sm:text-left">
+              {currentCycleInfo.isFinished ? (
+                <p className="text-[10px] sm:text-xs font-medium text-green-600">
+                  Siklus saat ini telah selesai. Anda dapat memulai siklus baru.
+                </p>
+              ) : (
+                <p className="text-[10px] sm:text-xs font-medium text-red-500 whitespace-normal break-words flex items-start sm:items-center justify-center sm:justify-start gap-1">
+                  <span className="font-extrabold text-red-600 text-sm leading-none mt-0.5 sm:mt-0">*</span> 
+                  {currentCycleInfo.pesanSiklus || "Selesaikan semua rencana panen terlebih dahulu."}
+                </p>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
@@ -1581,7 +1506,8 @@ export default function Panen() {
                 ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
             <InputField
               label="Tanggal Panen"
               type="date"
@@ -1599,7 +1525,8 @@ export default function Panen() {
               }
             />
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
             <InputField
               label="Jam Mulai"
               type="time"
@@ -1617,30 +1544,43 @@ export default function Panen() {
               }
             />
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+
+          {/* BARIS BARU: JUMLAH TANDAN & JUMLAH POKOK */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+            <InputField
+              label="Jumlah Pokok Dipanen"
+              type="number"
+              placeholder="0 Pokok"
+              value={formLog.jumlah_pokok_dipanen || ""}
+              onChange={(e) =>
+                setFormLog({ ...formLog, jumlah_pokok_dipanen: e.target.value })
+              }
+            />
             <InputField
               label="Jumlah Tandan (Buah)"
               type="number"
-              placeholder="0"
+              placeholder="0 Tandan"
               value={formLog.jumlahTandan}
               onChange={(e) =>
                 setFormLog({ ...formLog, jumlahTandan: e.target.value })
               }
             />
-            <div className="w-full">
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                Kondisi Kebun
-              </label>
-              <input
-                type="text"
-                placeholder="Bersih / Semak / Banjir"
-                value={formLog.kondisiKebun}
-                onChange={(e) =>
-                  setFormLog({ ...formLog, kondisiKebun: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#EF8523]"
-              />
-            </div>
+          </div>
+
+          {/* KONDISI KEBUN FULL WIDTH */}
+          <div className="w-full">
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
+              Kondisi Kebun
+            </label>
+            <input
+              type="text"
+              placeholder="Contoh: Bersih / Semak / Banjir"
+              value={formLog.kondisiKebun}
+              onChange={(e) =>
+                setFormLog({ ...formLog, kondisiKebun: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#EF8523]"
+            />
           </div>
         </ModalLayout>
       )}

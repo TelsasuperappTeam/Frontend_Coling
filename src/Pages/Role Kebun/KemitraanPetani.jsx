@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ShieldCheck,
   Users,
@@ -9,10 +9,13 @@ import {
   AlertTriangle,
   ExternalLink,
   Loader2,
+  Download,
+  Stamp,
 } from "lucide-react";
-// Pastikan getFileUrl di-export dari constants.js
+
 import { API_ENDPOINTS, getFileUrl } from "../../config/constants.js";
 import { useNavigate, useLocation } from "react-router-dom";
+import { showToast, confirmDialog } from "../../utils/notif";
 
 const KemitraanPetani = () => {
   const navigate = useNavigate();
@@ -63,7 +66,7 @@ const KemitraanPetani = () => {
         { headers },
       );
       const dataPanen = await resPanen.json();
-      console.log("Data BE - Rencana Panen Pending:", dataPanen); // <-- CONSOLE LOG DITAMBAHKAN
+      console.log("Rencana Panen Pending:", dataPanen); // <-- CONSOLE LOG DITAMBAHKAN
 
       // (SESUAI BE MAHAR): FETCH RENCANA TANAM (BLOK) PENDING
       const resTanam = await fetch(
@@ -71,7 +74,7 @@ const KemitraanPetani = () => {
         { headers },
       );
       const dataTanam = await resTanam.json();
-      console.log("Data BE - Rencana Tanam (Blok) Pending:", dataTanam); // <-- CONSOLE LOG DITAMBAHKAN
+      console.log("Rencana Tanam (Blok) Pending:", dataTanam); // <-- CONSOLE LOG DITAMBAHKAN
 
       // (SESUAI BE MAHAR): FETCH PENDING DOKUMEN ISPO
       const resDokumen = await fetch(
@@ -79,7 +82,7 @@ const KemitraanPetani = () => {
         { headers },
       );
       const dataDokumen = await resDokumen.json();
-      console.log("Data BE - Dokumen ISPO Pending:", dataDokumen); // <-- CONSOLE LOG DITAMBAHKAN
+      console.log("Dokumen ISPO Pending:", dataDokumen); // <-- CONSOLE LOG DITAMBAHKAN
 
       if (Array.isArray(dataPanen)) setPendingPanen(dataPanen);
       if (Array.isArray(dataTanam)) setPendingTanam(dataTanam);
@@ -149,14 +152,12 @@ const KemitraanPetani = () => {
       status_approval: isApprove ? "disetujui" : "ditolak",
     };
 
-    // Hanya kirim catatan jika ditolak & ada isinya
     if (!isApprove && reason) {
       payload.catatan_penolakan = reason;
     }
 
     try {
       const token = localStorage.getItem("token");
-
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -168,58 +169,90 @@ const KemitraanPetani = () => {
 
       if (!res.ok) {
         const textResponse = await res.text();
-        let errorMessage = `Gagal memproses ${contextName} (Status: ${res.status})`;
+        let errorMessage = `Gagal memproses ${contextName}`;
         try {
           const jsonResponse = JSON.parse(textResponse);
-          if (jsonResponse.detail) {
-            errorMessage += `: ${JSON.stringify(jsonResponse.detail)}`;
-          } else if (jsonResponse.message) {
-            errorMessage += `: ${jsonResponse.message}`;
-          }
+          errorMessage =
+            jsonResponse.detail || jsonResponse.message || errorMessage;
         } catch {
           errorMessage += `: ${textResponse.substring(0, 100)}`;
         }
         throw new Error(errorMessage);
       }
 
-      alert(`${contextName} berhasil ${isApprove ? "disetujui" : "ditolak"}`);
-      fetchValidasiData(); // Refresh data tabel/grid setelah sukses
+      // MENGGUNAKAN TOAST ALIH-ALIH ALERT BROWSER
+      showToast.success(
+        `${contextName} berhasil ${isApprove ? "disetujui" : "ditolak"}`,
+      );
+      fetchValidasiData();
     } catch (error) {
       console.error(`Error ${contextName}:`, error);
-      alert(error.message);
+      showToast.error(error.message);
     }
   };
 
-  // (SESUAI BE MAHAR): Handler Approve/Reject Rencana Panen
+  // Handler Approve/Reject Rencana Panen DENGAN KONFIRMASI
   const processActionPanen = async (id, isApprove, reason = null) => {
+    if (isApprove) {
+      const isSetuju = await confirmDialog({
+        title: "Setujui Rencana Panen?",
+        text: "Apakah Anda yakin ingin menyetujui rencana panen ini?",
+        confirmText: "Ya, Setujui!",
+      });
+      if (!isSetuju) return;
+    }
+
     const url = API_ENDPOINTS.FARM.KEBUN.APPROVAL.ACTION_RENCANA_PANEN(id);
     await sendApprovalRequest(url, isApprove, reason, "Rencana Panen");
   };
 
-  // (SESUAI BE MAHAR): Handler Approve/Reject Rencana Tanam (Blok)
+  // Handler Approve/Reject Rencana Tanam DENGAN KONFIRMASI
   const processActionTanam = async (id, isApprove, reason = null) => {
+    if (isApprove) {
+      const isSetuju = await confirmDialog({
+        title: "Setujui Rencana Tanam?",
+        text: "Apakah Anda yakin ingin menyetujui rencana replanting/tanam baru ini?",
+        confirmText: "Ya, Setujui!",
+      });
+      if (!isSetuju) return;
+    }
+
     const url = API_ENDPOINTS.FARM.KEBUN.APPROVAL.APPROVE_BLOK(id);
     await sendApprovalRequest(url, isApprove, reason, "Rencana Tanam");
   };
 
-  // (SESUAI BE MAHAR): Handler Approve/Reject Dokumen ISPO
+  // --- VALIDASI DOKUMEN ISPO ---
   const processActionDokumen = async (id, isApprove, reason = null) => {
-    // Karena URL pakai {id}, kita replace string-nya
-    const url = API_ENDPOINTS.ISPO.KEBUN.REVIEW_DOKUMEN_ISPO.replace(
-      "{id}",
-      id,
-    );
-
-    // Payload spesifik ISPO (bukan status_approval, tapi status)
-    const payload = {
-      status: isApprove ? "APPROVED" : "REJECTED",
-    };
-    if (!isApprove && reason) {
-      payload.catatan_revisi = reason;
+    // Konfirmasi khusus untuk tombol Terima (Centang Hijau)
+    if (isApprove) {
+      const isSetuju = await confirmDialog({
+        title: "Validasi Dokumen Sertifikasi?",
+        text: "Apakah Anda yakin dokumen ISPO ini sudah benar dan memenuhi syarat?",
+        confirmText: "Ya, Validasi!",
+      });
+      if (!isSetuju) return;
     }
 
+    // Tembak Endpoint Review ISPO (Bisa untuk Terima maupun Tolak)
     try {
       const token = localStorage.getItem("token");
+
+      // Ganti {id} di URL dengan id dokumen yang sedang diklik
+      const url = API_ENDPOINTS.ISPO.KEBUN.REVIEW_DOKUMEN_ISPO.replace(
+        "{id}",
+        id,
+      );
+
+      // Siapkan payload sesuai permintaan BE
+      const payload = {
+        status: isApprove ? "APPROVED" : "REJECTED",
+      };
+
+      // Jika ditolak, masukkan catatan revisinya
+      if (!isApprove && reason) {
+        payload.catatan_revisi = reason;
+      }
+
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -229,18 +262,26 @@ const KemitraanPetani = () => {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Gagal mereview dokumen ISPO");
-      alert(`Dokumen berhasil ${isApprove ? "disetujui" : "ditolak"}`);
-      fetchValidasiData(); // Refresh tabel
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(
+          data.detail || data.message || "Gagal memproses dokumen ISPO",
+        );
+
+      showToast.success(
+        `Dokumen ISPO berhasil ${isApprove ? "disetujui" : "ditolak"}!`,
+      );
+
+      fetchValidasiData();
     } catch (error) {
-      console.error(error);
-      alert(error.message);
+      showToast.error(error.message);
     }
   };
 
+  // Submit Penolakan Modal (Digabungkan untuk Panen, Tanam, dan Dokumen)
   const handleSubmitRejection = async () => {
     if (!rejectReason.trim()) {
-      alert("Harap isi alasan penolakan.");
+      showToast.error("Harap isi alasan penolakan.");
       return;
     }
 
@@ -249,11 +290,108 @@ const KemitraanPetani = () => {
     } else if (selectedRejectItem.type === "tanam") {
       await processActionTanam(selectedRejectItem.id, false, rejectReason);
     } else if (selectedRejectItem.type === "dokumen") {
-      // <-- TAMBAHAN UNTUK DOKUMEN ISPO
+      // Sekarang melempar reason (alasan penolakan) ke fungsi API ISPO
       await processActionDokumen(selectedRejectItem.id, false, rejectReason);
     }
 
     closeRejectModal();
+  };
+
+  // --- STATE DOKUMEN KOLEKTIF & CAP DIGITAL ---
+  const [isGeneratingKolektif, setIsGeneratingKolektif] = useState(false);
+  const [isUploadingCap, setIsUploadingCap] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // 1. Handler Generate PDF Kolektif
+  const handleGenerateKolektif = async () => {
+    // TAMBAHAN: Konfirmasi sebelum memproses dokumen
+    const isSetuju = await confirmDialog({
+      title: "Generate Dokumen Kolektif?",
+      text: "Apakah Anda yakin ingin membuat dokumen realisasi penjualan gabungan untuk seluruh petani yang sudah di-ACC?",
+      confirmText: "Ya, Buat Dokumen!",
+    });
+    if (!isSetuju) return;
+
+    setIsGeneratingKolektif(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        API_ENDPOINTS.ISPO.KEBUN.DOKUMEN_REALISASI_PENJUALAN_GABUNGAN,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(
+          data.detail || data.message || "Gagal membuat dokumen kolektif.",
+        );
+
+      showToast.success("Dokumen berhasil digabungkan!");
+      // Buka PDF di tab baru
+      window.open(getFileUrl(data.download_url, "ISPO"), "_blank");
+    } catch (error) {
+      showToast.error(error.message);
+    } finally {
+      setIsGeneratingKolektif(false);
+    }
+  };
+
+  // 2. TAMBAHAN BARU: Handler Konfirmasi sebelum buka Jendela File
+  const handleTriggerUploadCap = async () => {
+    // Munculkan konfirmasi & informasi terkait syarat gambar cap
+    const isSetuju = await confirmDialog({
+      title: "Upload Cap Digital",
+      text: "Pastikan Cap yang diupload adalah CAP DIGITAL BERSIH (berformat PNG tanpa latar belakang putih). Jangan gunakan foto stempel fisik yang buram atau masih ada latar belakangnya. Lanjutkan?",
+      confirmText: "Ya, Pilih File",
+    });
+
+    if (isSetuju) {
+      fileInputRef.current.click(); // Baru buka jendela file browser jika setuju
+    }
+  };
+
+  // 3. Handler Eksekusi Upload Cap Digital
+  const handleUploadCap = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validasi tipe file (Sesuai BE hanya menerima .png / .jpg)
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      showToast.error(
+        "Format tidak didukung. Harap upload file gambar (.png atau .jpg)",
+      );
+      e.target.value = null;
+      return;
+    }
+
+    setIsUploadingCap(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file); // Key 'file' harus sesuai dengan parameter di BE
+
+      const res = await fetch(API_ENDPOINTS.ISPO.KEBUN.UPLOAD_CAP_DOKUMEN, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }, // Catatan: JANGAN set Content-Type untuk FormData
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(
+          data.detail || data.message || "Gagal mengunggah cap digital.",
+        );
+
+      showToast.success("Cap Digital berhasil diunggah dan disimpan!");
+    } catch (error) {
+      showToast.error(error.message);
+    } finally {
+      setIsUploadingCap(false);
+      e.target.value = null; // Reset input agar bisa upload file yang sama lagi jika perlu
+    }
   };
 
   return (
@@ -621,6 +759,61 @@ const KemitraanPetani = () => {
                 kebun.
               </p>
 
+              {/* AKSI GENERATE DOKUMEN KOLEKTIF & UPLOAD CAP */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h4 className="font-bold text-blue-900 text-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" /> Laporan
+                    Realisasi Penjualan (Kolektif)
+                  </h4>
+                  <p className="text-xs text-blue-700 mt-1 max-w-lg leading-relaxed">
+                    Buat 1 dokumen PDF gabungan yang berisi laporan realisasi
+                    penjualan seluruh petani yang sudah di-ACC. Cap digital akan
+                    ditempel otomatis.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  {/* Hidden File Input untuk Cap */}
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleUploadCap}
+                  />
+
+                  {/* Tombol Sekunder: Upload Cap (Memanggil handleTriggerUploadCap) */}
+                  <button
+                    onClick={handleTriggerUploadCap}
+                    disabled={isUploadingCap || isGeneratingKolektif}
+                    className="px-3 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors flex items-center gap-1.5 w-full sm:w-auto justify-center disabled:opacity-50"
+                    title="Pengaturan Cap Digital"
+                  >
+                    {isUploadingCap ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Stamp className="w-3.5 h-3.5" />
+                    )}
+                    <span className="hidden sm:inline">Upload Cap</span>
+                  </button>
+
+                  {/* Tombol Primer: Generate Dokumen */}
+                  <button
+                    onClick={handleGenerateKolektif}
+                    disabled={isGeneratingKolektif || isUploadingCap}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors flex items-center gap-1.5 w-full sm:w-auto justify-center disabled:opacity-50"
+                  >
+                    {isGeneratingKolektif ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    Buat Dokumen
+                  </button>
+                </div>
+              </div>
+
               <div className="overflow-x-auto rounded-xl border border-gray-200">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -637,30 +830,25 @@ const KemitraanPetani = () => {
                     </tr>
                   </thead>
                   <tbody className="text-xs text-gray-700 bg-white">
-                    {/* 1. CEK KONDISI LOADING DULU */}
                     {loading ? (
                       <tr>
                         <td
                           colSpan="7"
                           className="p-8 text-center text-gray-400"
                         >
-                          <div className="text-center py-10 text-gray-400 text-xs font-bold">
-                            Memuat data validasi ISPO petani...
-                          </div>
+                          Memuat data validasi ISPO...
                         </td>
                       </tr>
                     ) : pendingDokumen.length === 0 ? (
-                      /* 2. JIKA TIDAK LOADING & DATA KOSONG */
                       <tr>
                         <td
                           colSpan="7"
-                          className="p-6 text-center text-gray-400 font-bold"
+                          className="p-8 text-center text-gray-400 font-bold"
                         >
                           Tidak ada dokumen sertifikasi yang menunggu validasi.
                         </td>
                       </tr>
                     ) : (
-                      /* 3. JIKA TIDAK LOADING & DATA ADA */
                       pendingDokumen.map((item, index) => (
                         <tr
                           key={item.id}
@@ -669,22 +857,15 @@ const KemitraanPetani = () => {
                           <td className="p-4 font-bold text-center">
                             {index + 1}
                           </td>
-
-                          {/* MENGGUNAKAN NAMA PETANI DARI BE */}
                           <td className="p-4 font-bold text-[#B5302D]">
                             {item.nama_petani || "Tidak Diketahui"}
                           </td>
-
-                          {/* MENGGUNAKAN JENIS DOKUMEN DARI BE */}
                           <td className="p-4 font-medium">
                             {item.jenis_dokumen || item.requirement_code}
                           </td>
-
-                          {/* MENGGUNAKAN PRINSIP ISPO DARI BE */}
                           <td className="p-4 text-gray-500 font-semibold">
                             {item.prinsip_ispo || "-"}
                           </td>
-
                           <td className="p-4">
                             <a
                               href={getFileUrl(item.file_url, "ISPO")}
@@ -692,36 +873,36 @@ const KemitraanPetani = () => {
                               rel="noreferrer"
                               className="flex items-center gap-1 text-blue-600 hover:underline font-bold"
                             >
-                              <FileText className="w-3 h-3" /> Buka File
+                              <FileText className="w-3 h-3" /> Lihat File
                             </a>
                           </td>
-
-                          {/* MENGGUNAKAN STATUS DARI BE DENGAN GAYA BADGE */}
                           <td className="p-4 italic text-gray-400">
                             <span className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-2 py-1 rounded-md text-[10px] font-bold not-italic">
                               {item.status || "PENDING"}
                             </span>
                           </td>
-
                           <td className="p-4">
                             <div className="flex items-center justify-center gap-3">
+                              {/* Tombol Tolak: Membuka Modal Reject */}
                               <button
                                 onClick={() =>
                                   openRejectModal(item.id, "dokumen")
                                 }
-                                className="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
                                 title="Tolak"
                               >
-                                <XCircle className="w-5 h-5" />
+                                <XCircle className="w-4 h-4" />
                               </button>
+
+                              {/* Tombol Terima: Memanggil Dummy Function */}
                               <button
                                 onClick={() =>
                                   processActionDokumen(item.id, true)
                                 }
-                                className="text-green-500 hover:bg-green-50 p-1.5 rounded transition-colors"
-                                title="Validasi (Setujui)"
+                                className="text-green-500 hover:bg-green-50 p-1 rounded transition-colors"
+                                title="Validasi"
                               >
-                                <CheckCircle className="w-5 h-5" />
+                                <CheckCircle className="w-4 h-4" />
                               </button>
                             </div>
                           </td>

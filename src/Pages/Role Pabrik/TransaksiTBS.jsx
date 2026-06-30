@@ -15,6 +15,7 @@ import {
   XCircle,
   ShoppingCart,
   Truck,
+  AlertCircle,
 } from "lucide-react";
 
 import { API_ENDPOINTS, NOTIF_MESSAGES } from "../../config/constants";
