@@ -19,7 +19,7 @@ Set up abru buka file
 update git hub
 git status 
 git add .
-git commit -m "Revisi tampilan UI/UX karna ada yang kurang sesuai"
+git commit -m "Revisi logika yang kurang tepat"
 git push origin main
 
 Jika menggunakan local maka "npm run dev"

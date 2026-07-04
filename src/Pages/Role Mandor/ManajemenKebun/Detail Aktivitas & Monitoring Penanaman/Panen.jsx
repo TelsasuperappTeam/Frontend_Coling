@@ -61,6 +61,7 @@ export default function Panen() {
     jamMulai: "",
     jamSelesai: "",
     jumlahTandan: "",
+    jumlah_pokok_dipanen: "",
     kondisiKebun: "",
   });
   const [formResult, setFormResult] = useState({
@@ -359,13 +360,10 @@ export default function Panen() {
       formLog.jumlah_pokok_dipanen === "" ||
       formLog.jumlah_pokok_dipanen === undefined
     ) {
-      showToast.error(
-        "Masih ada kolom yang belum diisi. Silakan pilih Rencana, Nama Pemanen, dan Jumlah Tandan terlebih dahulu.",
-      );
+      showToast.error("Mohon lengkapi semua data, termasuk Jumlah Pokok!");
       return;
     }
 
-    // Tutup popup duluan
     setActiveModal(null);
     setIsSubmitting(true);
     showToast.loading("Menyimpan catatan panen...");
@@ -373,6 +371,8 @@ export default function Panen() {
     try {
       const token = localStorage.getItem("token");
       const url = API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_REALISASI_PANEN;
+
+      // Payload wajib sesuai skema BE MAHAR
       const payload = {
         rencana_panen_id: parseInt(formLog.selectedPlanId),
         nama_pemanen: formLog.namaPetani,
@@ -380,7 +380,7 @@ export default function Panen() {
         jam_mulai: formLog.jamMulai,
         jam_selesai: formLog.jamSelesai,
         jumlah_tandan_dipanen: parseFloat(formLog.jumlahTandan),
-        jumlah_pokok_dipanen: parseInt(formLog.jumlah_pokok_dipanen),
+        jumlah_pokok_dipanen: parseInt(formLog.jumlah_pokok_dipanen), // Wajib Integer
         kondisi_kebun: formLog.kondisiKebun || null,
       };
 
@@ -409,12 +409,14 @@ export default function Panen() {
         });
         fetchRencanaPanen();
       } else {
+        // Ambil pesan error dari Backend
         const err = await res.json();
-        showToast.error(`Gagal: ${err.detail || "Cek isian kembali"}`);
+        console.error("Backend Error:", err);
+        showToast.error(`Gagal: ${err.detail || "Periksa kembali inputan Anda"}`);
       }
     } catch {
       showToast.dismiss();
-      showToast.error("Gagal koneksi ke server.");
+      showToast.error("Error jaringan. Tidak dapat terhubung ke server.");
     } finally {
       setIsSubmitting(false);
     }

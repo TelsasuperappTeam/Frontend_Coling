@@ -157,6 +157,13 @@ const MONITORING_CONFIG = {
         align: "left",
       },
       {
+        header: "Pokok Ditindak",
+        key: "jumlah_pokok_ditindak",
+        width: "110px",
+        align: "center",
+        type: "number",
+      },
+      {
         header: "Foto",
         key: "dokumentasi_kebersihan_url",
         width: "100px",
@@ -195,6 +202,12 @@ const MONITORING_CONFIG = {
         label: "Kondisi Lingkungan",
         type: "select",
         options: ENUM_OPTIONS.kondisi_lingkungan,
+      },
+      {
+        key: "jumlah_pokok_ditindak",
+        label: "Jumlah Pokok Ditindak",
+        type: "number",
+        placeholder: "Contoh: 25",
       },
       { key: "f", label: "Upload Foto", type: "file" },
     ],
@@ -245,6 +258,13 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
+        header: "Pokok Ditindak",
+        key: "jumlah_pokok_ditindak",
+        width: "110px",
+        align: "center",
+        type: "number",
+      },
+      {
         header: "Foto",
         key: "dokumentasi_covercrop_url",
         width: "100px",
@@ -284,6 +304,12 @@ const MONITORING_CONFIG = {
         options: ENUM_OPTIONS.kelembapan_tanah,
       },
       { key: "jumlah_petugas", label: "Jumlah Petugas", type: "number" },
+      {
+        key: "jumlah_pokok_ditindak",
+        label: "Jumlah Pokok Ditindak",
+        type: "number",
+        placeholder: "Contoh: 25",
+      },
       {
         key: "deskripsi_kegiatan",
         label: "Deskripsi (Opsional)",
@@ -419,6 +445,13 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
+        header: "Pokok Ditindak",
+        key: "jumlah_pokok_ditindak",
+        width: "110px",
+        align: "center",
+        type: "number",
+      },
+      {
         header: "Foto",
         key: "dokumentasi_aktivitas_url",
         width: "100px",
@@ -445,6 +478,12 @@ const MONITORING_CONFIG = {
         placeholder: "Opsional",
       },
       { key: "jumlah_petugas", label: "Jumlah Petugas", type: "number" },
+      {
+        key: "jumlah_pokok_ditindak",
+        label: "Jumlah Pokok Ditindak",
+        type: "number",
+        placeholder: "Contoh: 25",
+      },
       { key: "f", label: "Upload Foto", type: "file" },
     ],
   },
@@ -577,6 +616,13 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
+        header: "Pokok Ditindak",
+        key: "jumlah_pokok_ditindak",
+        width: "110px",
+        align: "center",
+        type: "number",
+      },
+      {
         header: "Foto",
         key: "dokumentasi_pestisida_url",
         width: "100px",
@@ -594,7 +640,12 @@ const MONITORING_CONFIG = {
         options: [], // Dikosongkan, akan diisi dinamis dari state
       },
       // ---------------------------------------
-      { key: "dosis_diberikan", label: "Jumlah Dosis", type: "number" },
+      {
+        key: "dosis_diberikan",
+        label: "Jumlah Dosis",
+        type: "number",
+        placeholder: "Contoh: 2",
+      },
       {
         key: "satuan_dosis",
         label: "Satuan",
@@ -605,6 +656,7 @@ const MONITORING_CONFIG = {
         key: "jumlah_total_digunakan",
         label: "Total Pakai (L/Kg)",
         type: "number",
+        placeholder: "Contoh: 3.5",
       },
       {
         key: "opt_sasaran",
@@ -615,8 +667,20 @@ const MONITORING_CONFIG = {
         key: "luas_area_terkendali_ha",
         label: "Luas Area Terkendali (ha)",
         type: "number",
+        placeholder: "Contoh: 2",
       },
-      { key: "jumlah_petugas", label: " Jumlah Petugas", type: "number" },
+      {
+        key: "jumlah_petugas",
+        label: " Jumlah Petugas",
+        type: "number",
+        placeholder: "Contoh: 5",
+      },
+      {
+        key: "jumlah_pokok_ditindak",
+        label: "Jumlah Pokok Ditindak",
+        type: "number",
+        placeholder: "Contoh: 25",
+      },
       { key: "f", label: "Foto Bukti", type: "file" },
     ],
   },
@@ -812,6 +876,7 @@ export default function MonitoringGAP() {
 
         if (response.ok) {
           const data = await response.json();
+          console.log("[DEBUG] Respons Detail Blok dari BE:", data);
           setUnitData(data);
         }
       } catch (error) {
@@ -882,11 +947,11 @@ export default function MonitoringGAP() {
         else if (sectionKey === "opt")
           url =
             API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_PESTISIDA(blokId);
-        else if (sectionKey === "drainase") { // <--- Tambah kurung kurawal buka
+        else if (sectionKey === "drainase") {
+          // <--- Tambah kurung kurawal buka
           url =
             API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_DRAINASE(blokId);
-        }
-        else if (
+        } else if (
           sectionKey === "piringan_kondisi" ||
           sectionKey === "piringan_aktivitas"
         ) {
@@ -943,6 +1008,14 @@ export default function MonitoringGAP() {
     }
     if (!popupType) return;
 
+    // --- TAMBAHAN FINAL: VALIDASI KHUSUS PESTISIDA (OPT) ---
+    if (popupType === "opt") {
+      if (!formData.satuan_dosis) {
+        showToast.error("Gagal: Kolom Satuan Dosis wajib dipilih.");
+        return; // Berhenti di sini, cegah error 422 dari Backend
+      }
+    }
+
     // Popup Konfirmasi sebelum menyimpan
     const isSetuju = await confirmDialog({
       title: "Simpan Data Monitoring?",
@@ -978,7 +1051,6 @@ export default function MonitoringGAP() {
         url =
           API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_PESTISIDA(blokId);
       else if (popupType === "drainase")
-        // <--- TAMBAHAN BARU URL
         url =
           API_ENDPOINTS.FARM.PETANI.ACTIVITY.ADD_MONITORING_DRAINASE(blokId);
       else if (popupType === "piringan_kondisi")
@@ -1008,12 +1080,34 @@ export default function MonitoringGAP() {
         });
       } else {
         const payload = new FormData();
+
+        // INJEKSI NILAI DEFAULT EKSPLISIT
+        // Mencegah silent failure: Jika input kosong/tidak disentuh, paksakan bernilai 0 agar key terbaca di Object.keys
+        if (
+          formData.jumlah_pokok_ditindak === undefined ||
+          formData.jumlah_pokok_ditindak === ""
+        ) {
+          formData.jumlah_pokok_ditindak = 0;
+        }
+        if (
+          formData.jumlah_pohon_dipupuk === undefined ||
+          formData.jumlah_pohon_dipupuk === ""
+        ) {
+          formData.jumlah_pohon_dipupuk = 0;
+        }
+        if (
+          formData.jumlah_petugas === undefined ||
+          formData.jumlah_petugas === ""
+        ) {
+          formData.jumlah_petugas = 0;
+        }
+
         Object.keys(formData).forEach((key) => {
           let value = formData[key];
 
-          if (value === undefined || value === null || value === "") return;
+          if (value === undefined || value === null) return;
 
-          // <--- tanggal_pengukuran dikonversi ke format T00:00:00 (datetime)
+          // Format Datetime
           if (
             (key === "tanggal_pemupukan" ||
               key === "tanggal_pemakaian" ||
@@ -1023,29 +1117,39 @@ export default function MonitoringGAP() {
             value = `${value}T00:00:00`;
           }
 
+          // Grup Integer (Wajib Bilangan Bulat untuk Backend)
           if (
-            key === "dinamis_pupuk_id" ||
-            key === "dinamis_pestisida_id" ||
-            key === "monitoring_piringan_id"
+            [
+              "dinamis_pupuk_id",
+              "dinamis_pestisida_id",
+              "monitoring_piringan_id",
+              "jumlah_petugas",
+              "jumlah_pokok_ditindak",
+              "jumlah_pohon_dipupuk",
+            ].includes(key)
           ) {
-            value = parseInt(value);
-          } else if (
+            value = value === "" ? 0 : parseInt(value, 10);
+          }
+          // Grup Float (Boleh Pecahan)
+          else if (
             [
               "dosis_diberikan",
               "jumlah_total_digunakan",
               "luas_area_terkendali_ha",
               "dosis_diberikan_per_gram",
               "jumlah_total_pupuk_digunakan_kg",
-              "jumlah_pohon_dipupuk",
-              "jumlah_petugas",
               "kedalaman_muka_air_cm",
             ].includes(key)
           ) {
-            value = parseFloat(value);
+            value = value === "" ? 0.0 : parseFloat(value);
           }
+
+          // Abaikan string kosong hanya untuk inputan text/file
+          if (value === "" && typeof value === "string") return;
 
           payload.append(key, value);
         });
+
         finalBody = payload;
       }
 
@@ -1073,7 +1177,6 @@ export default function MonitoringGAP() {
         throw new Error(errorMsg);
       }
 
-      // BARU MUNCULKAN TOAST SUKSESNYA
       showToast.success("Data monitoring berhasil disimpan!");
 
       if (popupType.includes("piringan")) fetchSectionData("piringan_kondisi");
@@ -1615,6 +1718,14 @@ export default function MonitoringGAP() {
                                             <span className="font-medium text-gray-700">
                                               {akt.jumlah_petugas
                                                 ? `${akt.jumlah_petugas} Orang`
+                                                : "-"}
+                                            </span>
+                                          </p>
+                                          <p>
+                                            Pokok Ditindak:{" "}
+                                            <span className="font-medium text-gray-700">
+                                              {akt.jumlah_pokok_ditindak
+                                                ? `${akt.jumlah_pokok_ditindak} Pkk`
                                                 : "-"}
                                             </span>
                                           </p>
