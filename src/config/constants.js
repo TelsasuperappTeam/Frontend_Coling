@@ -17,18 +17,20 @@ export const ROLES = {
 };
 
 // ======================= BASE URL =======================
-// Karena backend MAHAR sudah disatukan (merged), gunakan satu alamat pusat.
-// URL Default (Fallback jika .env tidak terbaca)
-const DEFAULT_SERVER_URL = "https://api.company.telsa.cloud";
+// src/config/constants.js
+
+// Pilihan Server (Anda bisa switch di sini jika server utama bermasalah)
+const SERVER_BARU = "https://api.telsa.cloud";
+const SERVER_LAMA = "https://api.company.telsa.cloud";
+
+const ACTIVE_SERVER = SERVER_BARU; 
 
 export const API_BASE_URLS = {
-  // Mengambil dari .env (atau .env.local jika ada).
-  // Jika string kosong, fallback ke DEFAULT_SERVER_URL.
-  AUTH: import.meta.env.VITE_API_AUTH_URL || DEFAULT_SERVER_URL,
-  USER: import.meta.env.VITE_API_USER_URL || DEFAULT_SERVER_URL,
-  FARM: import.meta.env.VITE_API_FARM_URL || DEFAULT_SERVER_URL,
-  ISPO: import.meta.env.VITE_API_ISPO_URL || DEFAULT_SERVER_URL,
-  TRACEABILITY: import.meta.env.VITE_API_TRACEABILITY_URL || DEFAULT_SERVER_URL,
+  AUTH: import.meta.env.VITE_API_AUTH_URL || ACTIVE_SERVER,
+  USER: import.meta.env.VITE_API_USER_URL || ACTIVE_SERVER,
+  FARM: import.meta.env.VITE_API_FARM_URL || ACTIVE_SERVER,
+  ISPO: import.meta.env.VITE_API_ISPO_URL || ACTIVE_SERVER,
+  TRACEABILITY: import.meta.env.VITE_API_TRACEABILITY_URL || ACTIVE_SERVER,
 };
 
 // ======================= ENDPOINT API =======================
