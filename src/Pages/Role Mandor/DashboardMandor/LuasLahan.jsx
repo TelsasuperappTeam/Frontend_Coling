@@ -645,16 +645,6 @@ export default function LuasLahan() {
                   <li className="flex gap-2 border-t border-gray-50 pt-3">
                     <span className="text-[#B5302D] font-bold">•</span>
                     <span>
-                      <b>Izin Usaha</b> (IUP/HGU)
-                      <br />
-                      <span className="text-[10px] text-gray-400 block mt-0.5">
-                        Khusus untuk pelaku usaha skala petani sawit rakyat/swadaya.
-                      </span>
-                    </span>
-                  </li>
-                  <li className="flex gap-2 border-t border-gray-50 pt-3">
-                    <span className="text-[#B5302D] font-bold">•</span>
-                    <span>
                       <b>SPPL</b> (Surat Pernyataan Lingkungan)
                     </span>
                   </li>
@@ -712,7 +702,7 @@ export default function LuasLahan() {
                 <p>
                   Jika lahan Anda berstatus <b>Sengketa</b>, sistem akan
                   memberikan keringanan: Anda bisa mendaftar{" "}
-                  <b>tanpa mengunggah STDB/IUP & SPPL</b>.
+                  <b>tanpa mengunggah STDB & SPPL</b>.
                 </p>
                 <p className="mt-2 font-medium">
                   Sebagai gantinya, Anda <b>wajib</b> melampirkan bukti progres
