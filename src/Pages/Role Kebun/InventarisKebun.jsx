@@ -481,7 +481,7 @@ export default function Inventaris() {
         },
         {
           name: "file_sertifikat",
-          label: "Foto Pupuk (Wajib)",
+          label: "Dokumen Sertifikat Pupuk (Wajib)",
           type: "file",
           note: "File: JPG, PNG, PDF (Maks. 2MB)",
         },

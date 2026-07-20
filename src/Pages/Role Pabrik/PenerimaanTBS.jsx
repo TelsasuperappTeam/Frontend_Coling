@@ -1167,7 +1167,7 @@ const PenerimaanTBS = () => {
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="w-6 h-6 text-gray-400 mb-2" />
                           <p className="text-xs text-gray-500 font-semibold">
-                            Klik untuk unggah foto nota
+                            Klik untuk unggah dokumen nota
                           </p>
                         </div>
                         <input

@@ -86,7 +86,7 @@ const DOKUMEN_CONFIG = [
       "Kriteria 2.3 Penerapan Teknik Budidaya dan Pengangkutan Kelapa Sawit",
     subKriteria: "2.3.2 pembenihan",
     label: "Bukti sosialisasi informasi benih",
-    deskripsi: "Upload dokumen/foto/video bukti sosialisasi informasi benih.",
+    deskripsi: "Upload dokumen berita acara bukti kegiatan sosialisasi informasi benih.",
     code: "P2_2_3_9_SOSIALISASI_BENIH",
   },
   {

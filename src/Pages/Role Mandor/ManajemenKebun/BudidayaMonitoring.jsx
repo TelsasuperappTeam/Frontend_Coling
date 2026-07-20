@@ -1272,7 +1272,7 @@ export default function BudidayaMonitoring() {
 
                         <div>
                           <label className="block font-bold text-gray-700 mb-2 text-sm">
-                            Bukti Foto/Video Terasering
+                            Bukti dokumentasi/berita acara Terasering
                           </label>
                           <input
                             type="file"
@@ -1326,7 +1326,7 @@ export default function BudidayaMonitoring() {
 
                           <div>
                             <label className="block font-bold text-gray-700 mb-2 text-sm">
-                              Bukti Foto/Video Drainase
+                              Bukti dokumentasi/berita acara drainase
                             </label>
                             <input
                               type="file"

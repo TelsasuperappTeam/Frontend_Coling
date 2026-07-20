@@ -726,7 +726,7 @@ export default function ArsipSiklus() {
                         isBadge: true,
                       },
                       {
-                        header: "Foto",
+                        header: "Dokumentasi kegiatan",
                         key: "dokumentasi_kebersihan_url",
                         isLink: true,
                         align: "center",
@@ -783,7 +783,7 @@ export default function ArsipSiklus() {
                         align: "center",
                       },
                       {
-                        header: "Foto",
+                        header: "Dokumentasi kegiatan",
                         key: "dokumentasi_covercrop_url",
                         isLink: true,
                         align: "center",
@@ -954,7 +954,7 @@ export default function ArsipSiklus() {
                                               rel="noreferrer"
                                               className="text-[#EF8523] hover:underline flex items-center gap-1 text-[10px] font-bold bg-orange-50 px-1.5 py-0.5 rounded"
                                             >
-                                              <FileText size={12} /> Foto
+                                              <FileText size={12} /> Dokumen
                                             </a>
                                           )}
                                         </div>
@@ -1017,7 +1017,7 @@ export default function ArsipSiklus() {
                         align: "center",
                       },
                       {
-                        header: "Foto",
+                        header: "Dokumentasi kegiatan",
                         key: "dokumentasi_pemupukan_url",
                         isLink: true,
                         align: "center",
@@ -1074,7 +1074,7 @@ export default function ArsipSiklus() {
                         align: "center",
                       },
                       {
-                        header: "Foto",
+                        header: "Dokumentasi Kegiatan",
                         key: "dokumentasi_pestisida_url",
                         isLink: true,
                         align: "center",
@@ -1119,7 +1119,7 @@ export default function ArsipSiklus() {
                         align: "center",
                       },
                       {
-                        header: "Foto Bukti",
+                        header: "Dokumentasi Kegiatan",
                         key: "foto_pengukuran_url",
                         isLink: true,
                         align: "center",

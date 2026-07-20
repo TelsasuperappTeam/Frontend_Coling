@@ -164,7 +164,7 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
-        header: "Foto",
+        header: "Dokumentasi Kegiatan",
         key: "dokumentasi_kebersihan_url",
         width: "100px",
         type: "link",
@@ -209,7 +209,7 @@ const MONITORING_CONFIG = {
         type: "number",
         placeholder: "Contoh: 25",
       },
-      { key: "f", label: "Upload Foto", type: "file" },
+      { key: "f", label: "Upload Dokumentasi Kegiatan", type: "file" },
     ],
   },
 
@@ -265,7 +265,7 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
-        header: "Foto",
+        header: "Dokumentasi Kegiatan",
         key: "dokumentasi_covercrop_url",
         width: "100px",
         type: "link",
@@ -315,7 +315,7 @@ const MONITORING_CONFIG = {
         label: "Deskripsi (Opsional)",
         placeholder: "Keterangan kegiatan yang dilakukan...",
       },
-      { key: "f", label: "Upload Foto", type: "file" },
+      { key: "f", label: "Upload Dokumentasi Kegiatan", type: "file" },
     ],
   },
 
@@ -452,7 +452,7 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
-        header: "Foto",
+        header: "Dokumentasi Kegiatan",
         key: "dokumentasi_aktivitas_url",
         width: "100px",
         type: "link",
@@ -484,7 +484,7 @@ const MONITORING_CONFIG = {
         type: "number",
         placeholder: "Contoh: 25",
       },
-      { key: "f", label: "Upload Foto", type: "file" },
+      { key: "f", label: "Upload Dokumentasi Kegiatan", type: "file" },
     ],
   },
 
@@ -527,7 +527,7 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
-        header: "Foto",
+        header: "Dokumentasi Kegiatan",
         key: "dokumentasi_pemupukan_url",
         width: "100px",
         type: "link",
@@ -562,7 +562,7 @@ const MONITORING_CONFIG = {
         options: ENUM_OPTIONS.cuaca_pemupukan,
       },
       { key: "jumlah_petugas", label: "Jumlah Petugas", type: "number" },
-      { key: "f", label: "Foto Bukti", type: "file" },
+      { key: "f", label: "Dokumentasi Kegiatan", type: "file" },
     ],
   },
 
@@ -623,7 +623,7 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
-        header: "Foto",
+        header: "Dokumentasi Kegiatan",
         key: "dokumentasi_pestisida_url",
         width: "100px",
         type: "link",
@@ -681,7 +681,7 @@ const MONITORING_CONFIG = {
         type: "number",
         placeholder: "Contoh: 25",
       },
-      { key: "f", label: "Foto Bukti", type: "file" },
+      { key: "f", label: "Dokumentasi Kegiatan", type: "file" },
     ],
   },
 
@@ -711,7 +711,7 @@ const MONITORING_CONFIG = {
         type: "number",
       },
       {
-        header: "Foto Bukti",
+        header: "Dokumentasi Kegiatan",
         key: "foto_pengukuran_url",
         width: "120px",
         type: "link",
@@ -727,7 +727,7 @@ const MONITORING_CONFIG = {
         placeholder: "Contoh: 45.5",
       },
       { key: "jumlah_petugas", label: "Jumlah Petugas", type: "number" },
-      { key: "f", label: "Foto Bukti Pengukuran", type: "file" },
+      { key: "f", label: "Foto Bukti Kegiatan Pengukuran", type: "file" },
     ],
   },
 };
@@ -1018,7 +1018,7 @@ export default function MonitoringGAP() {
 
     const isSetuju = await confirmDialog({
       title: "Simpan Data Monitoring?",
-      text: "Pastikan data aktivitas dan foto bukti yang diunggah sudah benar.",
+      text: "Pastikan data aktivitas dan bukti dokumentasi Kegiatan yang diunggah sudah benar.",
       confirmText: "Ya, Simpan Data",
       cancelText: "Periksa Lagi",
       isDanger: false,

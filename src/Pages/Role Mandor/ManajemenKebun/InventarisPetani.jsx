@@ -439,7 +439,7 @@ export default function InventarisPetani() {
         },
         {
           name: "file_sertifikat",
-          label: "Foto / Sertifikat Pupuk (wajib)",
+          label: "Dokumen Sertifikat Pupuk (wajib)",
           type: "file",
           required: true,
         },
@@ -513,7 +513,7 @@ export default function InventarisPetani() {
         },
         {
           name: "file_sertifikat",
-          label: "Foto / Sertifikat Pestisida (Wajib)",
+          label: "Dokumen Sertifikat Pestisida (Wajib)",
           type: "file",
           required: true,
         },

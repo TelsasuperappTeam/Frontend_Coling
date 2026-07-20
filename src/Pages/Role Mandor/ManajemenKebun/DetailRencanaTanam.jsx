@@ -707,7 +707,7 @@ export default function DetailRencanaTanam() {
           {detailData.dok_bukti_terasering_url && (
             <div className="col-span-2 lg:col-span-1 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 flex flex-col justify-center relative overflow-hidden">
               <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
-                Bukti Terasering
+                Bukti dokumentasi/berita acara terasering
               </p>
               <a
                 href={getFileUrl(detailData.dok_bukti_terasering_url)}
@@ -722,7 +722,7 @@ export default function DetailRencanaTanam() {
           {detailData.dok_bukti_drainase_url && (
             <div className="col-span-2 lg:col-span-1 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 flex flex-col justify-center relative overflow-hidden">
               <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
-                Bukti Drainase
+                Bukti dokumentasi/berita acara drainase
               </p>
               <a
                 href={getFileUrl(detailData.dok_bukti_drainase_url)}
@@ -1202,7 +1202,7 @@ export default function DetailRencanaTanam() {
                       </div>
                       <div>
                         <label className="block font-bold text-gray-700 mb-2 text-sm">
-                          Upload Bukti Terasering
+                          Upload dokumentasi/berita acara terasering
                         </label>
                         {formData.dok_bukti_terasering_url &&
                           !fileTerasering && (
@@ -1272,7 +1272,7 @@ export default function DetailRencanaTanam() {
                         </div>
                         <div>
                           <label className="block font-bold text-gray-700 mb-2 text-sm">
-                            Upload Bukti Drainase
+                            Upload dokumentasi/berita acara drainase
                           </label>
                           {formData.dok_bukti_drainase_url && !fileDrainase && (
                             <div className="mb-3 text-xs font-bold flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-blue-200 shadow-sm">

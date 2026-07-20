@@ -592,7 +592,7 @@ export default function ManajemenSengketa() {
               {/* INPUT FILE */}
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">
-                  File Bukti (Foto/Dokumen) <span className="text-red-500">*</span>
+                  File Bukti (Dokumen) <span className="text-red-500">*</span>
                 </label>
                 <input
                   required

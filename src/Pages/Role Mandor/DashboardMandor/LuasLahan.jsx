@@ -400,7 +400,7 @@ export default function LuasLahan() {
 
     if (form.membukaLahan === true) {
       if (form.files.pembukaan_lahan_video.status !== "success") {
-        return showToast.error("Wajib upload bukti/video pembukaan lahan.");
+        return showToast.error("Wajib upload berita acara kegiatan pembukaan lahan.");
       }
     }
 
@@ -615,8 +615,7 @@ export default function LuasLahan() {
               </h2>
               <p className="text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
                 Agar proses pengisian berjalan lancar, mohon pastikan Anda telah
-                menyiapkan dokumen dalam format <b>PDF, Foto, atau Video</b>{" "}
-                dari berkas-berkas berikut:
+                menyiapkan dokumen dari berkas-berkas berikut:
               </p>
             </div>
 
@@ -683,7 +682,7 @@ export default function LuasLahan() {
                       <b>Video Pembukaan Lahan</b>
                       <br />
                       <span className="text-[10px] text-gray-500 block mt-0.5">
-                        Wajib jika Anda sedang membuka lahan baru saat ini.
+                        Wajib jika Anda sedang membuka lahan baru saat ini, pastikan adanya bukti berita acara untuk validasi lebih lengkap.
                       </span>
                     </span>
                   </li>
@@ -1061,7 +1060,7 @@ export default function LuasLahan() {
 
             {form.membukaLahan === true && (
               <UploadInput
-                label="Dokumentasi Buka Lahan (Video)"
+                label="Dokumentasi kegiatan Buka Lahan (Video)"
                 type="pembukaan_lahan_video"
                 required={true}
               />

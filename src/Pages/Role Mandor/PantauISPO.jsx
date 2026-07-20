@@ -240,7 +240,7 @@ export default function PantauISPO() {
         {
           label: "Bukti sosialisasi informasi benih",
           deskripsi:
-            "Dokumen/foto/video sosialisasi dari Kebun melalui kelompok tani.",
+            "Dokumen berita acara kegiatan sosialisasi dari Kebun melalui kelompok tani.",
           actionType: "system",
           requirementCode: "P2_2_3_9_SOSIALISASI_BENIH", // SUDAH
         },

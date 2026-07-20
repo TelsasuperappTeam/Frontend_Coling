@@ -105,7 +105,7 @@ const DOKUMEN_CONFIG = [
     subKriteria: "2.3.2 pembenihan",
     label: "Bukti sosialisasi informasi benih",
     deskripsi:
-      "Upload dokumen/foto/video bukti sosialisasi informasi benih melalui kelompok tani.",
+      "Upload dokumen berita acara bukti kegiatan sosialisasi informasi benih melalui kelompok tani.",
     code: "P2_2_3_9_SOSIALISASI_BENIH", // SUDAH
   },
 
@@ -240,7 +240,7 @@ const DOKUMEN_CONFIG = [
     kriteria: "Kriteria 3.1 Pencegahan dan Penanggulangan Kebakaran",
     label: "Dokumentasi simulasi tanggap darurat",
     deskripsi:
-      "Upload bukti bahwa telah dilakukan simulasi kebakaran, seperti: Foto, laporan, atau berita acara kegiatan.",
+      "Upload bukti dokumen berita acara bahwa telah dilakukan kegiatan simulasi kebakaran.",
     code: "P3_3_2_5_SIMULASI_TANGGAP_DARURAT", // BE BELUM
   },
 
