@@ -17,13 +17,12 @@ export const ROLES = {
 };
 
 // ======================= BASE URL =======================
-// src/config/constants.js
+// Sesuaikan dengan arsitektur pusat pada diagram (api.company.telsa.cloud)
+const SERVER_UTAMA = "https://api.company.telsa.cloud"; 
+const SERVER_CADANGAN = "https://api.telsa.cloud";
 
-// Pilihan Server (Anda bisa switch di sini jika server utama bermasalah)
-const SERVER_BARU = "https://api.telsa.cloud";
-const SERVER_LAMA = "https://api.company.telsa.cloud";
-
-const ACTIVE_SERVER = SERVER_BARU; 
+// Tentukan server mana yang aktif digunakan saat ini
+const ACTIVE_SERVER = SERVER_UTAMA; 
 
 export const API_BASE_URLS = {
   AUTH: import.meta.env.VITE_API_AUTH_URL || ACTIVE_SERVER,
