@@ -98,7 +98,7 @@ const Navbar = () => {
                 className="h-6 w-auto sm:h-7"
               />
               <h1 className="text-lg sm:text-xl lg:text-xl font-bold text-white whitespace-nowrap tracking-tight">
-                PalmaOne-08
+                Selamat Datang di TELSA!
               </h1>
             </div>
           </div>

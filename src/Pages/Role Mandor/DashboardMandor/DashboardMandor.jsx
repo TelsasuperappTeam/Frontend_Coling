@@ -101,7 +101,7 @@ export default function DashboardMandor() {
   // --- State Profile (Menampung data user) ---
   const [profile, setProfile] = useState({
     nama_lengkap: "",
-    role: "Mandor",
+    role: "Petani",
     email: "",
     nomor_hp: "",
     foto: "",
@@ -619,7 +619,7 @@ export default function DashboardMandor() {
 
       setProfile({
         nama_lengkap: userData.nama_lengkap || "-",
-        role: "Mandor",
+        role: "Petani",
         email: userData.email || "-",
         nomor_hp: userData.no_hp || "-",
         alamat_kebun: userData.alamat || "",
@@ -808,7 +808,7 @@ export default function DashboardMandor() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Tampilan Utama Fitur Mandor
+        Tampilan Utama Fitur Petani
       </h2>
 
       {/* --- SECTION 2: WIDGETS --- */}

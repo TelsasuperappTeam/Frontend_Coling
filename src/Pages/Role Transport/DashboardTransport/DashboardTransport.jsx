@@ -108,7 +108,7 @@ export default function DashboardLogistik() {
         // Mapping Data Backend ke State Frontend
         setProfile({
           nama_logistik: userData.nama_lengkap || "-",
-          role: "Transport",
+          role: "Logistik",
           email: userData.email || "-",
           nomor_telepon: userData.no_hp || "-",
           alamat_pabrik: userData.alamat || "",
@@ -422,7 +422,7 @@ export default function DashboardLogistik() {
       </div>
 
       <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] mt-6 sm:mt-8 mb-6 sm:mb-10 px-1 border-l-4 border-[#B5302D] pl-3">
-        Tampilan Utama Fitur Transport
+        Tampilan Utama Fitur Logistik
       </h2>
 
       {/* SECTION 2 WIDGETS */}

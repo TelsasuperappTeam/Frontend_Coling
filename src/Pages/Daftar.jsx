@@ -213,7 +213,7 @@ export default function Daftar() {
             Buat Akun Baru
           </h1>
           <p className="text-sm sm:text-base font-medium text-[#EF8523]">
-            Platform ISPO PalmaOne-08
+            Platform ISPO TELSA Super App
           </p>
           <p className="text-black mt-2 text-xs sm:text-sm">
             Daftarkan akun sesuai peran Anda di sistem
@@ -234,13 +234,9 @@ export default function Daftar() {
               className="appearance-none w-full rounded-lg border border-gray-300 px-4 py-3 bg-white text-gray-800 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#EF8523] focus:border-transparent"
             >
               <option value="">Pilih Peran</option>
-              <option value={ROLES.GENERAL_MANAGER_DISTRIK}>
-                General Manager Distrik
-              </option>
               <option value={ROLES.KEBUN}>Kebun</option>
-              <option value={ROLES.ESTATE_MANAGER}>Estate Manager</option>
-              <option value={ROLES.MANDOR}>Mandor</option>
-              <option value={ROLES.TRANSPORT}>Transport</option>
+              <option value={ROLES.MANDOR}>Petani</option>
+              <option value={ROLES.TRANSPORT}>Logistik</option>
               <option value={ROLES.PABRIK}>Pabrik</option>
             </select>
 

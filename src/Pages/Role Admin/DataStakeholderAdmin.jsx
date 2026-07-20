@@ -46,13 +46,11 @@ export default function DataStakeholderAdmin() {
 
   const [originalForm, setOriginalForm] = useState(null);
 
-  // --- DISESUAIKAN DENGAN ROLE BARU ---
+  // --- DISESUAIKAN DENGAN ROLE BARU (Estate Manager & GM Distrik Dihapus, Mandor -> Petani, Transport -> Logistik) ---
   const [open, setOpen] = useState({
     kebun: true,
-    mandor: false,
-    estateManager: false,
-    gmDistrik: false,
-    transport: false,
+    petani: false,
+    logistik: false,
     pabrik: false,
     admin: false,
     audit: false,
@@ -156,7 +154,6 @@ export default function DataStakeholderAdmin() {
 
   const byRole = (role) => {
     const safeUsers = Array.isArray(users) ? users : [];
-    // Pastikan role tidak undefined sebelum dicheck
     if (!role) return [];
     return safeUsers.filter(
       (u) => u.role?.toLowerCase() === role?.toLowerCase(),
@@ -337,27 +334,15 @@ export default function DataStakeholderAdmin() {
               icon: <TreeDeciduous size={20} />,
             },
             {
-              title: "Stakeholder Mandor",
-              role: ROLES.MANDOR,
-              key: "mandor",
+              title: "Stakeholder Petani",
+              role: ROLES.PETANI || "petani",
+              key: "petani",
               icon: <User size={20} />,
             },
             {
-              title: "Estate Manager",
-              role: ROLES.ESTATE_MANAGER,
-              key: "estateManager",
-              icon: <Shield size={20} />,
-            },
-            {
-              title: "General Manager Distrik",
-              role: ROLES.GENERAL_MANAGER_DISTRIK,
-              key: "gmDistrik",
-              icon: <Shield size={20} />,
-            },
-            {
-              title: "Stakeholder Transport",
-              role: ROLES.TRANSPORT,
-              key: "transport",
+              title: "Stakeholder Logistik",
+              role: ROLES.TRANSPORT || "transport",
+              key: "logistik",
               icon: <Truck size={20} />,
             },
             {
@@ -368,7 +353,7 @@ export default function DataStakeholderAdmin() {
             },
             {
               title: "Administrator",
-              role: ROLES.ADMIN, // Tetap dibiarkan jika ada
+              role: ROLES.ADMIN,
               key: "admin",
               icon: <Settings size={20} />,
             },
@@ -536,10 +521,10 @@ export default function DataStakeholderAdmin() {
 
 function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
   // --- LOGIKA TAMPILAN KOLOM DISESUAIKAN ---
-  const showDistrikId = role === ROLES.KEBUN; // Menampilkan distrik_id khusus KEBUN
-  const showKebunId = role === ROLES.KEBUN || role === ROLES.ESTATE_MANAGER; // Menampilkan kebun_id untuk KEBUN dan ESTATE MANAGER
-  const showKebunInduk = role === ROLES.MANDOR;
-  const showKoordinat = role !== ROLES.TRANSPORT;
+  const showDistrikId = role === ROLES.KEBUN;
+  const showKebunId = role === ROLES.KEBUN; 
+  const showKebunInduk = role === (ROLES.PETANI || "petani");
+  const showKoordinat = role !== (ROLES.TRANSPORT || "transport");
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -619,7 +604,6 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                     </div>
 
                     <div className="grid grid-cols-1 gap-2 mt-1">
-                      {/* KOLOM BARU MOBILE: Distrik ID */}
                       {showDistrikId && (
                         <div className="flex items-center gap-2">
                           <Tag size={14} className="text-gray-400 shrink-0" />
@@ -629,7 +613,6 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                         </div>
                       )}
 
-                      {/* KOLOM UPDATE MOBILE: Kebun ID */}
                       {showKebunId && (
                         <div className="flex items-center gap-2">
                           <Tag size={14} className="text-gray-400 shrink-0" />
@@ -706,12 +689,10 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                   <Th icon={<Phone size={14} />}>No HP</Th>
                   <Th icon={<MapPin size={14} />}>Alamat</Th>
 
-                  {/* HEADER BARU: Distrik ID */}
                   {showDistrikId && (
                     <Th icon={<Tag size={14} />}>Distrik ID</Th>
                   )}
 
-                  {/* HEADER UPDATE: Kebun ID */}
                   {showKebunId && <Th icon={<Tag size={14} />}>Kebun ID</Th>}
 
                   {showKebunInduk && (
@@ -747,14 +728,12 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
                         {u.alamat || "-"}
                       </Td>
 
-                      {/* KOLOM BARU DESKTOP: Distrik ID */}
                       {showDistrikId && (
                         <Td className="font-mono text-xs text-purple-600 font-bold">
                           {u.distrik_id || "-"}
                         </Td>
                       )}
 
-                      {/* KOLOM UPDATE DESKTOP: Kebun ID */}
                       {showKebunId && (
                         <Td className="font-mono text-xs text-blue-600 font-bold">
                           {u.kebun_id || "-"}
@@ -829,7 +808,7 @@ function Section({ title, icon, data, open, toggle, onEdit, onDelete, role }) {
 }
 
 /* ================== COMPONENT AUDIT LOG SECTION ================== */
-// ... (Sisa komponen AuditLogSection, Th, Td, Input, StatusBadge, formatDate dibiarkan sama seperti aslinya karena tidak berkaitan dengan perubahan Roles)
+
 function AuditLogSection({ data, open, toggle, loading }) {
   const renderChanges = (changesString) => {
     try {

@@ -1008,15 +1008,14 @@ export default function MonitoringGAP() {
     }
     if (!popupType) return;
 
-    // --- TAMBAHAN FINAL: VALIDASI KHUSUS PESTISIDA (OPT) ---
+    // --- ssVALIDASI KHUSUS PESTISIDA (OPT) ---
     if (popupType === "opt") {
       if (!formData.satuan_dosis) {
         showToast.error("Gagal: Kolom Satuan Dosis wajib dipilih.");
-        return; // Berhenti di sini, cegah error 422 dari Backend
+        return;
       }
     }
 
-    // Popup Konfirmasi sebelum menyimpan
     const isSetuju = await confirmDialog({
       title: "Simpan Data Monitoring?",
       text: "Pastikan data aktivitas dan foto bukti yang diunggah sudah benar.",
@@ -1028,7 +1027,6 @@ export default function MonitoringGAP() {
     if (!isSetuju) return;
 
     setShowPopup(false);
-
     setIsSaving(true);
     showToast.loading("Menyimpan data monitoring...");
 
@@ -1081,8 +1079,8 @@ export default function MonitoringGAP() {
       } else {
         const payload = new FormData();
 
-        // INJEKSI NILAI DEFAULT EKSPLISIT
-        // Mencegah silent failure: Jika input kosong/tidak disentuh, paksakan bernilai 0 agar key terbaca di Object.keys
+        // INJEKSI NILAI DEFAULT SECARA EKSPLISIT (Solusi dari BE)
+        // Ini memastikan key 'jumlah_pokok_ditindak' PASTI ada, meskipun user tidak mengetik apa-apa
         if (
           formData.jumlah_pokok_ditindak === undefined ||
           formData.jumlah_pokok_ditindak === ""
@@ -1124,7 +1122,7 @@ export default function MonitoringGAP() {
               "dinamis_pestisida_id",
               "monitoring_piringan_id",
               "jumlah_petugas",
-              "jumlah_pokok_ditindak",
+              "jumlah_pokok_ditindak", // DI SINI TEMPATNYA SEKARANG
               "jumlah_pohon_dipupuk",
             ].includes(key)
           ) {
@@ -1144,7 +1142,7 @@ export default function MonitoringGAP() {
             value = value === "" ? 0.0 : parseFloat(value);
           }
 
-          // Abaikan string kosong hanya untuk inputan text/file
+          // Abaikan string kosong untuk inputan text/file (setelah proses parsing angka selesai)
           if (value === "" && typeof value === "string") return;
 
           payload.append(key, value);
@@ -1165,6 +1163,8 @@ export default function MonitoringGAP() {
         let errorMsg = "Gagal simpan data";
         try {
           const errResponse = await res.json();
+          // Cek console log jika gagal, akan memberikan pesan error asli dari Pydantic Backend
+          console.error("[DEBUG BE Error]", errResponse);
           if (Array.isArray(errResponse.detail)) {
             errorMsg =
               "Masih ada kolom atau file dokumen yang belum diisi. Silakan lengkapi form terlebih dahulu.";

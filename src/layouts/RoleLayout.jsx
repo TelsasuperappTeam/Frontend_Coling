@@ -16,7 +16,7 @@ const RoleLayout = ({ role }) => {
     // 1. Cek apakah ada state 'fromLogin'
     if (location.state?.fromLogin) {
       // 2. Munculkan toast
-      showToast.success("Selamat datang di ISPO PalmaOne-08!");
+      showToast.success("Selamat datang di ISPO TELSA Super App!");
 
       // 3. SEGERA hapus state dari history agar tidak terbaca lagi
       // Gunakan replaceState untuk menghapus object state-nya secara total

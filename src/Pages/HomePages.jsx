@@ -176,7 +176,7 @@ const HomePages = () => {
               <div className="absolute inset-0 scale-90 bg-white/15 rounded-3xl blur-2xl" />
               <img
                 src={HomeImage}
-                alt="Tampilan Aplikasi PalmaOne-08"
+                alt="Tampilan Aplikasi TELSA Super App"
                 fetchPriority="high"
                 width="500"
                 height="500"
@@ -197,11 +197,11 @@ const HomePages = () => {
             </span>
 
             <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-4xl font-extrabold leading-[1.15] tracking-tight drop-shadow-lg">
-              Selamat Datang di Platform ISPO PalmaOne-08
+              Selamat Datang di Platform TELSA Super App
             </h1>
 
             <p className="text-white/90 text-sm sm:text-base md:text-lg leading-relaxed max-w-md mx-auto md:mx-0">
-              Platform ERP Untuk Pemenuhan Sertifikasi ISPO untuk Perusahaan
+              Platform ERP Untuk Pemenuhan Sertifikasi ISPO untuk petani sawit rakyat/swadaya
             </p>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1">
@@ -239,7 +239,7 @@ const HomePages = () => {
             </h2>
 
             <p className="text-gray-600 text-sm md:text-lg leading-relaxed px-2 md:px-0 max-w-3xl mx-auto">
-              <strong>Platform ISPO PalmOne-08</strong> adalah sistem ERP
+              <strong>Platform ISPO TELSA Super App</strong> adalah sistem ERP
               untuk mengelola pencatatan perkebunan, transability sawit,
               koordinasi antar pelaku sawit, dan pemenuhan sertifikasi ISPO
               dengan lebih mudah, cepat, dan efisien.
@@ -250,7 +250,7 @@ const HomePages = () => {
             {[
               "<strong>Membantu pemenuhan persyaratan ISPO</strong> sesuai dengan Permentan No. 33 Tahun 2025.",
               "<strong>Otomatisasi dokumen</strong> berdasarkan aktivitas perkebunan harian Anda.",
-              "Didesain khusus untuk <strong>Perusahaan</strong> dan pendamping stakeholder.",
+              "Didesain khusus untuk <strong>petani sawit rakyat/swadaya</strong> dan pendamping stakeholder.",
             ].map((text, i) => {
               const IconComponent = [ClipboardCheck, Clock, Users][i];
 
@@ -424,7 +424,7 @@ const HomePages = () => {
                       </h4>
                       <p className="text-[9px] sm:text-xs text-green-700 font-semibold mt-1 flex items-center gap-1">
                         <Sprout className="w-3 h-3" />
-                        Traceability Blockchain • ISPO PalmaOne-08
+                        Traceability Blockchain • ISPO TELSA Super App
                       </p>
                     </div>
                   </div>
@@ -756,7 +756,7 @@ const HomePages = () => {
             </h2>
             <p className="text-sm md:text-lg text-gray-600 mb-6 md:mb-8 leading-relaxed">
               Kami telah merangkum beberapa pertanyaan yang paling sering
-              diajukan untuk membantu Anda memahami Platform ISPO PalmaOne-08
+              diajukan untuk membantu Anda memahami Platform ISPO TELSA Super App
               lebih baik.
             </p>
 
@@ -783,16 +783,16 @@ const HomePages = () => {
           <div className="space-y-3 md:space-y-4">
             {[
               {
-                q: "Apa itu Platform ISPO PalmaOne-08?",
-                a: "Platform ISPO PalmaOne-08 adalah sistem ERP untuk mengelola pencatatan perkebunan, transparansi, dan proses sertifikasi ISPO secara mudah dan terintegrasi dengan sistem.",
+                q: "Apa itu Platform ISPO TELSA Super App?",
+                a: "Platform ISPO TELSA Super App adalah sistem ERP untuk mengelola pencatatan perkebunan, transparansi, dan proses sertifikasi ISPO secara mudah dan terintegrasi dengan sistem.",
               },
               {
                 q: "Apakah aplikasi ini gratis?",
-                a: "Ya, seluruh fitur Platform ISPO PalmaOne-08 dapat digunakan secara gratis oleh petani rakyat, pendamping, logistik, pabrik, stakeholder lainnya.",
+                a: "Ya, seluruh fitur Platform ISPO TELSA Super App dapat digunakan secara gratis oleh petani rakyat, pendamping, logistik, pabrik, stakeholder lainnya.",
               },
               {
-                q: "Bagaimana cara memulai menggunakan Platform ISPO PalmaOne-08?",
-                a: "Untuk mulai menggunakan Platform ISPO PalmaOne-08, kunjungi website, daftarkan akun Anda, lalu tunggu sistem memproses pengajuan. Setelah disetujui, akun dapat digunakan untuk mengelola data kebun Anda.",
+                q: "Bagaimana cara memulai menggunakan Platform ISPO TELSA Super App?",
+                a: "Untuk mulai menggunakan Platform ISPO TELSA Super App, kunjungi website, daftarkan akun Anda, lalu tunggu sistem memproses pengajuan. Setelah disetujui, akun dapat digunakan untuk mengelola data kebun Anda.",
               },
             ].map((faq, i) => {
               const isOpen = openFaqIndex === i;

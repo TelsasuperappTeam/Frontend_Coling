@@ -391,7 +391,7 @@ export default function LuasLahan() {
         form.jenisPelakuUsaha === "PERUSAHAAN" &&
         form.files.iup_hgu.status !== "success"
       ) {
-        return showToast.error("Wajib upload IUP/HGU (Khusus Perusahaan).");
+        return showToast.error("Wajib upload STDP/SPPL.");
       }
       if (form.files.sppl.status !== "success") {
         return showToast.error("Wajib upload SPPL.");
@@ -649,7 +649,7 @@ export default function LuasLahan() {
                       <b>Izin Usaha</b> (IUP/HGU)
                       <br />
                       <span className="text-[10px] text-gray-400 block mt-0.5">
-                        Khusus untuk pelaku usaha skala Perusahaan.
+                        Khusus untuk pelaku usaha skala petani sawit rakyat/swadaya.
                       </span>
                     </span>
                   </li>

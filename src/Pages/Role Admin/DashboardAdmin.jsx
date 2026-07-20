@@ -8,12 +8,10 @@ const DashboardAdmin = () => {
     role: "",
   });
 
-  // State disesuaikan dengan role baru
+  // State disesuaikan dengan penghapusan role dan perubahan Mandor -> Petani
   const [dataJumlah, setDataJumlah] = useState({
     kebun: 0,
-    mandor: 0,
-    estateManager: 0,
-    gmDistrik: 0,
+    petani: 0,
     logistik: 0,
     pabrik: 0,
     validasiKebun: 0,
@@ -77,24 +75,20 @@ const DashboardAdmin = () => {
         userList = rawData.data;
       }
 
-      // Filter menggunakan role terbaru dari constant
+      // Filter menggunakan role terbaru (Mandor diganti Petani, Estate Manager & GM Distrik dihapus)
       const jumlahKebun = userList.filter(
         (u) => u.role?.toLowerCase() === ROLES.KEBUN?.toLowerCase(),
       ).length;
-      const jumlahMandor = userList.filter(
-        (u) => u.role?.toLowerCase() === ROLES.MANDOR?.toLowerCase(),
+      
+      // Menggunakan ROLES.PETANI atau fallback ke string "petani" jika constant belum diupdate
+      const jumlahPetani = userList.filter(
+        (u) => u.role?.toLowerCase() === (ROLES.PETANI || "petani")?.toLowerCase(),
       ).length;
-      const jumlahEstateManager = userList.filter(
-        (u) => u.role?.toLowerCase() === ROLES.ESTATE_MANAGER?.toLowerCase(),
-      ).length;
-      const jumlahGMDistrik = userList.filter(
-        (u) =>
-          u.role?.toLowerCase() ===
-          ROLES.GENERAL_MANAGER_DISTRIK?.toLowerCase(),
-      ).length;
+      
       const jumlahTransport = userList.filter(
         (u) => u.role?.toLowerCase() === ROLES.TRANSPORT?.toLowerCase(),
       ).length;
+      
       const jumlahPabrik = userList.filter(
         (u) => u.role?.toLowerCase() === ROLES.PABRIK?.toLowerCase(),
       ).length;
@@ -107,9 +101,7 @@ const DashboardAdmin = () => {
 
       setDataJumlah({
         kebun: jumlahKebun,
-        mandor: jumlahMandor,
-        estateManager: jumlahEstateManager,
-        gmDistrik: jumlahGMDistrik,
+        petani: jumlahPetani,
         logistik: jumlahTransport,
         pabrik: jumlahPabrik,
         validasiKebun,
@@ -133,7 +125,6 @@ const DashboardAdmin = () => {
     <div className="space-y-6 sm:space-y-8 p-4 sm:p-6 md:p-8 min-h-screen font-sans bg-white">
       {/* ====== HEADER ====== */}
       <div>
-        {/* UKURAN DIPERKECIL: text-xl sm:text-2xl font-bold */}
         <h2 className="text-xl sm:text-2xl font-bold text-[#B5302D] tracking-tight">
           Dashboard Admin
         </h2>
@@ -151,7 +142,6 @@ const DashboardAdmin = () => {
         <div className="bg-gradient-to-br from-[#EF8523] to-[#d9751d] text-white rounded-2xl p-5 sm:p-7 flex flex-col shadow-sm relative overflow-hidden h-full border border-orange-400">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl pointer-events-none"></div>
 
-          {/* UKURAN DIPERKECIL: text-base sm:text-lg */}
           <h3 className="font-bold text-base sm:text-lg mb-4 text-white/90 border-b border-white/20 pb-3 relative z-10">
             Data Diri Admin
           </h3>
@@ -189,7 +179,6 @@ const DashboardAdmin = () => {
           {/* Body Validasi */}
           <div className="bg-white rounded-xl shadow-sm p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border border-gray-100 hover:border-red-100 transition-colors flex-1">
             <div className="flex-1">
-              {/* UKURAN DIPERKECIL: text-sm sm:text-base */}
               <p className="text-sm sm:text-base font-bold text-gray-800 leading-tight">
                 Validasi Akun Kebun Baru
               </p>
@@ -201,7 +190,6 @@ const DashboardAdmin = () => {
             </div>
 
             <div className="bg-red-50 border border-red-100 text-[#B5302D] rounded-2xl px-5 py-3 sm:py-4 flex flex-col items-center justify-center min-w-[100px] shrink-0 w-full sm:w-auto">
-              {/* UKURAN DIPERKECIL: text-2xl sm:text-3xl */}
               <span className="text-2xl sm:text-3xl font-bold tracking-tight">
                 {dataJumlah.validasiKebun}
               </span>
@@ -222,16 +210,11 @@ const DashboardAdmin = () => {
           </h3>
         </div>
 
-        {/* Grid List Stakeholder */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 bg-white p-4 sm:p-5 rounded-b-2xl shadow-sm border border-gray-200">
+        {/* Grid List Stakeholder (Disesuaikan menjadi lg:grid-cols-4 untuk 4 kartu) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 bg-white p-4 sm:p-5 rounded-b-2xl shadow-sm border border-gray-200">
           <StakeholderCard title="Kebun" jumlah={dataJumlah.kebun} />
-          <StakeholderCard title="Mandor" jumlah={dataJumlah.mandor} />
-          <StakeholderCard
-            title="Estate Manager"
-            jumlah={dataJumlah.estateManager}
-          />
-          <StakeholderCard title="GM Distrik" jumlah={dataJumlah.gmDistrik} />
-          <StakeholderCard title="Transport" jumlah={dataJumlah.logistik} />
+          <StakeholderCard title="Petani" jumlah={dataJumlah.petani} />
+          <StakeholderCard title="Logistik" jumlah={dataJumlah.logistik} />
           <StakeholderCard title="Pabrik" jumlah={dataJumlah.pabrik} />
         </div>
       </div>
@@ -250,7 +233,6 @@ const StakeholderCard = ({ title, jumlah }) => (
       Stakeholder {title}
     </p>
 
-    {/* UKURAN DIPERKECIL: text-2xl sm:text-3xl */}
     <div className="text-2xl sm:text-3xl font-bold text-gray-800 my-1.5 group-hover:text-[#B5302D] transition-colors">
       {jumlah}
     </div>

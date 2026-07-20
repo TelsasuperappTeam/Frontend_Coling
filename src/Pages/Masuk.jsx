@@ -91,7 +91,7 @@ export default function Masuk() {
         {/* ====== JUDUL ====== */}
         <h1 className="text-2xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight text-center tracking-tight">
           <span className="block text-[#B5302D]">Selamat Datang di</span>
-          <span className="block">Platform ISPO PalmaOne-08!</span>
+          <span className="block">Platform ISPO TELSA Super App!</span>
         </h1>
 
         {/* ====== FORM LOGIN ====== */}
